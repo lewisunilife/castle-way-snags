@@ -98,8 +98,6 @@
     white-space: nowrap;
   }
 
-  /* ---- Setup notice (only until Supabase details are filled in) ---- */
-
   .setup {
     margin-top: 20px;
     border: 1px solid var(--warn);
@@ -110,12 +108,7 @@
   }
 
   .setup strong { display: block; margin-bottom: 4px; }
-  .setup code {
-    font-family: ui-monospace, Menlo, Consolas, monospace;
-    font-size: 12px;
-  }
-
-  /* ---- Status bar ---- */
+  .setup code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
 
   .bar {
     display: flex;
@@ -167,7 +160,8 @@
   #live-status.is-live { color: var(--live); font-weight: 700; }
   #live-status.is-local { color: var(--warn); font-weight: 700; }
 
-  /* ---- Tables ---- */
+  #unsaved { color: var(--warn); font-weight: 700; }
+  #unsaved:empty { display: none; }
 
   .scroller { overflow-x: auto; }
 
@@ -268,6 +262,10 @@
     text-decoration-thickness: 1px;
   }
 
+  /* A row whose change has not reached the server yet. */
+  tr.unsaved td.done { border-left-color: var(--warn); }
+  tr.unsaved .by { color: var(--warn); }
+
   .by {
     display: block;
     font-size: 11.5px;
@@ -293,8 +291,6 @@
   .note-field::placeholder { color: var(--muted); opacity: 0.75; }
   .note-field:focus { border-bottom-color: var(--tick); outline: none; }
   .note-field:not(:placeholder-shown) { border-bottom-style: solid; }
-
-  /* ---- Comments ---- */
 
   .panel { border: 1px solid var(--rule); padding: 18px; }
 
@@ -363,6 +359,8 @@
     padding: 2px 0 2px 12px;
   }
 
+  #comment-list li.unsent { border-left-color: var(--warn); }
+
   .c-meta {
     display: block;
     font-size: 11.5px;
@@ -394,8 +392,10 @@
       margin-left: 0;
       flex: 1 1 100%;
       flex-direction: row;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: baseline;
+      gap: 8px;
     }
 
     .scroller { overflow-x: visible; }
@@ -418,6 +418,8 @@
       margin-bottom: 10px;
       align-items: start;
     }
+
+    tbody tr.unsaved { border-color: var(--warn); }
 
     tbody tr:hover td,
     tbody td {
@@ -545,9 +547,9 @@
   <div class="setup" id="setup-notice" hidden>
     <strong>Not connected yet</strong>
     Ticks and notes are saving to this device only. To make the list shared,
-    open <code>index.html</code>, put your Supabase project URL and anon key
-    into the <code>SUPABASE</code> block near the top of the script, and
-    re-upload. Setup steps are in <code>README.md</code> next to this file.
+    open <code>site/index.html</code>, put your Supabase project URL and anon
+    key into the <code>SUPABASE</code> block near the top of the script, and
+    push. Setup steps are in <code>README.md</code>.
   </div>
 
   <div class="bar">
@@ -558,6 +560,7 @@
     <div class="bar-meta">
       <span id="progress">0 of 130 items ticked</span>
       <span id="live-status">Connecting&hellip;</span>
+      <span id="unsaved"></span>
     </div>
   </div>
 
@@ -601,8 +604,8 @@
   "use strict";
 
   /* ====================================================================
-     SUPABASE — fill these two in, then re-upload the file.
-     Supabase dashboard → Project Settings → API.
+     SUPABASE — fill these two in, then push.
+     Supabase dashboard -> Project Settings -> API.
      The anon key is a public key and is meant to be readable here; the
      service_role key is NOT — never paste that into this file.
      ==================================================================== */
@@ -930,45 +933,85 @@
     });
   }
 
-  /* ---- State ---- */
+  // Row keys come from the row's own content, not its position, so
+  // reordering or inserting rows never re-points an existing tick at a
+  // different job. (Rewording a row does orphan its tick — the intended
+  // trade: the job itself changed.)
+  function rowKey(sectionKey, room, src, action) {
+    var str = sectionKey + "|" + room + "|" + src + "|" + action;
+    var h = 0x811c9dc5;
+    for (var i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+    }
+    return sectionKey + "-" + h.toString(36);
+  }
+
+  function uuid() {
+    if (window.crypto && window.crypto.randomUUID) {
+      return window.crypto.randomUUID();
+    }
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+      var r = (Math.random() * 16) | 0;
+      var v = c === "x" ? r : ((r & 0x3) | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  /* ------------------------------------------------------------------
+     State.
+
+       items  — what the server last told us.
+       queued — changes made here that the server has not confirmed yet.
+                Written to this device and retried until they land, so a
+                dropped signal mid-tick loses nothing.
+
+     What you see is `queued` laid over `items`, so your own change shows
+     at once and an older server copy never overwrites it.
+     ------------------------------------------------------------------ */
 
   var NAME_KEY = "cw-tower1-name";
-  var LOCAL_KEY = "cw-tower1-snags-local-v1";
+  var LOCAL_KEY = "cw-tower1-snags-local-v2";
+  var QUEUE_KEY = "cw-tower1-snags-queue-v2";
+  var MIGRATED_KEY = "cw-tower1-snags-migrated-v2";
 
   var items = {};
   var comments = [];
+  var queued = {};
+  var queuedComments = [];
+
   var client = null;
   var live = false;
+  var channel = null;
   var index = {};
   var total = 0;
+  var retryTimer = null;
+  var retryDelay = 4000;
 
-  function configured() {
-    return SUPABASE_URL.indexOf("PASTE_") !== 0 &&
-      SUPABASE_ANON_KEY.indexOf("PASTE_") !== 0 &&
-      SUPABASE_URL && SUPABASE_ANON_KEY;
+  function store(key, value) {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) { /* private mode or full: carry on in memory */ }
   }
 
-  function readLocal() {
+  function load(key, fallback) {
     try {
-      var raw = window.localStorage.getItem(LOCAL_KEY);
-      if (!raw) { return; }
+      var raw = window.localStorage.getItem(key);
+      if (!raw) { return fallback; }
       var parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object") {
-        items = parsed.items && typeof parsed.items === "object" ? parsed.items : {};
-        comments = Object.prototype.toString.call(parsed.comments) === "[object Array]"
-          ? parsed.comments : [];
-      }
+      return parsed === null || parsed === undefined ? fallback : parsed;
     } catch (e) {
-      items = {};
-      comments = [];
+      return fallback;
     }
   }
 
-  function writeLocal() {
+  function saveQueue() {
+    store(QUEUE_KEY, { items: queued, comments: queuedComments });
+  }
+
+  function saveLocal() {
     if (live) { return; }
-    try {
-      window.localStorage.setItem(LOCAL_KEY, JSON.stringify({ items: items, comments: comments }));
-    } catch (e) { /* blocked storage */ }
+    store(LOCAL_KEY, { items: items, comments: comments });
   }
 
   var whoEl = document.getElementById("who");
@@ -1028,8 +1071,15 @@
 
     for (var k = 0; k < sec.rows.length; k++) {
       var row = sec.rows[k];
-      var id = sec.key + "-" + k;
+      var id = rowKey(sec.key, row[0], row[1], row[2]);
       var floor = floorOf(row[0]);
+
+      // Two rows sharing a key would silently share a tick. Nothing in the
+      // current list does; this makes a future edit that introduces one
+      // loud rather than quiet.
+      if (index[id] && window.console) {
+        console.error("Duplicate row key", id, row);
+      }
 
       index[id] = {
         key: sec.key,
@@ -1065,9 +1115,29 @@
   sectionsEl.innerHTML = out;
 
   var progressEl = document.getElementById("progress");
+  var statusEl = document.getElementById("live-status");
+  var unsavedEl = document.getElementById("unsaved");
+
   progressEl.textContent = "0 of " + total + " items ticked";
 
   /* ---- Render ---- */
+
+  // Your own unsent change always wins over the server's older copy.
+  function effective(id) {
+    return queued[id] || items[id] || {};
+  }
+
+  function pendingCount() {
+    return Object.keys(queued).length + queuedComments.length;
+  }
+
+  function renderUnsaved() {
+    if (!live) { unsavedEl.textContent = ""; return; }
+    var n = pendingCount();
+    unsavedEl.textContent = n
+      ? (n === 1 ? "1 change still saving" : n + " changes still saving")
+      : "";
+  }
 
   function render() {
     var doneCount = 0;
@@ -1078,9 +1148,10 @@
       if (!Object.prototype.hasOwnProperty.call(index, id)) { continue; }
 
       var meta = index[id];
-      var rec = items[id] || {};
+      var rec = effective(id);
       var isDone = rec.done === true;
       var note = typeof rec.note === "string" ? rec.note : "";
+      var isPending = Object.prototype.hasOwnProperty.call(queued, id);
 
       if (!perSection[meta.key]) { perSection[meta.key] = { done: 0, total: 0 }; }
       perSection[meta.key].total++;
@@ -1096,7 +1167,10 @@
       var byEl = document.getElementById("by-" + id);
 
       if (tickEl && tickEl.checked !== isDone) { tickEl.checked = isDone; }
-      if (rowEl) { rowEl.classList.toggle("ticked", isDone); }
+      if (rowEl) {
+        rowEl.classList.toggle("ticked", isDone);
+        rowEl.classList.toggle("unsaved", isPending && live);
+      }
 
       // Never yank text out from under someone mid-sentence.
       if (noteEl && document.activeElement !== noteEl && noteEl.value !== note) {
@@ -1110,6 +1184,7 @@
           stamp = (isDone ? "Ticked by " : "Updated by ") + by;
           var when = shortDate(rec.updated_at);
           if (when) { stamp += " · " + when; }
+          if (isPending && live) { stamp += " · saving…"; }
         }
         byEl.textContent = stamp;
       }
@@ -1124,6 +1199,7 @@
     }
 
     progressEl.textContent = doneCount + " of " + total + " items ticked";
+    renderUnsaved();
   }
 
   /* ---- Comments ---- */
@@ -1132,20 +1208,24 @@
   var emptyEl = document.getElementById("comment-empty");
 
   function renderComments() {
-    if (!comments.length) {
+    var all = comments.concat(queuedComments);
+    if (!all.length) {
       listEl.innerHTML = "";
       emptyEl.hidden = false;
       return;
     }
     emptyEl.hidden = true;
     var html = "";
-    for (var c = 0; c < comments.length; c++) {
-      var item = comments[c];
+    for (var c = 0; c < all.length; c++) {
+      var item = all[c];
+      var unsent = c >= comments.length && live;
       var meta = esc(item.author || "Someone");
       var when = shortDate(item.created_at);
       if (when) { meta += " · " + esc(when); }
+      if (unsent) { meta += " · sending…"; }
       html +=
-        '<li><span class="c-meta">' + meta + "</span>" +
+        "<li" + (unsent ? ' class="unsent"' : "") + ">" +
+        '<span class="c-meta">' + meta + "</span>" +
         '<span class="c-text">' + esc(item.body || "") + "</span></li>";
     }
     listEl.innerHTML = html;
@@ -1153,58 +1233,146 @@
 
   /* ---- Status ---- */
 
-  var statusEl = document.getElementById("live-status");
-
   function setStatus(text, cls) {
     statusEl.textContent = text;
     statusEl.className = cls || "";
+  }
+
+  function configured() {
+    return SUPABASE_URL.indexOf("PASTE_") !== 0 &&
+      SUPABASE_ANON_KEY.indexOf("PASTE_") !== 0 &&
+      !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
   }
 
   function goLocal(reason) {
     live = false;
     setStatus(reason || "Saved on this device only — not shared", "is-local");
     document.getElementById("setup-notice").hidden = configured();
+    renderUnsaved();
   }
 
-  /* ---- Writes ---- */
+  /* ---- The write queue ---- */
 
-  function touch(id) {
-    var rec = items[id] || { done: false, note: "", updated_by: "", updated_at: "" };
-    rec.updated_by = who();
-    rec.updated_at = new Date().toISOString();
-    items[id] = rec;
-    return rec;
+  function scheduleFlush() {
+    if (retryTimer || !live) { return; }
+    retryTimer = window.setTimeout(function () {
+      retryTimer = null;
+      flush();
+    }, retryDelay);
+    retryDelay = Math.min(retryDelay * 2, 30000);
   }
 
-  function commit(id) {
-    if (!live || !client) {
-      writeLocal();
-      return;
+  function settled() {
+    retryDelay = 4000;
+    if (pendingCount() === 0) {
+      setStatus("Live — everyone sees this list update", "is-live");
     }
-    var rec = items[id];
-    client.from(SNAGS_TABLE).upsert({
-      id: id,
-      done: rec.done === true,
-      note: rec.note || "",
-      updated_by: rec.updated_by || "",
-      updated_at: rec.updated_at
-    }).then(function (res) {
-      if (res.error) {
-        setStatus("Couldn't save that — check your signal.", "is-local");
-      } else if (statusEl.className !== "is-live") {
-        setStatus("Live — everyone sees this list update", "is-live");
-      }
+  }
+
+  function flush() {
+    if (!live || !client) { return; }
+
+    Object.keys(queued).forEach(function (id) {
+      var rec = queued[id];
+      if (rec.inflight) { return; }
+      rec.inflight = true;
+
+      client.from(SNAGS_TABLE).upsert({
+        id: id,
+        done: rec.done === true,
+        note: rec.note || "",
+        updated_by: rec.updated_by || "",
+        updated_at: rec.updated_at
+      }).then(function (res) {
+        rec.inflight = false;
+        if (res.error) {
+          setStatus("Can't reach the list — changes are held here and will send", "is-local");
+          scheduleFlush();
+          return;
+        }
+        // Only clear if no newer edit replaced this record meanwhile.
+        if (queued[id] === rec) {
+          items[id] = {
+            done: rec.done === true,
+            note: rec.note || "",
+            updated_by: rec.updated_by || "",
+            updated_at: rec.updated_at
+          };
+          delete queued[id];
+          saveQueue();
+        }
+        settled();
+        render();
+      }, function () {
+        rec.inflight = false;
+        scheduleFlush();
+      });
     });
+
+    queuedComments.slice().forEach(function (entry) {
+      if (entry.inflight) { return; }
+      entry.inflight = true;
+
+      client.from(COMMENTS_TABLE).insert({
+        id: entry.id,
+        body: entry.body,
+        author: entry.author
+      }).then(function (res) {
+        entry.inflight = false;
+        // 23505 = already there from an earlier attempt that landed but
+        // whose reply we never saw. That is a success, not a failure.
+        if (res.error && res.error.code !== "23505") {
+          setStatus("Can't reach the list — your comment is held here and will send", "is-local");
+          scheduleFlush();
+          return;
+        }
+        var at = queuedComments.indexOf(entry);
+        if (at !== -1) {
+          queuedComments.splice(at, 1);
+          saveQueue();
+        }
+        settled();
+        renderComments();
+        renderUnsaved();
+      }, function () {
+        entry.inflight = false;
+        scheduleFlush();
+      });
+    });
+
+    renderUnsaved();
+  }
+
+  /* ---- Edits ---- */
+
+  function enqueue(id, change) {
+    var base = effective(id);
+    var rec = {
+      done: base.done === true,
+      note: typeof base.note === "string" ? base.note : "",
+      updated_by: who(),
+      updated_at: new Date().toISOString()
+    };
+    if (Object.prototype.hasOwnProperty.call(change, "done")) { rec.done = change.done; }
+    if (Object.prototype.hasOwnProperty.call(change, "note")) { rec.note = change.note; }
+
+    if (live) {
+      queued[id] = rec;
+      saveQueue();
+      render();
+      flush();
+    } else {
+      // Not connected: this device's copy is the only copy.
+      items[id] = rec;
+      saveLocal();
+      render();
+    }
   }
 
   sectionsEl.addEventListener("change", function (ev) {
     var box = ev.target;
     if (!box || box.type !== "checkbox") { return; }
-    var id = box.getAttribute("data-id");
-    var rec = touch(id);
-    rec.done = box.checked;
-    render();
-    commit(id);
+    enqueue(box.getAttribute("data-id"), { done: box.checked });
   });
 
   var noteTimers = {};
@@ -1215,11 +1383,22 @@
     var id = field.getAttribute("data-id");
     if (noteTimers[id]) { window.clearTimeout(noteTimers[id]); }
     noteTimers[id] = window.setTimeout(function () {
-      var rec = touch(id);
-      rec.note = field.value.trim();
-      render();
-      commit(id);
-    }, 600);
+      enqueue(id, { note: field.value.trim() });
+    }, 700);
+  });
+
+  // A note still inside its debounce when the page closes would otherwise
+  // never be written at all.
+  window.addEventListener("pagehide", function () {
+    Object.keys(noteTimers).forEach(function (id) {
+      window.clearTimeout(noteTimers[id]);
+      var field = document.getElementById("note-" + id);
+      if (!field) { return; }
+      var current = effective(id).note || "";
+      if (field.value.trim() !== current) {
+        enqueue(id, { note: field.value.trim() });
+      }
+    });
   });
 
   var commentBtn = document.getElementById("comment-btn");
@@ -1228,21 +1407,24 @@
   commentBtn.addEventListener("click", function () {
     var body = commentText.value.trim();
     if (!body) { commentText.focus(); return; }
-    var entry = { body: body, author: who(), created_at: new Date().toISOString() };
+
+    var entry = {
+      id: uuid(),
+      body: body,
+      author: who(),
+      created_at: new Date().toISOString()
+    };
     commentText.value = "";
 
-    if (live && client) {
-      client.from(COMMENTS_TABLE).insert({ body: entry.body, author: entry.author })
-        .then(function (res) {
-          if (res.error) {
-            commentText.value = body;
-            setStatus("Couldn't post that — check your signal.", "is-local");
-          }
-        });
+    if (live) {
+      queuedComments.push(entry);
+      saveQueue();
+      renderComments();
+      flush();
     } else {
       comments.push(entry);
+      saveLocal();
       renderComments();
-      writeLocal();
     }
   });
 
@@ -1260,8 +1442,7 @@
 
     for (id in index) {
       if (!Object.prototype.hasOwnProperty.call(index, id)) { continue; }
-      var rec = items[id];
-      if (!rec) { continue; }
+      var rec = effective(id);
       if (rec.done) { doneIds.push(id); }
       if (rec.note) { noteIds.push(id); }
     }
@@ -1270,7 +1451,7 @@
     if (doneIds.length) {
       for (var a = 0; a < doneIds.length; a++) {
         var d = index[doneIds[a]];
-        var dr = items[doneIds[a]];
+        var dr = effective(doneIds[a]);
         lines.push("- " + d.room + " (" + d.floor + ", " + d.src + ") — " + d.action +
           (dr.updated_by ? "  [" + dr.updated_by + "]" : ""));
       }
@@ -1283,7 +1464,7 @@
     if (noteIds.length) {
       for (var b = 0; b < noteIds.length; b++) {
         var n = index[noteIds[b]];
-        var nr = items[noteIds[b]];
+        var nr = effective(noteIds[b]);
         lines.push("- " + n.room + " — " + n.action);
         lines.push("  " + nr.note + (nr.updated_by ? "  [" + nr.updated_by + "]" : ""));
       }
@@ -1291,11 +1472,12 @@
       lines.push("- none yet");
     }
 
-    if (comments.length) {
+    var allComments = comments.concat(queuedComments);
+    if (allComments.length) {
       lines.push("");
-      lines.push("COMMENTS (" + comments.length + ")");
-      for (var c = 0; c < comments.length; c++) {
-        lines.push("- " + (comments[c].author || "Someone") + ": " + comments[c].body);
+      lines.push("COMMENTS (" + allComments.length + ")");
+      for (var c = 0; c < allComments.length; c++) {
+        lines.push("- " + (allComments[c].author || "Someone") + ": " + allComments[c].body);
       }
     }
 
@@ -1326,11 +1508,31 @@
 
   /* ---- Boot ---- */
 
-  readLocal();
+  var localState = load(LOCAL_KEY, null);
+  if (localState && typeof localState === "object") {
+    items = localState.items && typeof localState.items === "object" ? localState.items : {};
+    comments = Object.prototype.toString.call(localState.comments) === "[object Array]"
+      ? localState.comments : [];
+  }
+
+  // Held separately: connecting replaces `items` with the server's copy, so
+  // the migration below needs this device's own work kept aside first.
+  var bootItems = items;
+  var bootComments = comments;
+
+  var queueState = load(QUEUE_KEY, null);
+  if (queueState && typeof queueState === "object") {
+    queued = queueState.items && typeof queueState.items === "object" ? queueState.items : {};
+    queuedComments = Object.prototype.toString.call(queueState.comments) === "[object Array]"
+      ? queueState.comments : [];
+    Object.keys(queued).forEach(function (id) { delete queued[id].inflight; });
+    queuedComments.forEach(function (e) { delete e.inflight; });
+  }
+
   render();
   renderComments();
 
-  function applySnagRow(rowData) {
+  function applyRow(rowData) {
     if (!rowData || !rowData.id) { return; }
     items[rowData.id] = {
       done: rowData.done === true,
@@ -1340,58 +1542,163 @@
     };
   }
 
-  function startLive() {
-    client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      realtime: { params: { eventsPerSecond: 5 } }
+  // Anything ticked on this device before it was connected is carried up
+  // once, rather than thrown away when the shared list takes over.
+  function migrateLocal() {
+    if (load(MIGRATED_KEY, false)) { return; }
+    var carried = 0;
+
+    Object.keys(bootItems).forEach(function (id) {
+      var rec = bootItems[id];
+      if (!index[id] || !rec) { return; }
+      if (rec.done === true || (rec.note && rec.note.length)) {
+        queued[id] = {
+          done: rec.done === true,
+          note: rec.note || "",
+          updated_by: rec.updated_by || who(),
+          updated_at: rec.updated_at || new Date().toISOString()
+        };
+        carried++;
+      }
     });
 
-    // The shared table is the truth; this device's copy was only the
-    // offline fallback.
-    items = {};
-    comments = [];
+    bootComments.forEach(function (c) {
+      if (!c || !c.body) { return; }
+      queuedComments.push({
+        id: c.id || uuid(),
+        body: c.body,
+        author: c.author || "Someone",
+        created_at: c.created_at || new Date().toISOString()
+      });
+      carried++;
+    });
+
+    store(MIGRATED_KEY, true);
+    if (carried) { saveQueue(); }
+  }
+
+  function refetch() {
+    if (!client) { return; }
 
     client.from(SNAGS_TABLE).select("*").then(function (res) {
       if (res.error) {
-        goLocal("Can't reach the shared list — saving on this device only");
+        goLocal("Can't reach the list — changes are held here and will send");
+        scheduleFlush();
         return;
       }
+
+      var wasLive = live;
+      var next = {};
+      for (var r = 0; r < res.data.length; r++) {
+        var row = res.data[r];
+        if (!row || !row.id) { continue; }
+        next[row.id] = {
+          done: row.done === true,
+          note: row.note || "",
+          updated_by: row.updated_by || "",
+          updated_at: row.updated_at || ""
+        };
+      }
+
+      // A reply can arrive older than something we already know — a write
+      // that landed while this request was in flight, or a realtime echo
+      // that beat it. Keep whichever copy is newer rather than letting a
+      // stale read undo it.
+      Object.keys(items).forEach(function (id) {
+        var mine = items[id];
+        var theirs = next[id];
+        if (!mine) { return; }
+        if (!theirs || (mine.updated_at || "") > (theirs.updated_at || "")) {
+          next[id] = mine;
+        }
+      });
+      items = next;
       live = true;
       document.getElementById("setup-notice").hidden = true;
-      for (var r = 0; r < res.data.length; r++) { applySnagRow(res.data[r]); }
+      if (!wasLive) { migrateLocal(); }
       render();
-      setStatus("Live — everyone sees this list update", "is-live");
+      renderComments();
+      flush();
+      if (pendingCount() === 0) {
+        setStatus("Live — everyone sees this list update", "is-live");
+      }
+    }, function () {
+      goLocal("Can't reach the list — changes are held here and will send");
+      scheduleFlush();
     });
 
     client.from(COMMENTS_TABLE).select("*").order("created_at", { ascending: true })
       .then(function (res) {
         if (res.error) { return; }
-        comments = res.data || [];
-        renderComments();
-      });
 
-    client.channel("castle-way-snags")
+        // Merge rather than replace: a comment posted while this request
+        // was in flight is not in the reply, and must not be dropped.
+        var seen = {};
+        var merged = [];
+        (res.data || []).concat(comments).forEach(function (c) {
+          if (!c || !c.id || seen[c.id]) { return; }
+          seen[c.id] = true;
+          merged.push(c);
+        });
+        merged.sort(function (x, y) {
+          return String(x.created_at || "").localeCompare(String(y.created_at || ""));
+        });
+        comments = merged;
+
+        // Drop any queued copy the server has now confirmed.
+        queuedComments = queuedComments.filter(function (q) {
+          return !comments.some(function (c) { return c.id === q.id; });
+        });
+        saveQueue();
+        renderComments();
+        renderUnsaved();
+      });
+  }
+
+  function subscribe() {
+    if (!client) { return; }
+
+    if (channel) {
+      try { client.removeChannel(channel); } catch (e) { /* ignore */ }
+      channel = null;
+    }
+
+    channel = client.channel("castle-way-snags")
       .on("postgres_changes",
         { event: "*", schema: "public", table: SNAGS_TABLE },
         function (payload) {
           if (payload.eventType === "DELETE") {
             if (payload.old && payload.old.id) { delete items[payload.old.id]; }
           } else {
-            applySnagRow(payload.new);
+            applyRow(payload.new);
           }
           render();
         })
       .on("postgres_changes",
         { event: "INSERT", schema: "public", table: COMMENTS_TABLE },
         function (payload) {
-          comments.push(payload.new);
+          var row = payload.new;
+          if (!row) { return; }
+          if (comments.some(function (c) { return c.id === row.id; })) { return; }
+          comments.push(row);
+          queuedComments = queuedComments.filter(function (q) { return q.id !== row.id; });
+          saveQueue();
           renderComments();
+          renderUnsaved();
         })
       .subscribe(function (status) {
         if (status === "SUBSCRIBED") {
           live = true;
-          setStatus("Live — everyone sees this list update", "is-live");
-        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          setStatus("Live updates dropped — reload to reconnect", "is-local");
+          flush();
+          if (pendingCount() === 0) {
+            setStatus("Live — everyone sees this list update", "is-live");
+          }
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          setStatus("Reconnecting… your changes are held here", "is-local");
+          window.setTimeout(function () {
+            subscribe();
+            refetch();
+          }, 5000);
         }
       });
   }
@@ -1399,15 +1706,35 @@
   if (!configured()) {
     goLocal();
   } else if (!window.supabase || !window.supabase.createClient) {
-    goLocal("Offline — saving on this device only");
+    goLocal("Offline — changes are held here and will send when you reconnect");
   } else {
     setStatus("Connecting…", "");
     try {
-      startLive();
+      client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        realtime: { params: { eventsPerSecond: 5 } }
+      });
+      refetch();
+      subscribe();
     } catch (e) {
-      goLocal("Can't reach the shared list — saving on this device only");
+      goLocal("Can't reach the list — changes are held here and will send");
     }
   }
+
+  // Coming back into signal, or back to the tab, is the moment to retry.
+  window.addEventListener("online", function () { retryDelay = 4000; flush(); });
+
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && live) { flush(); refetch(); }
+  });
+
+  // Last line of defence: don't let someone walk away from unsent work.
+  window.addEventListener("beforeunload", function (ev) {
+    if (live && pendingCount() > 0) {
+      ev.preventDefault();
+      ev.returnValue = "";
+      return "";
+    }
+  });
 })();
 </script>
 </body>

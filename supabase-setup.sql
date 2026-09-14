@@ -75,6 +75,24 @@ create trigger castle_way_comment_stamp
   before insert on public.castle_way_comments
   for each row execute function public.castle_way_comment_stamp();
 
+-- Same for snags: phones' clocks disagree, so the server decides when a
+-- line was last touched. The page shows its own time immediately and is
+-- corrected by the realtime echo a moment later.
+create or replace function public.castle_way_snag_stamp()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists castle_way_snag_stamp on public.castle_way_snags;
+create trigger castle_way_snag_stamp
+  before insert or update on public.castle_way_snags
+  for each row execute function public.castle_way_snag_stamp();
+
 -- ---------------------------------------------------------------------
 -- Realtime — this is what makes one contractor's tick appear on
 -- everyone else's phone.

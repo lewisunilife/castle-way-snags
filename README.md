@@ -47,16 +47,37 @@ Google Sheet shared with link editing. Each tick and note is stamped with
 whatever name the person typed in the box at the top, so there is a trail,
 but nothing verifies it.
 
+## How it protects the ticks
+
+- **Nothing is lost when the signal drops.** A tick or note is written to the
+  phone first, shown straight away, and retried until the server confirms it.
+  The row shows an amber edge and "saving..." until it lands, and the bar at
+  the top counts anything still outstanding. Closing the page mid-tick is
+  safe; it sends on the next visit. Trying to leave with work outstanding
+  prompts first.
+- **Your own change is never overwritten by an older copy** arriving from the
+  server, and a reply that turns up out of order is discarded in favour of
+  whichever copy is newer.
+- **Retried comments do not double-post** — each carries an id generated on
+  the device, so a retry after a reply that never arrived is recognised.
+- **Work ticked before the list was connected is carried up once**, not
+  discarded.
+- **Ticks cannot be deleted** by anyone using the page — the access rules
+  allow read, insert and update only.
+
 ## Updating the list
 
-Edit the `sections` array in `site/index.html` and push. Row keys are
-`<section>-<position>` (e.g. `joinery-7`), so adding to the end of a section is
-safe, but **inserting or reordering rows re-points existing ticks**. If you
-reorder, clear the table first:
+Edit the `sections` array in `site/index.html` and push. Row keys are derived
+from the row's own text (section, room, source, action), so **reordering rows
+or inserting new ones is safe** — existing ticks stay with their job.
 
-```sql
-truncate table public.castle_way_snags;
-```
+Rewording an action changes its key, which orphans that row's tick. That is
+deliberate: the job has changed, so it is no longer the thing that was ticked.
+If you reword something and want to keep the tick, re-tick it afterwards.
+
+Two rows that are identical in all four parts would share a key. Nothing in
+the current list does, and the page logs a console error if an edit ever
+introduces one.
 
 ## Starting a fresh round of works
 
