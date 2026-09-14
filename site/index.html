@@ -1044,10 +1044,12 @@
 
   <div id="view-studio" hidden>
     <h2>By studio</h2>
-    <p class="note-line">Every studio on the audit, with a line for each
-      thing outstanding. A studio moves down to Completed once all
-      <span id="studio-check-total">18</span> checks have passed and every
-      logged issue is marked done.</p>
+    <p class="note-line">All <span id="studio-total">257</span> studios in the
+      tower, with a line for each thing outstanding. Stelling&rsquo;s
+      <span id="studio-listed-total">37</span> come first, in their priority
+      order; the rest of the building follows. A studio moves down to
+      Completed once all <span id="studio-check-total">18</span> checks have
+      passed and every logged issue is marked done.</p>
     <div id="studio-list"></div>
     <p class="all-clear" id="studio-empty" hidden>No studios have been set up for
       auditing yet.</p>
@@ -2604,7 +2606,9 @@
      towards the nearest deadline first. Checked on import: 37 rooms, no
      repeats, priorities 1-37 unbroken, and every stated floor agrees with
      both the room number and the floor plans. */
-  var AUDIT_STUDIOS = [
+  /* The rooms Stelling are auditing, in the priority order they gave, with
+     the floor, room type and move-in date against each. */
+  var STELLING_LIST = [
     { room: "CW244", floor: "2nd Floor", type: "Luxury", movein: "Fri 18 Sep 2026" },
     { room: "CW302", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
     { room: "CW305", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
@@ -2644,10 +2648,37 @@
     { room: "CW205", floor: "2nd Floor", type: "Luxury Plus", movein: "" }
   ];
 
+  /* Every other room in the building follows them, so all 257 studios are on
+     the audit and a room nobody has been to is visible as exactly that.
+     EVERY_ROOM is the same building-wide list the MVHR sweep is built from,
+     so the two cannot drift apart. */
+  var AUDIT_STUDIOS = [];
   var STUDIO_BY_ROOM = {};
-  for (var sx = 0; sx < AUDIT_STUDIOS.length; sx++) {
+  var sx;
+
+  for (sx = 0; sx < STELLING_LIST.length; sx++) {
+    STELLING_LIST[sx].listed = true;
+    AUDIT_STUDIOS.push(STELLING_LIST[sx]);
+    STUDIO_BY_ROOM[STELLING_LIST[sx].room] = STELLING_LIST[sx];
+  }
+
+  for (sx = 0; sx < EVERY_ROOM.length; sx++) {
+    if (STUDIO_BY_ROOM[EVERY_ROOM[sx]]) { continue; }
+    var other = {
+      room: EVERY_ROOM[sx],
+      floor: floorOf(EVERY_ROOM[sx]),
+      type: "",
+      movein: "",
+      listed: false
+    };
+    AUDIT_STUDIOS.push(other);
+    STUDIO_BY_ROOM[other.room] = other;
+  }
+
+  var STELLING_COUNT = STELLING_LIST.length;
+
+  for (sx = 0; sx < AUDIT_STUDIOS.length; sx++) {
     AUDIT_STUDIOS[sx].priority = sx + 1;
-    STUDIO_BY_ROOM[AUDIT_STUDIOS[sx].room] = AUDIT_STUDIOS[sx];
   }
 
   var AUDIT_CHECKS = [
@@ -2873,6 +2904,17 @@
   var issueListEl = document.getElementById("issue-list");
   var issueEmptyEl = document.getElementById("issue-empty");
 
+  // Stelling's rooms lead with their priority; the rest of the building is
+  // named by its floor, because a priority number it was never given would
+  // be an invention.
+  function studioLabel(st) {
+    if (st.listed) {
+      return st.priority + ". " + st.room + " \u2014 " + st.type +
+        (st.movein ? ", in " + st.movein : "");
+    }
+    return st.room + (st.floor ? " \u2014 " + st.floor : "");
+  }
+
   function fillStudios() {
     if (!AUDIT_STUDIOS.length) {
       auditStudioEl.innerHTML = '<option value="">No studios set up yet</option>';
@@ -2882,22 +2924,27 @@
     var state = auditState();
     var issues = studioIssues();
     var todo = "";
+    var rest = "";
     var done = "";
 
     for (var i = 0; i < AUDIT_STUDIOS.length; i++) {
       var st = AUDIT_STUDIOS[i];
       var sum = studioSummary(st.room, state, issues);
       var opt = '<option value="' + esc(st.room) + '">' +
-        st.priority + ". " + esc(st.room) + " \u2014 " + esc(st.type) +
-        (st.movein ? ", in " + esc(st.movein) : "") + "</option>";
-      if (sum.complete) { done += opt; } else { todo += opt; }
+        esc(studioLabel(st)) + "</option>";
+      if (sum.complete) { done += opt; }
+      else if (st.listed) { todo += opt; }
+      else { rest += opt; }
     }
 
     // Finished studios drop out of the working list into their own group,
     // still reachable so a studio can be re-audited.
     var html = "";
     if (todo) {
-      html += '<optgroup label="Still to audit">' + todo + "</optgroup>";
+      html += '<optgroup label="Stelling\u2019s list">' + todo + "</optgroup>";
+    }
+    if (rest) {
+      html += '<optgroup label="Rest of the building">' + rest + "</optgroup>";
     }
     if (done) {
       html += '<optgroup label="Completed">' + done + "</optgroup>";
@@ -2986,11 +3033,14 @@
     auditProgressEl.textContent = "\u2014 " + (passed + failed) + " of " +
       AUDIT_CHECKS.length + " checked";
     var meta = STUDIO_BY_ROOM[auditStudio];
-    var line = meta
-      ? "Priority " + meta.priority + " of " + AUDIT_STUDIOS.length + " \u00b7 " +
-        meta.floor + " \u00b7 " + meta.type +
-        (meta.movein ? " \u00b7 moves in " + meta.movein : " \u00b7 no move-in date")
-      : "";
+    var line = "";
+    if (meta && meta.listed) {
+      line = "Priority " + meta.priority + " of " + STELLING_COUNT +
+        " on Stelling\u2019s list \u00b7 " + meta.floor + " \u00b7 " + meta.type +
+        (meta.movein ? " \u00b7 moves in " + meta.movein : " \u00b7 no move-in date");
+    } else if (meta) {
+      line = meta.floor + " \u00b7 not on Stelling\u2019s list";
+    }
     if (failed) {
       line += (line ? " \u2014 " : "") + failed +
         (failed === 1 ? " failure outstanding" : " failures outstanding");
@@ -3065,11 +3115,14 @@
     }
 
     var sm = STUDIO_BY_ROOM[room];
-    var meta = sm
-      ? "Priority " + sm.priority + " \u00b7 " + esc(sm.floor) + " \u00b7 " +
+    var meta = "";
+    if (sm && sm.listed) {
+      meta = "Priority " + sm.priority + " \u00b7 " + esc(sm.floor) + " \u00b7 " +
         esc(sm.type) + (sm.movein ? " \u00b7 moves in " + esc(sm.movein) : "") +
-        " \u00b7 "
-      : "";
+        " \u00b7 ";
+    } else if (sm && sm.floor) {
+      meta = esc(sm.floor) + " \u00b7 ";
+    }
 
     return '<div class="studio-card' + cls + '" data-room="' + esc(room) + '">' +
       "<h3>" + esc(room) + " \u2014 " + esc(head) + "</h3>" +
@@ -3115,25 +3168,39 @@
     });
 
     var openCards = "";
+    var restCards = "";
     var doneCards = "";
     var openCount = 0;
+    var restCount = 0;
     var doneCount = 0;
 
     for (i = 0; i < rooms.length; i++) {
       var sum = studioSummary(rooms[i], state, issues);
+      var sm = STUDIO_BY_ROOM[rooms[i]];
       if (sum.complete) {
         doneCount++;
         doneCards += studioCard(rooms[i], sum);
-      } else {
+      } else if (sm && sm.listed) {
         openCount++;
         openCards += studioCard(rooms[i], sum);
+      } else {
+        // The rest of the building, kept apart so Stelling's rooms are not
+        // buried under two hundred that nobody has been asked to audit.
+        restCount++;
+        restCards += studioCard(rooms[i], sum);
       }
     }
 
     var html = "";
     if (openCount) {
-      html += '<h3 class="studio-group" id="studio-open-head">Still to clear ' +
-        "\u2014 " + openCount + "</h3>" + openCards;
+      html += '<h3 class="studio-group" id="studio-open-head">' +
+        "Stelling\u2019s list \u2014 still to clear \u2014 " + openCount +
+        "</h3>" + openCards;
+    }
+    if (restCount) {
+      html += '<h3 class="studio-group" id="studio-other-head">' +
+        "Rest of the building \u2014 still to clear \u2014 " + restCount +
+        "</h3>" + restCards;
     }
     if (doneCount) {
       html += '<h3 class="studio-group" id="studio-done-head">Completed ' +
@@ -3306,6 +3373,8 @@
   render();
   renderComments();
   document.getElementById("studio-check-total").textContent = AUDIT_CHECKS.length;
+  document.getElementById("studio-total").textContent = AUDIT_STUDIOS.length;
+  document.getElementById("studio-listed-total").textContent = STELLING_COUNT;
   renderStudios();
   applyGate();
 

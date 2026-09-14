@@ -68,10 +68,16 @@ the studio, the check and the reason. Passing the check later takes the line
 away again. A fail left **Unassigned** shows in its own section at the foot of
 the trade view, so it is waiting to be given to someone rather than lost.
 
-**By studio** is public and lists every studio on the audit, not only the ones
-with something against them, so an un-started studio is visible as an
-un-started studio. Each card gives the priority, floor, room type, move-in
-date and how many of the checks are done, then a line per outstanding thing.
+**By studio** is public and lists all 257 studios in the tower, not only the
+ones with something against them, so an un-started studio is visible as an
+un-started studio. Each card gives the floor, how many of the checks are done
+and a line per outstanding thing; Stelling's rooms also carry their priority,
+room type and move-in date.
+
+The 37 rooms Stelling are auditing come first, in their priority order, and
+the rest of the building follows under its own heading so they are not buried
+under two hundred rooms nobody has been asked to audit. The studio picker in
+the audit log is grouped the same way.
 
 A studio moves down into **Completed** once all eighteen checks have passed
 and every logged issue is marked done. Completed studios stay on the page
@@ -87,13 +93,14 @@ Results are append-only: re-auditing a studio adds to the record rather than
 overwriting it, and the newest entry for a check is its status. Nothing is
 edited or deleted, which is the point of an audit trail.
 
-The 37 studios Stelling are auditing in Tower 1 are listed in priority
-order — nearest move-in first — with the floor, room type and move-in date
-showing against whichever is selected. **By studio** is sorted the same way,
-so the studio closest to being let is at the top.
+Stelling's 37 rooms are in `STELLING_LIST` in `site/index.html`, in the
+priority order they gave — nearest move-in first. Everything else comes from
+`EVERY_ROOM`, the same building-wide list the MVHR sweep is built from, so
+the audit and the MVHR tickets cannot drift apart: both cover the same 257
+rooms. Adding a room to the building means editing the floor layouts once.
 
-Studios come from `AUDIT_STUDIOS` in `site/index.html`; priority is the
-order of that array, so reordering it reorders the audit.
+To change Stelling's order, reorder `STELLING_LIST`; priority is that array's
+order, not a stored number, so it cannot fall out of step.
 
 ## Who is carrying each trade
 
