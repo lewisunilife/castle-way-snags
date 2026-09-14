@@ -598,20 +598,26 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<!-- Latest v2 rather than a pinned patch: the project uses the newer
+     sb_publishable_ key format, which predates some older builds. If this
+     fetch fails the script below retries from a second CDN. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 (function () {
   "use strict";
 
   /* ====================================================================
-     SUPABASE — fill these two in, then push.
-     Supabase dashboard -> Project Settings -> API.
-     The anon key is a public key and is meant to be readable here; the
-     service_role key is NOT — never paste that into this file.
+     SUPABASE — project "castle-way-snags".
+
+     This is the PUBLISHABLE key. It is designed to be readable here and
+     grants only what the access rules in supabase-setup.sql allow: read,
+     tick and note the snagging lines, read and add comments, nothing
+     else. The secret / service_role key must NEVER go in this file — it
+     bypasses every one of those rules and this page is public.
      ==================================================================== */
 
-  var SUPABASE_URL = "PASTE_YOUR_SUPABASE_URL_HERE";
-  var SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
+  var SUPABASE_URL = "https://jwlycjikdqxkcvccvwiy.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_W2tTMpsK91CmRRby3WHVDQ_Yw0QgnYP";
 
   var SNAGS_TABLE = "castle_way_snags";
   var COMMENTS_TABLE = "castle_way_comments";
@@ -1244,6 +1250,21 @@
       !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
   }
 
+  // The library comes from a CDN, and a phone on hotel wifi or a blocked
+  // network can fail to fetch it. Try a second source before giving up,
+  // so a CDN hiccup degrades to device-only rather than looking broken.
+  function withSupabase(done) {
+    if (window.supabase && window.supabase.createClient) { done(true); return; }
+
+    var el = document.createElement("script");
+    el.src = "https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js";
+    el.onload = function () {
+      done(!!(window.supabase && window.supabase.createClient));
+    };
+    el.onerror = function () { done(false); };
+    document.head.appendChild(el);
+  }
+
   function goLocal(reason) {
     live = false;
     setStatus(reason || "Saved on this device only — not shared", "is-local");
@@ -1705,19 +1726,23 @@
 
   if (!configured()) {
     goLocal();
-  } else if (!window.supabase || !window.supabase.createClient) {
-    goLocal("Offline — changes are held here and will send when you reconnect");
   } else {
     setStatus("Connecting…", "");
-    try {
-      client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        realtime: { params: { eventsPerSecond: 5 } }
-      });
-      refetch();
-      subscribe();
-    } catch (e) {
-      goLocal("Can't reach the list — changes are held here and will send");
-    }
+    withSupabase(function (ready) {
+      if (!ready) {
+        goLocal("Offline — changes are held here and will send when you reconnect");
+        return;
+      }
+      try {
+        client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          realtime: { params: { eventsPerSecond: 5 } }
+        });
+        refetch();
+        subscribe();
+      } catch (e) {
+        goLocal("Can't reach the list — changes are held here and will send");
+      }
+    });
   }
 
   // Coming back into signal, or back to the tab, is the moment to retry.
