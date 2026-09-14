@@ -226,7 +226,31 @@
 
   tr.total:hover td { background: var(--band); }
 
-  th.done-h { text-align: right; width: 58px; }
+  th.done-h { text-align: right; width: 74px; }
+
+  /* Tick a whole trade off at once. */
+  .sec-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  th.done-h .sec-all {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 3px;
+    color: var(--on-ink);
+    opacity: 0.85;
+  }
+
+  th.done-h .sec-all input { width: 14px; height: 14px; }
+
+  /* The table head is hidden on a phone, so the heading carries it there. */
+  .sec-all.on-phone { display: none; }
 
   td.done {
     border-left: 1px solid var(--rule);
@@ -475,6 +499,17 @@
     h1 { font-size: 22px; }
     h2 { font-size: 17px; margin: 34px 0 10px; }
     .sec-count { display: block; font-size: 13px; }
+
+    .sec-all.on-phone {
+      display: inline-flex;
+      margin-top: 8px;
+      padding: 7px 12px;
+      border: 1px solid var(--rule);
+      font-size: 13px;
+      gap: 8px;
+    }
+
+    .sec-all.on-phone input { width: 20px; height: 20px; }
 
     .bar { gap: 12px; padding: 12px 14px; }
 
@@ -1164,8 +1199,10 @@
   // walk-round sections are not summarised (their items are counted once,
   // under their trade), so they are absent from this map by design.
   var tradeKeyByTitle = {};
+  var sectionTitles = {};
   for (var t = 0; t < sections.length; t++) {
     tradeKeyByTitle[sections[t].title] = sections[t].key;
+    sectionTitles[sections[t].key] = sections[t].title;
   }
 
   function roomCells(tradeTitle, roomList) {
@@ -1214,10 +1251,16 @@
     var sec = sections[j];
     out +=
       "<h2>" + esc(sec.title) + " (" + sec.issues + " issues, " + sec.rooms + " rooms) " +
-      '<span class="sec-count" id="count-' + sec.key + '"></span></h2>' +
+      '<span class="sec-count" id="count-' + sec.key + '"></span>' +
+      '<label class="sec-all on-phone"><input type="checkbox" class="all-box"' +
+      ' data-section="' + sec.key + '"' +
+      ' aria-label="Tick every item under ' + esc(sec.title) + '"> Tick all</label>' +
+      "</h2>" +
       '<div class="scroller"><table><thead><tr>' +
       "<th>Room</th><th>Floor</th><th>" + esc(sec.col3) + "</th><th>Action</th>" +
-      '<th class="done-h">Done</th>' +
+      '<th class="done-h">Done<label class="sec-all"><input type="checkbox"' +
+      ' class="all-box" data-section="' + sec.key + '"' +
+      ' aria-label="Tick every item under ' + esc(sec.title) + '"> All</label></th>' +
       "</tr></thead><tbody>";
 
     for (var k = 0; k < sec.rows.length; k++) {
@@ -1461,6 +1504,13 @@
       var el = document.getElementById("count-" + sk);
       if (el) {
         el.textContent = "— " + secDone + " of " + ids.length + " ticked";
+      }
+
+      // all / some / none, on both copies of the control
+      var boxes = sectionsEl.querySelectorAll('.all-box[data-section="' + sk + '"]');
+      for (var ab = 0; ab < boxes.length; ab++) {
+        boxes[ab].checked = ids.length > 0 && secDone === ids.length;
+        boxes[ab].indeterminate = secDone > 0 && secDone < ids.length;
       }
     }
 
@@ -1710,7 +1760,7 @@
 
   /* ---- Edits ---- */
 
-  function enqueue(id, change) {
+  function recordFor(id, change) {
     var base = effective(id);
     var rec = {
       done: base.done === true,
@@ -1720,23 +1770,71 @@
     };
     if (Object.prototype.hasOwnProperty.call(change, "done")) { rec.done = change.done; }
     if (Object.prototype.hasOwnProperty.call(change, "note")) { rec.note = change.note; }
+    return rec;
+  }
+
+  // A whole trade is one write pass, not one render and flush per line.
+  function enqueueMany(ids, change) {
+    if (!ids.length) { return; }
+
+    for (var i = 0; i < ids.length; i++) {
+      var rec = recordFor(ids[i], change);
+      if (live) {
+        queued[ids[i]] = rec;
+      } else {
+        // Not connected: this device's copy is the only copy.
+        items[ids[i]] = rec;
+      }
+    }
 
     if (live) {
-      queued[id] = rec;
       saveQueue();
       render();
       flush();
     } else {
-      // Not connected: this device's copy is the only copy.
-      items[id] = rec;
       saveLocal();
       render();
     }
   }
 
+  function enqueue(id, change) {
+    enqueueMany([id], change);
+  }
+
+  // Ticking a whole trade off is one action. Unticking one throws away who
+  // did what and when, so that direction asks first.
+  function toggleSection(key, want, box) {
+    var ids = sectionRows[key] || [];
+    var changing = [];
+
+    for (var i = 0; i < ids.length; i++) {
+      if (effective(ids[i]).done !== want) { changing.push(ids[i]); }
+    }
+
+    if (!changing.length) { render(); return; }
+
+    if (!want && changing.length > 1) {
+      var title = sectionTitles[key] || "this trade";
+      if (!window.confirm("Untick all " + changing.length + " ticked items under " +
+          title + "? Who ticked them, and when, will be lost.")) {
+        if (box) { box.checked = true; }
+        render();
+        return;
+      }
+    }
+
+    enqueueMany(changing, { done: want });
+  }
+
   sectionsEl.addEventListener("change", function (ev) {
     var box = ev.target;
     if (!box || box.type !== "checkbox") { return; }
+
+    if (box.classList.contains("all-box")) {
+      toggleSection(box.getAttribute("data-section"), box.checked, box);
+      return;
+    }
+
     enqueue(box.getAttribute("data-id"), { done: box.checked });
   });
 
