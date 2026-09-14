@@ -68,16 +68,16 @@ but nothing verifies it.
 ## Updating the list
 
 Edit the `sections` array in `site/index.html` and push. Row keys are derived
-from the row's own text (section, room, source, action), so **reordering rows
-or inserting new ones is safe** — existing ticks stay with their job.
+from the room and the action, so **reordering rows, moving one between trades
+or inserting new ones is safe** — existing ticks and notes stay with their job.
 
-Rewording an action changes its key, which orphans that row's tick. That is
-deliberate: the job has changed, so it is no longer the thing that was ticked.
-If you reword something and want to keep the tick, re-tick it afterwards.
+Rewording an action changes its key, which orphans that job's ticks and notes.
+That is deliberate: the job has changed, so it is no longer the thing that was
+ticked. If you reword something and want to keep the history, re-tick it.
 
-Two rows that are identical in all four parts would share a key. Nothing in
-the current list does, and the page logs a console error if an edit ever
-introduces one.
+Two rows with the same room and the same action wording are treated as one
+job. That is what lets the same item be listed under more than one heading
+without being counted or ticked twice.
 
 ## Starting a fresh round of works
 
