@@ -68,22 +68,29 @@ the studio, the check and the reason. Passing the check later takes the line
 away again. A fail left **Unassigned** shows in its own section at the foot of
 the trade view, so it is waiting to be given to someone rather than lost.
 
-**By studio** is public and lists all 257 studios in the tower, not only the
-ones with something against them, so an un-started studio is visible as an
-un-started studio. Each card gives the floor, how many of the checks are done
-and a line per outstanding thing; Stelling's rooms also carry their priority,
-room type and move-in date.
+**By studio** is public and lists all 257 studios in the tower in room order,
+lowest to highest, with a line for everything still outstanding against each
+one — open jobs from the trade lists, audit failures, and logged issues, each
+naming its trade.
 
-The 37 rooms Stelling are auditing come first, in their priority order, and
-the rest of the building follows under its own heading so they are not buried
-under two hundred rooms nobody has been asked to audit. The studio picker in
-the audit log is grouped the same way.
+The 37 rooms on Stelling's list read **waiting to be audited** until their
+audit is started. The rest of the building has been audited already, so what
+shows against those rooms is simply what is left on the trade lists; a room
+with nothing left reads **no tickets outstanding**.
 
-A studio moves down into **Completed** once all eighteen checks have passed
-and every logged issue is marked done. Completed studios stay on the page
-rather than disappearing, and drop out of the working list in the audit's
-studio picker into a **Completed** group, so what is left to audit is what
-the picker shows.
+A count above the list gives the split — waiting, outstanding, clear — and
+**Hide rooms with nothing outstanding** drops the clear ones. The count still
+counts everything, so it stays true whatever is on screen; the choice is
+remembered on that device and changes nobody else's view.
+
+The audit log's studio picker offers only Stelling's 37, since the rest of the
+building does not need auditing. Finished ones move into a **Completed** group
+rather than leaving the list, so a room can be re-audited.
+
+One of Stelling's rooms is clear once all eighteen checks have passed, every
+logged issue is marked done, **and** nothing is left against it on the trade
+lists. A room in the rest of the building is clear once its trade list is
+clear.
 
 Logged issues are cleared with **Mark done** in the audit log. That is its
 own record rather than an edit, so the page still shows the issue was raised,

@@ -319,18 +319,13 @@
   .fail-what { }
   .fail-why { display: block; color: var(--muted); }
 
-  .studio-group {
-    margin: 24px 0 10px;
-    font-size: 12px;
+  .studio-counts {
+    margin: -6px 0 12px;
+    font-size: 13px;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    color: var(--muted);
-    border-bottom: 1px solid var(--rule);
-    padding-bottom: 6px;
   }
 
-  .studio-group:first-child { margin-top: 0; }
+  #view-studio .filter { margin-bottom: 14px; }
 
   .studio-card {
     border: 1px solid var(--rule);
@@ -340,7 +335,8 @@
 
   .studio-card.is-clear { border-color: var(--live); background: var(--done-bg); }
   .studio-card.is-clear h3 { color: var(--live); }
-  .studio-card.is-untouched { border-style: dashed; }
+  .studio-card.is-waiting { border-style: dashed; }
+  .studio-card li.ticket { border-left-color: var(--ink); }
 
   .studio-card h3 {
     margin: 0 0 8px;
@@ -1045,11 +1041,18 @@
   <div id="view-studio" hidden>
     <h2>By studio</h2>
     <p class="note-line">All <span id="studio-total">257</span> studios in the
-      tower, with a line for each thing outstanding. Stelling&rsquo;s
-      <span id="studio-listed-total">37</span> come first, in their priority
-      order; the rest of the building follows. A studio moves down to
-      Completed once all <span id="studio-check-total">18</span> checks have
-      passed and every logged issue is marked done.</p>
+      tower, in room order: everything still outstanding against each one on
+      the trade lists, plus anything its audit found. The
+      <span id="studio-listed-total">37</span> rooms Stelling have yet to
+      audit say so; the rest have been audited already, so what is shown
+      against them is what is left to do. A room reads <strong>no tickets
+      outstanding</strong> once there is nothing against it &mdash; for
+      Stelling&rsquo;s rooms, once all <span id="studio-check-total">18</span>
+      checks have passed as well.</p>
+    <p class="studio-counts" id="studio-counts"></p>
+    <label class="filter" for="hide-clear">
+      <input type="checkbox" id="hide-clear"> Hide rooms with nothing outstanding
+    </label>
     <div id="studio-list"></div>
     <p class="all-clear" id="studio-empty" hidden>No studios have been set up for
       auditing yet.</p>
@@ -1512,6 +1515,7 @@
   var NAME_KEY = "cw-tower1-name";
   var COMPANY_KEY = "cw-tower1-company";
   var HIDE_DONE_KEY = "cw-tower1-hide-done";
+  var HIDE_CLEAR_KEY = "cw-tower1-hide-clear";
   var LOCAL_KEY = "cw-tower1-snags-local-v2";
   var QUEUE_KEY = "cw-tower1-snags-queue-v2";
   var MIGRATED_KEY = "cw-tower1-snags-migrated-v2";
@@ -1529,6 +1533,7 @@
   var occurrences = {};    // job key -> the DOM ids showing it
   var sectionRows = {};    // section key -> job keys it lists
   var roomIndex = {};
+  var roomJobs = {};       // room -> the job keys listed against it
   var total = 0;
   var retryTimer = null;
   var retryDelay = 4000;
@@ -1737,8 +1742,14 @@
       var domId = sec.key + "-" + k;
 
       if (!index[id]) {
-        index[id] = { room: row[0], floor: floor, action: row[2] };
+        index[id] = { room: row[0], floor: floor, action: row[2], trades: [] };
         total++;
+        if (!roomJobs[row[0]]) { roomJobs[row[0]] = []; }
+        roomJobs[row[0]].push(id);
+      }
+      // A job listed under more than one heading belongs to each of them.
+      if (index[id].trades.indexOf(sec.key) === -1) {
+        index[id].trades.push(sec.key);
       }
 
       if (!occurrences[id]) { occurrences[id] = []; }
@@ -2088,6 +2099,7 @@
     allClearEl.hidden = !(hideDone && !anyVisible);
 
     renderAuditFails();
+    renderStudios();
     renderSummary();
     progressEl.textContent = doneCount + " of " + total + " items ticked";
     renderUnsaved();
@@ -2824,8 +2836,24 @@
     return out;
   }
 
-  // Everything the two views need to know about one studio: how much has
-  // been checked, what is still outstanding, and whether it is finished.
+  function roomTickets(room) {
+    var ids = roomJobs[room] || [];
+    var out = [];
+    for (var i = 0; i < ids.length; i++) {
+      var rec = effective(ids[i]);
+      if (rec && rec.done === true) { continue; }
+      out.push(ids[i]);
+    }
+    return out;
+  }
+
+  // Everything the two views need to know about one studio: what is still
+  // open against it on the trade lists, what the audit found, and whether
+  // there is anything left to do at all.
+  //
+  // Only the rooms on Stelling's list are waiting for an audit. The rest of
+  // the building has been audited already, so what is outstanding there is
+  // whatever is still ticked off on the trade lists.
   function studioSummary(room, state, issues) {
     var checks = (state || auditState())[room] || {};
     var fails = [];
@@ -2845,12 +2873,24 @@
       if (!logged[i].done) { open.push(logged[i]); }
     }
 
+    var tickets = roomTickets(room);
+    var sm = STUDIO_BY_ROOM[room];
+    var listed = !!(sm && sm.listed);
+    var outstanding = fails.length + open.length + tickets.length;
+    var awaiting = listed && checked === 0;
+
     return {
+      listed: listed,
       checked: checked,
       fails: fails,
       open: open,
-      outstanding: fails.length + open.length,
-      complete: checked === AUDIT_CHECKS.length && !fails.length && !open.length
+      tickets: tickets,
+      outstanding: outstanding,
+      // Stelling's rooms are not finished until their audit is;
+      // the rest are finished when nothing is left against them.
+      awaiting: awaiting,
+      complete: !awaiting && !outstanding &&
+        (!listed || checked === AUDIT_CHECKS.length)
     };
   }
 
@@ -2916,42 +2956,40 @@
   }
 
   function fillStudios() {
-    if (!AUDIT_STUDIOS.length) {
+    if (!STELLING_LIST.length) {
       auditStudioEl.innerHTML = '<option value="">No studios set up yet</option>';
       auditStudioEl.disabled = true;
       return;
     }
+    // Only the rooms Stelling are auditing. The rest of the building has
+    // been audited already, so putting it here would be two hundred rooms
+    // to scroll past on the way to the one they are standing in.
     var state = auditState();
     var issues = studioIssues();
     var todo = "";
-    var rest = "";
     var done = "";
 
-    for (var i = 0; i < AUDIT_STUDIOS.length; i++) {
-      var st = AUDIT_STUDIOS[i];
+    for (var i = 0; i < STELLING_LIST.length; i++) {
+      var st = STELLING_LIST[i];
       var sum = studioSummary(st.room, state, issues);
       var opt = '<option value="' + esc(st.room) + '">' +
         esc(studioLabel(st)) + "</option>";
-      if (sum.complete) { done += opt; }
-      else if (st.listed) { todo += opt; }
-      else { rest += opt; }
+      if (sum.complete) { done += opt; } else { todo += opt; }
     }
 
     // Finished studios drop out of the working list into their own group,
     // still reachable so a studio can be re-audited.
     var html = "";
     if (todo) {
-      html += '<optgroup label="Stelling\u2019s list">' + todo + "</optgroup>";
-    }
-    if (rest) {
-      html += '<optgroup label="Rest of the building">' + rest + "</optgroup>";
+      html += '<optgroup label="Still to audit">' + todo + "</optgroup>";
     }
     if (done) {
       html += '<optgroup label="Completed">' + done + "</optgroup>";
     }
     auditStudioEl.innerHTML = html;
     auditStudioEl.disabled = false;
-    if (!STUDIO_BY_ROOM[auditStudio]) { auditStudio = AUDIT_STUDIOS[0].room; }
+    var chosen = STUDIO_BY_ROOM[auditStudio];
+    if (!chosen || !chosen.listed) { auditStudio = STELLING_LIST[0].room; }
     auditStudioEl.value = auditStudio;
   }
 
@@ -3080,6 +3118,7 @@
 
   var studioListEl = document.getElementById("studio-list");
   var studioEmptyEl = document.getElementById("studio-empty");
+  var studioCountsEl = document.getElementById("studio-counts");
 
   function studioCard(room, sum) {
     var items = "";
@@ -3094,6 +3133,18 @@
         (f.st.by ? " \u00b7 " + esc(f.st.by) : "") + "</span></li>";
     }
 
+    // Whatever is still open on the trade lists for this room, named the
+    // same way it is named there.
+    for (i = 0; i < sum.tickets.length; i++) {
+      var job = index[sum.tickets[i]] || {};
+      var names = [];
+      for (var t = 0; t < (job.trades || []).length; t++) {
+        names.push(tradeName(job.trades[t]));
+      }
+      items += '<li class="ticket">' + esc(job.action || "") +
+        '<span class="note-who">' + esc(names.join(" / ")) + "</span></li>";
+    }
+
     for (i = 0; i < sum.open.length; i++) {
       items += '<li class="logged">' + esc(sum.open[i].body || "") +
         '<span class="note-who">Logged' +
@@ -3102,16 +3153,17 @@
 
     var head;
     var cls = "";
-    if (sum.complete) {
-      head = "complete";
+    if (sum.awaiting) {
+      head = "waiting to be audited" +
+        (sum.outstanding ? ", " + sum.outstanding + " outstanding" : "");
+      cls = " is-waiting";
+    } else if (sum.complete) {
+      head = sum.listed ? "audited, nothing outstanding" : "no tickets outstanding";
       cls = " is-clear";
     } else if (sum.outstanding) {
       head = sum.outstanding + " outstanding";
-    } else if (!sum.checked) {
-      head = "not audited yet";
-      cls = " is-untouched";
     } else {
-      head = "nothing outstanding so far";
+      head = "audit in progress, nothing outstanding";
     }
 
     var sm = STUDIO_BY_ROOM[room];
@@ -3124,17 +3176,31 @@
       meta = esc(sm.floor) + " \u00b7 ";
     }
 
+    var progress = (sum.listed || sum.checked)
+      ? sum.checked + " of " + AUDIT_CHECKS.length + " checks done"
+      : "audited";
+
     return '<div class="studio-card' + cls + '" data-room="' + esc(room) + '">' +
       "<h3>" + esc(room) + " \u2014 " + esc(head) + "</h3>" +
-      '<p class="studio-meta">' + meta + sum.checked + " of " +
-      AUDIT_CHECKS.length + " checks done</p>" +
+      '<p class="studio-meta">' + meta + progress + "</p>" +
       (items ? "<ul>" + items + "</ul>" : "") + "</div>";
   }
 
   // Every studio on the audit shows here, not just the ones with something
   // against them: a studio with nothing on it is a fact worth seeing. Once
   // it is finished it drops out of the working list into Completed.
+  var studioViewOn = false;
+  var hideClear = false;
+
+  // Every studio in the tower, in room order, lowest to highest. No
+  // priority ordering: on site people work from the room number, and
+  // Stelling's own order is already on their rooms and in the audit picker.
   function renderStudios() {
+    // Two hundred and fifty-seven cards is not free, and ticking a job on
+    // the trade list changes them all. Build them when they are being
+    // looked at, not on every tick behind a hidden view.
+    if (!studioViewOn) { return; }
+
     var state = auditState();
     var issues = studioIssues();
     var rooms = [];
@@ -3156,59 +3222,46 @@
     for (k in issues) {
       if (Object.prototype.hasOwnProperty.call(issues, k) && !seen[k]) { extra[k] = true; }
     }
-    var extras = Object.keys(extra).sort();
+    var extras = Object.keys(extra);
     for (i = 0; i < extras.length; i++) { rooms.push(extras[i]); }
 
-    // Nearest move-in first, so what is most urgent is at the top.
-    rooms.sort(function (a, b) {
-      var pa = STUDIO_BY_ROOM[a] ? STUDIO_BY_ROOM[a].priority : 9999;
-      var pb = STUDIO_BY_ROOM[b] ? STUDIO_BY_ROOM[b].priority : 9999;
-      if (pa !== pb) { return pa - pb; }
-      return a.localeCompare(b);
-    });
+    // Room numbers are CW + three digits + an optional letter, so plain
+    // string order is room order.
+    rooms.sort(function (a, b) { return a < b ? -1 : (a > b ? 1 : 0); });
 
-    var openCards = "";
-    var restCards = "";
-    var doneCards = "";
-    var openCount = 0;
-    var restCount = 0;
-    var doneCount = 0;
+    var html = "";
+    var waiting = 0;
+    var open = 0;
+    var clear = 0;
+    var shown = 0;
 
     for (i = 0; i < rooms.length; i++) {
       var sum = studioSummary(rooms[i], state, issues);
-      var sm = STUDIO_BY_ROOM[rooms[i]];
-      if (sum.complete) {
-        doneCount++;
-        doneCards += studioCard(rooms[i], sum);
-      } else if (sm && sm.listed) {
-        openCount++;
-        openCards += studioCard(rooms[i], sum);
-      } else {
-        // The rest of the building, kept apart so Stelling's rooms are not
-        // buried under two hundred that nobody has been asked to audit.
-        restCount++;
-        restCards += studioCard(rooms[i], sum);
-      }
+      if (sum.awaiting) { waiting++; }
+      else if (sum.complete) { clear++; }
+      else { open++; }
+
+      if (hideClear && sum.complete) { continue; }
+      shown++;
+      html += studioCard(rooms[i], sum);
     }
 
-    var html = "";
-    if (openCount) {
-      html += '<h3 class="studio-group" id="studio-open-head">' +
-        "Stelling\u2019s list \u2014 still to clear \u2014 " + openCount +
-        "</h3>" + openCards;
-    }
-    if (restCount) {
-      html += '<h3 class="studio-group" id="studio-other-head">' +
-        "Rest of the building \u2014 still to clear \u2014 " + restCount +
-        "</h3>" + restCards;
-    }
-    if (doneCount) {
-      html += '<h3 class="studio-group" id="studio-done-head">Completed ' +
-        "\u2014 " + doneCount + "</h3>" + doneCards;
-    }
+    var counts = [];
+    if (waiting) { counts.push(waiting + " waiting to be audited"); }
+    if (open) { counts.push(open + " with something outstanding"); }
+    if (clear) { counts.push(clear + " with nothing outstanding"); }
+    studioCountsEl.textContent = counts.join(" \u00b7 ");
 
     studioListEl.innerHTML = html;
-    studioEmptyEl.hidden = html !== "";
+    if (!rooms.length) {
+      studioEmptyEl.textContent = "No studios have been set up for auditing yet.";
+      studioEmptyEl.hidden = false;
+    } else if (!shown) {
+      studioEmptyEl.textContent = "Nothing outstanding against any studio.";
+      studioEmptyEl.hidden = false;
+    } else {
+      studioEmptyEl.hidden = true;
+    }
   }
 
   /* ---- Wiring ---- */
@@ -3221,6 +3274,7 @@
     document.getElementById("view-trade").hidden = name !== "trade";
     document.getElementById("view-studio").hidden = name !== "studio";
     document.getElementById("view-audit").hidden = name !== "audit";
+    studioViewOn = name === "studio";
     if (name === "studio") { renderStudios(); }
     if (name === "audit") {
       if (auditIn) { fillStudios(); }
@@ -3333,6 +3387,16 @@
     if (!btn || !btn.classList || !btn.classList.contains("issue-done")) { return; }
     var id = btn.getAttribute("data-issue");
     if (id) { setIssueDone(id); }
+  });
+
+  var hideClearEl = document.getElementById("hide-clear");
+  hideClear = load(HIDE_CLEAR_KEY, false) === true;
+  hideClearEl.checked = hideClear;
+
+  hideClearEl.addEventListener("change", function () {
+    hideClear = hideClearEl.checked;
+    store(HIDE_CLEAR_KEY, hideClear);
+    renderStudios();
   });
 
   document.getElementById("issue-add").addEventListener("click", function () {
