@@ -981,18 +981,23 @@
     });
   }
 
-  // Row keys come from the row's own content, not its position, so
-  // reordering or inserting rows never re-points an existing tick at a
-  // different job. (Rewording a row does orphan its tick — the intended
-  // trade: the job itself changed.)
-  function rowKey(sectionKey, room, src, action) {
-    var str = sectionKey + "|" + room + "|" + src + "|" + action;
+  // A key identifies a JOB, not a line on the page. 22 jobs are listed
+  // twice — once in a walk-round list, once under their trade — and room
+  // plus action is what makes those two lines the same job. Keying on
+  // that means ticking either one ticks the job everywhere it appears,
+  // and 130 lines resolve to the 108 issues the summary totals.
+  //
+  // The key comes from content rather than position, so reordering or
+  // inserting rows never re-points an existing tick. Rewording an action
+  // does orphan its tick — the intended trade: the job itself changed.
+  function rowKey(room, action) {
+    var str = room + "|" + action;
     var h = 0x811c9dc5;
     for (var i = 0; i < str.length; i++) {
       h ^= str.charCodeAt(i);
       h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
     }
-    return sectionKey + "-" + h.toString(36);
+    return room.toLowerCase() + "-" + h.toString(36);
   }
 
   function uuid() {
@@ -1032,7 +1037,9 @@
   var client = null;
   var live = false;
   var channel = null;
-  var index = {};
+  var index = {};          // job key -> {room, floor, action}
+  var occurrences = {};    // job key -> the DOM ids showing it
+  var sectionRows = {};    // section key -> job keys it lists
   var roomIndex = {};
   var total = 0;
   var retryTimer = null;
@@ -1181,44 +1188,43 @@
 
     for (var k = 0; k < sec.rows.length; k++) {
       var row = sec.rows[k];
-      var id = rowKey(sec.key, row[0], row[1], row[2]);
+      var id = rowKey(row[0], row[2]);
       var floor = floorOf(row[0]);
 
-      // Two rows sharing a key would silently share a tick. Nothing in the
-      // current list does; this makes a future edit that introduces one
-      // loud rather than quiet.
-      if (index[id] && window.console) {
-        console.error("Duplicate row key", id, row);
+      // One job, but it may be printed on two lines of the page, so the
+      // DOM needs its own unique id per line while the data key stays
+      // shared.
+      var domId = sec.key + "-" + k;
+
+      if (!index[id]) {
+        index[id] = { room: row[0], floor: floor, action: row[2] };
+        total++;
       }
 
-      index[id] = {
-        key: sec.key,
-        section: sec.title,
-        room: row[0],
-        floor: floor,
-        src: row[1],
-        action: row[2]
-      };
-      total++;
+      if (!occurrences[id]) { occurrences[id] = []; }
+      occurrences[id].push(domId);
 
-      // Every line for this trade in this room, so the summary can cross
+      if (!sectionRows[sec.key]) { sectionRows[sec.key] = []; }
+      sectionRows[sec.key].push(id);
+
+      // Every job this trade has in this room, so the summary can cross
       // the room off once the last of them is ticked.
       if (!roomIndex[sec.key]) { roomIndex[sec.key] = {}; }
       if (!roomIndex[sec.key][row[0]]) { roomIndex[sec.key][row[0]] = []; }
       roomIndex[sec.key][row[0]].push(id);
 
       out +=
-        '<tr id="row-' + id + '">' +
+        '<tr id="row-' + domId + '">' +
         '<td class="room">' + esc(row[0]) + "</td>" +
         '<td class="floor">' + esc(floor) + "</td>" +
         '<td class="src">' + esc(row[1]) + "</td>" +
         '<td class="action"><span class="action-text">' + esc(row[2]) + "</span>" +
-        '<input class="note-field" type="text" id="note-' + id + '" data-id="' + id + '"' +
+        '<input class="note-field" type="text" id="note-' + domId + '" data-id="' + id + '"' +
         ' placeholder="Add a note"' +
         ' aria-label="Note for ' + esc(row[0]) + " " + esc(row[2]) + '">' +
-        '<span class="by" id="by-' + id + '"></span></td>' +
-        '<td class="done"><label for="tick-' + id + '">' +
-        '<input type="checkbox" id="tick-' + id + '" data-id="' + id + '"' +
+        '<span class="by" id="by-' + domId + '"></span></td>' +
+        '<td class="done"><label for="tick-' + domId + '">' +
+        '<input type="checkbox" id="tick-' + domId + '" data-id="' + id + '"' +
         ' aria-label="Mark ' + esc(row[0]) + " " + esc(row[2]) + ' as done">' +
         "</label></td>" +
         "</tr>";
@@ -1257,60 +1263,60 @@
 
   function render() {
     var doneCount = 0;
-    var perSection = {};
     var id;
 
     for (id in index) {
       if (!Object.prototype.hasOwnProperty.call(index, id)) { continue; }
 
-      var meta = index[id];
       var rec = effective(id);
       var isDone = rec.done === true;
       var note = typeof rec.note === "string" ? rec.note : "";
       var isPending = Object.prototype.hasOwnProperty.call(queued, id);
 
-      if (!perSection[meta.key]) { perSection[meta.key] = { done: 0, total: 0 }; }
-      perSection[meta.key].total++;
+      if (isDone) { doneCount++; }
 
-      if (isDone) {
-        doneCount++;
-        perSection[meta.key].done++;
+      var stamp = "";
+      var by = rec.updated_by || "";
+      if (by && (isDone || note)) {
+        stamp = (isDone ? "Ticked by " : "Updated by ") + by;
+        var when = shortDate(rec.updated_at);
+        if (when) { stamp += " · " + when; }
+        if (isPending && live) { stamp += " · saving…"; }
       }
 
-      var rowEl = document.getElementById("row-" + id);
-      var tickEl = document.getElementById("tick-" + id);
-      var noteEl = document.getElementById("note-" + id);
-      var byEl = document.getElementById("by-" + id);
+      // A job listed under both a walk-round and its trade shows on two
+      // lines; both have to move together.
+      var where = occurrences[id] || [];
+      for (var w = 0; w < where.length; w++) {
+        var domId = where[w];
+        var rowEl = document.getElementById("row-" + domId);
+        var tickEl = document.getElementById("tick-" + domId);
+        var noteEl = document.getElementById("note-" + domId);
+        var byEl = document.getElementById("by-" + domId);
 
-      if (tickEl && tickEl.checked !== isDone) { tickEl.checked = isDone; }
-      if (rowEl) {
-        rowEl.classList.toggle("ticked", isDone);
-        rowEl.classList.toggle("unsaved", isPending && live);
-      }
-
-      // Never yank text out from under someone mid-sentence.
-      if (noteEl && document.activeElement !== noteEl && noteEl.value !== note) {
-        noteEl.value = note;
-      }
-
-      if (byEl) {
-        var stamp = "";
-        var by = rec.updated_by || "";
-        if (by && (isDone || note)) {
-          stamp = (isDone ? "Ticked by " : "Updated by ") + by;
-          var when = shortDate(rec.updated_at);
-          if (when) { stamp += " · " + when; }
-          if (isPending && live) { stamp += " · saving…"; }
+        if (tickEl && tickEl.checked !== isDone) { tickEl.checked = isDone; }
+        if (rowEl) {
+          rowEl.classList.toggle("ticked", isDone);
+          rowEl.classList.toggle("unsaved", isPending && live);
         }
-        byEl.textContent = stamp;
+        // Never yank text out from under someone mid-sentence.
+        if (noteEl && document.activeElement !== noteEl && noteEl.value !== note) {
+          noteEl.value = note;
+        }
+        if (byEl) { byEl.textContent = stamp; }
       }
     }
 
-    for (var sk in perSection) {
-      if (!Object.prototype.hasOwnProperty.call(perSection, sk)) { continue; }
+    for (var sk in sectionRows) {
+      if (!Object.prototype.hasOwnProperty.call(sectionRows, sk)) { continue; }
+      var ids = sectionRows[sk];
+      var secDone = 0;
+      for (var q = 0; q < ids.length; q++) {
+        if (effective(ids[q]).done === true) { secDone++; }
+      }
       var el = document.getElementById("count-" + sk);
       if (el) {
-        el.textContent = "— " + perSection[sk].done + " of " + perSection[sk].total + " ticked";
+        el.textContent = "— " + secDone + " of " + ids.length + " ticked";
       }
     }
 
@@ -1549,18 +1555,21 @@
     var field = ev.target;
     if (!field || !field.classList.contains("note-field")) { return; }
     var id = field.getAttribute("data-id");
-    if (noteTimers[id]) { window.clearTimeout(noteTimers[id]); }
-    noteTimers[id] = window.setTimeout(function () {
-      enqueue(id, { note: field.value.trim() });
-    }, 700);
+    if (noteTimers[id]) { window.clearTimeout(noteTimers[id].timer); }
+    noteTimers[id] = {
+      el: field,
+      timer: window.setTimeout(function () {
+        enqueue(id, { note: field.value.trim() });
+      }, 700)
+    };
   });
 
   // A note still inside its debounce when the page closes would otherwise
   // never be written at all.
   window.addEventListener("pagehide", function () {
     Object.keys(noteTimers).forEach(function (id) {
-      window.clearTimeout(noteTimers[id]);
-      var field = document.getElementById("note-" + id);
+      window.clearTimeout(noteTimers[id].timer);
+      var field = noteTimers[id].el;
       if (!field) { return; }
       var current = effective(id).note || "";
       if (field.value.trim() !== current) {
@@ -1620,7 +1629,7 @@
       for (var a = 0; a < doneIds.length; a++) {
         var d = index[doneIds[a]];
         var dr = effective(doneIds[a]);
-        lines.push("- " + d.room + " (" + d.floor + ", " + d.src + ") — " + d.action +
+        lines.push("- " + d.room + " (" + d.floor + ") — " + d.action +
           (dr.updated_by ? "  [" + dr.updated_by + "]" : ""));
       }
     } else {
