@@ -94,12 +94,31 @@ create trigger castle_way_snag_stamp
   for each row execute function public.castle_way_snag_stamp();
 
 -- ---------------------------------------------------------------------
+-- Table privileges.
+--
+-- RLS above decides which ROWS a caller may touch; these decide which
+-- STATEMENTS it may run at all. Supabase's default privileges usually
+-- grant these automatically, but spelling them out means this script
+-- produces the same result on a project where they have been changed.
+-- No delete is granted to anon, so no contractor can remove a line even
+-- if a policy were loosened later.
+-- ---------------------------------------------------------------------
+
+grant usage on schema public to anon;
+grant select, insert, update on public.castle_way_snags to anon;
+grant select, insert on public.castle_way_comments to anon;
+
+-- ---------------------------------------------------------------------
 -- Realtime — this is what makes one contractor's tick appear on
 -- everyone else's phone.
 -- ---------------------------------------------------------------------
 
 do $$
 begin
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    create publication supabase_realtime;
+  end if;
+
   begin
     alter publication supabase_realtime add table public.castle_way_snags;
   exception when duplicate_object then
