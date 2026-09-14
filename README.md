@@ -83,6 +83,13 @@ type and Stelling priority. **Order by** switches between room number and
 move-in date, soonest arrival first; rooms with no date given go to the end
 rather than the front.
 
+In move-in date order the rooms are gathered under a collapsible header per
+date, showing that day's room count and how many still have something against
+them, so a day's arrivals open and shut as one. Dated headers start open and
+the undated pile starts shut, since it is every room with no arrival booked;
+**Expand all dates** and **Collapse all dates** move the lot, and whatever is
+left open is remembered on that device.
+
 A count above the list gives the split — waiting, outstanding, clear. Three
 filters narrow it:
 

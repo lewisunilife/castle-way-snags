@@ -376,6 +376,41 @@
 
   #trade-boxes input { width: 18px; height: 18px; flex: none; }
 
+  .date-group { margin-bottom: 16px; }
+
+  .date-group > summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 12px;
+    min-height: 44px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--on-ink);
+    background: var(--ink);
+  }
+
+  .date-group > summary::-webkit-details-marker { display: none; }
+  .date-group > summary::before { content: "\25B8"; font-size: 11px; }
+  .date-group[open] > summary::before { content: "\25BE"; }
+  .date-group > summary .group-when { flex: 1 1 auto; }
+
+  .date-group > summary .group-count {
+    font-weight: 400;
+    font-size: 12.5px;
+    text-align: right;
+  }
+
+  .date-group .group-body { padding-top: 12px; }
+
+  .group-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
   .studio-filtered {
     margin: 0 0 12px;
     font-size: 12.5px;
@@ -1124,6 +1159,10 @@
         <input type="checkbox" id="hide-ground"> Hide ground floor
       </label>
     </div>
+    <div class="group-actions" id="group-actions" hidden>
+      <button type="button" class="secondary" id="dates-open">Expand all dates</button>
+      <button type="button" class="secondary" id="dates-shut">Collapse all dates</button>
+    </div>
     <details class="trade-filter">
       <summary id="trade-filter-summary">Filter tasks by trade</summary>
       <div id="trade-boxes"></div>
@@ -1595,6 +1634,7 @@
   var HIDE_GROUND_KEY = "cw-tower1-hide-ground";
   var STUDIO_SORT_KEY = "cw-tower1-studio-sort";
   var TRADE_OFF_KEY = "cw-tower1-trades-off";
+  var DATE_OPEN_KEY = "cw-tower1-dates-open";
   var LOCAL_KEY = "cw-tower1-snags-local-v2";
   var QUEUE_KEY = "cw-tower1-snags-queue-v2";
   var MIGRATED_KEY = "cw-tower1-snags-migrated-v2";
@@ -3220,6 +3260,7 @@
   var studioEmptyEl = document.getElementById("studio-empty");
   var studioCountsEl = document.getElementById("studio-counts");
   var studioFilteredEl = document.getElementById("studio-filtered");
+  var groupActionsEl = document.getElementById("group-actions");
 
   function studioCard(room, sum) {
     var items = "";
@@ -3288,10 +3329,19 @@
   // Every studio on the audit shows here, not just the ones with something
   // against them: a studio with nothing on it is a fact worth seeing. Once
   // it is finished it drops out of the working list into Completed.
+  function onDateToggle(ev) {
+    var box = ev.currentTarget;
+    var key = box.getAttribute("data-date");
+    if (!key) { return; }
+    dateOpen[key] = box.open;
+    store(DATE_OPEN_KEY, dateOpen);
+  }
+
   var studioViewOn = false;
   var hideClear = false;
   var hideGround = false;
   var studioSort = "room";
+  var dateOpen = {};   // date key -> open, where it differs from the default
   var tradeOff = {};   // trade key -> hidden from the by-studio view
 
   function tradeHidden(key) {
@@ -3368,6 +3418,20 @@
     var clear = 0;
     var shown = 0;
 
+    // In date order the rooms are gathered under the day they are let, so
+    // a week's arrivals can be opened or shut as one.
+    var byDate = studioSort === "movein";
+    var groups = [];
+    var groupBy = {};
+
+    function group(key, label) {
+      if (!groupBy[key]) {
+        groupBy[key] = { key: key, label: label, cards: "", rooms: 0, out: 0 };
+        groups.push(groupBy[key]);
+      }
+      return groupBy[key];
+    }
+
     for (i = 0; i < rooms.length; i++) {
       var room = rooms[i];
       if (hideGround && room.charAt(2) === "0") { continue; }
@@ -3379,8 +3443,40 @@
 
       if (hideClear && sum.complete) { continue; }
       shown++;
-      html += studioCard(room, sum);
+
+      if (!byDate) {
+        html += studioCard(room, sum);
+        continue;
+      }
+
+      var sm = STUDIO_BY_ROOM[room];
+      var g = group((sm && sm.moveinKey) || "none",
+        (sm && sm.movein) || "No move-in date set");
+      g.cards += studioCard(room, sum);
+      g.rooms++;
+      if (!sum.complete) { g.out++; }
     }
+
+    if (byDate) {
+      for (i = 0; i < groups.length; i++) {
+        var gr = groups[i];
+        // Dated groups open, the undated pile shut: it is every room with
+        // no arrival booked, which is not what this order is for.
+        var isOpen = Object.prototype.hasOwnProperty.call(dateOpen, gr.key)
+          ? dateOpen[gr.key] === true
+          : gr.key !== "none";
+        html += '<details class="date-group" data-date="' + esc(gr.key) + '"' +
+          (isOpen ? " open" : "") + "><summary>" +
+          '<span class="group-when">' + esc(gr.label) + "</span>" +
+          '<span class="group-count">' + gr.rooms +
+          (gr.rooms === 1 ? " room" : " rooms") +
+          (gr.out ? " \u00b7 " + gr.out + " outstanding" : "") +
+          "</span></summary>" +
+          '<div class="group-body">' + gr.cards + "</div></details>";
+      }
+    }
+
+    groupActionsEl.hidden = !byDate;
 
     var counts = [];
     if (waiting) { counts.push(waiting + " waiting to be audited"); }
@@ -3410,6 +3506,13 @@
     }
 
     studioListEl.innerHTML = html;
+
+    // A details toggle does not bubble, so each group gets its own listener.
+    var boxes = studioListEl.querySelectorAll(".date-group");
+    for (i = 0; i < boxes.length; i++) {
+      boxes[i].addEventListener("toggle", onDateToggle);
+    }
+
     if (!rooms.length) {
       studioEmptyEl.textContent = "No studios have been set up for auditing yet.";
       studioEmptyEl.hidden = false;
@@ -3625,6 +3728,33 @@
     if (box.checked) { delete tradeOff[key]; } else { tradeOff[key] = true; }
     saveTradeOff();
     renderStudios();
+  });
+
+  var savedDates = load(DATE_OPEN_KEY, {});
+  if (savedDates && typeof savedDates === "object") {
+    for (var dk in savedDates) {
+      if (Object.prototype.hasOwnProperty.call(savedDates, dk)) {
+        dateOpen[dk] = savedDates[dk] === true;
+      }
+    }
+  }
+
+  function setAllDates(open) {
+    var boxes = studioListEl.querySelectorAll(".date-group");
+    for (var i = 0; i < boxes.length; i++) {
+      var key = boxes[i].getAttribute("data-date");
+      if (key) { dateOpen[key] = open; }
+      boxes[i].open = open;
+    }
+    store(DATE_OPEN_KEY, dateOpen);
+  }
+
+  document.getElementById("dates-open").addEventListener("click", function () {
+    setAllDates(true);
+  });
+
+  document.getElementById("dates-shut").addEventListener("click", function () {
+    setAllDates(false);
   });
 
   document.getElementById("trade-reset").addEventListener("click", function () {
