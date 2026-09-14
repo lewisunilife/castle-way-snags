@@ -57,10 +57,31 @@ Eighteen checks per studio in priority order — life safety, then what makes a
 studio habitable, then what makes it work, then handover. Pass is one tap;
 Fail asks why before it records anything, and the reason travels with it.
 
-A failed check appears on its trade's list under "From the audit", carrying
-the studio, the check and the reason. Passing that check later takes the line
-away again. **By studio** shows every studio with an outstanding failure or a
-logged issue, and is public.
+Every check has a trade it lands on by default, but the auditor decides. The
+reason box carries a **Send to** dropdown with all thirteen trades and
+**Unassigned**, so a fail can go where the work actually belongs rather than
+where the checklist guessed. Changing it on an already-failed check moves the
+line there and then, reason and all.
+
+A failed check appears on that trade's list under "From the audit", carrying
+the studio, the check and the reason. Passing the check later takes the line
+away again. A fail left **Unassigned** shows in its own section at the foot of
+the trade view, so it is waiting to be given to someone rather than lost.
+
+**By studio** is public and lists every studio on the audit, not only the ones
+with something against them, so an un-started studio is visible as an
+un-started studio. Each card gives the priority, floor, room type, move-in
+date and how many of the checks are done, then a line per outstanding thing.
+
+A studio moves down into **Completed** once all eighteen checks have passed
+and every logged issue is marked done. Completed studios stay on the page
+rather than disappearing, and drop out of the working list in the audit's
+studio picker into a **Completed** group, so what is left to audit is what
+the picker shows.
+
+Logged issues are cleared with **Mark done** in the audit log. That is its
+own record rather than an edit, so the page still shows the issue was raised,
+by whom, and who cleared it.
 
 Results are append-only: re-auditing a studio adds to the record rather than
 overwriting it, and the newest entry for a check is its status. Nothing is

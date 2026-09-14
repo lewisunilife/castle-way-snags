@@ -273,6 +273,25 @@
     min-height: 44px;
   }
 
+  .check-assign {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--muted);
+    margin: 10px 0 4px;
+  }
+
+  .check-why select {
+    width: 100%;
+    font: inherit;
+    font-size: 16px;
+    color: var(--text);
+    background: var(--field);
+    border: 1px solid var(--rule);
+    padding: 9px 10px;
+    min-height: 44px;
+  }
+
   .check-stamp {
     display: block;
     font-size: 11.5px;
@@ -300,11 +319,28 @@
   .fail-what { }
   .fail-why { display: block; color: var(--muted); }
 
+  .studio-group {
+    margin: 24px 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 6px;
+  }
+
+  .studio-group:first-child { margin-top: 0; }
+
   .studio-card {
     border: 1px solid var(--rule);
     padding: 14px;
     margin-bottom: 10px;
   }
+
+  .studio-card.is-clear { border-color: var(--live); background: var(--done-bg); }
+  .studio-card.is-clear h3 { color: var(--live); }
+  .studio-card.is-untouched { border-style: dashed; }
 
   .studio-card h3 {
     margin: 0 0 8px;
@@ -338,6 +374,10 @@
     font-size: 14px;
     line-height: 1.5;
   }
+
+  #issue-list li.is-done { border-left-color: var(--live); }
+  #issue-list li.is-done .note-body { text-decoration: line-through; color: var(--muted); }
+  #issue-list .note-btn { margin-top: 4px; }
 
   .filter {
     display: inline-flex;
@@ -978,6 +1018,10 @@
   </div>
 
   <div id="sections"></div>
+  <div class="section" id="sec-unassigned" hidden>
+    <h2>Unassigned <span class="sec-count">&mdash; waiting for a trade</span></h2>
+    <div class="fails" id="fails-unassigned"></div>
+  </div>
   <p class="all-clear" id="all-clear" hidden>Everything is ticked off. Untick
     <strong>Hide completed</strong> above to see the full list.</p>
 
@@ -1000,11 +1044,13 @@
 
   <div id="view-studio" hidden>
     <h2>By studio</h2>
-    <p class="note-line">Every studio with an outstanding audit failure or a
-      logged issue. Cleared failures drop off once the check is passed again.</p>
+    <p class="note-line">Every studio on the audit, with a line for each
+      thing outstanding. A studio moves down to Completed once all
+      <span id="studio-check-total">18</span> checks have passed and every
+      logged issue is marked done.</p>
     <div id="studio-list"></div>
-    <p class="all-clear" id="studio-empty" hidden>Nothing outstanding against any
-      studio.</p>
+    <p class="all-clear" id="studio-empty" hidden>No studios have been set up for
+      auditing yet.</p>
   </div>
 
   <div id="view-audit" hidden>
@@ -1892,8 +1938,9 @@
         var st = state[room][cid];
         var ck = CHECK_BY_ID[cid];
         if (!ck || st.status !== "fail") { continue; }
-        if (!out[ck.trade]) { out[ck.trade] = []; }
-        out[ck.trade].push({
+        var to = st.trade || ck.trade;
+        if (!out[to]) { out[to] = []; }
+        out[to].push({
           room: room,
           action: "Audit fail: " + ck.label,
           why: st.comment,
@@ -1912,16 +1959,23 @@
 
   function renderAuditFails() {
     var byTrade = auditFailRows();
+    var keys = [];
+    var si;
 
-    for (var si = 0; si < sections.length; si++) {
-      var key = sections[si].key;
+    for (si = 0; si < sections.length; si++) { keys.push(sections[si].key); }
+    keys.push(UNASSIGNED);
+
+    for (si = 0; si < keys.length; si++) {
+      var key = keys[si];
       var holder = document.getElementById("fails-" + key);
+      var wrap = key === UNASSIGNED ? document.getElementById("sec-unassigned") : null;
       if (!holder) { continue; }
 
       var rows = byTrade[key] || [];
       if (!rows.length) {
         if (holder.innerHTML !== "") { holder.innerHTML = ""; }
         holder.hidden = true;
+        if (wrap) { wrap.hidden = true; }
         continue;
       }
 
@@ -1941,6 +1995,12 @@
 
       holder.innerHTML = html;
       holder.hidden = false;
+      if (wrap) {
+        wrap.hidden = false;
+        // Work with no trade against it is still work outstanding, so the
+        // "everything is ticked off" line must not claim otherwise.
+        allClearEl.hidden = true;
+      }
     }
   }
 
@@ -2637,6 +2697,23 @@
   var auditIn = false;
   var auditStudio = "";
 
+  // "FAIL(electrical): reason", or plain "FAIL: reason" from before trades
+  // could be reassigned. Both read the same way.
+  var FAIL_RE = /^FAIL(?:\(([a-z0-9-]{1,30})\))?:?\s*/;
+
+  // A fail can be parked with no trade against it rather than forced onto
+  // the wrong one. It still shows, under Unassigned, so it is not lost.
+  var UNASSIGNED = "unassigned";
+
+  function knownTrade(key) {
+    return !!key && (key === UNASSIGNED || !!sectionTitles[key]);
+  }
+
+  function tradeName(key) {
+    if (key === UNASSIGNED) { return "Unassigned"; }
+    return sectionTitles[key] || key;
+  }
+
   /* ---- Reading the record ---- */
 
   // The newest entry per studio and check wins, so an audit that is run
@@ -2654,15 +2731,21 @@
       var room = bits[1];
       var checkId = bits[2];
       var body = String(c.body || "");
-      var failed = body.indexOf("FAIL") === 0;
+      var m = FAIL_RE.exec(body);
 
       if (!out[room]) { out[room] = {}; }
       var prior = out[room][checkId];
       if (prior && String(prior.at || "") > String(c.created_at || "")) { continue; }
 
+      // A fail carries the trade the auditor sent it to. Records written
+      // before that was possible carry none, so the check's own trade stands.
+      var ck = CHECK_BY_ID[checkId];
+      var to = m && knownTrade(m[1]) ? m[1] : (ck ? ck.trade : "");
+
       out[room][checkId] = {
-        status: failed ? "fail" : "pass",
-        comment: failed ? body.replace(/^FAIL:?\s*/, "") : "",
+        status: m ? "fail" : "pass",
+        comment: m ? body.slice(m[0].length) : "",
+        trade: to,
         by: c.author || "",
         at: c.created_at || ""
       };
@@ -2671,15 +2754,35 @@
     return out;
   }
 
+  // Marking an issue done is its own entry rather than an edit, so the
+  // record still shows it was raised and who cleared it.
+  function issueResolutions() {
+    var all = comments.concat(queuedComments);
+    var out = {};
+    for (var i = 0; i < all.length; i++) {
+      var c = all[i];
+      if (!c || !c.snag_id || c.snag_id.indexOf("issue-done:") !== 0) { continue; }
+      out[c.snag_id.slice(11)] = { by: c.author || "", at: c.created_at || "" };
+    }
+    return out;
+  }
+
   function studioIssues() {
     var all = comments.concat(queuedComments);
+    var res = issueResolutions();
     var out = {};
     for (var i = 0; i < all.length; i++) {
       var c = all[i];
       if (!c || !c.snag_id || c.snag_id.indexOf("issue:") !== 0) { continue; }
       var room = c.snag_id.split(":")[1];
       if (!out[room]) { out[room] = []; }
-      out[room].push(c);
+      out[room].push({
+        id: c.id,
+        body: c.body,
+        author: c.author,
+        created_at: c.created_at,
+        done: res[c.id] || null
+      });
     }
     for (var k in out) {
       if (!Object.prototype.hasOwnProperty.call(out, k)) { continue; }
@@ -2688,6 +2791,36 @@
       });
     }
     return out;
+  }
+
+  // Everything the two views need to know about one studio: how much has
+  // been checked, what is still outstanding, and whether it is finished.
+  function studioSummary(room, state, issues) {
+    var checks = (state || auditState())[room] || {};
+    var fails = [];
+    var checked = 0;
+    var i;
+
+    for (i = 0; i < AUDIT_CHECKS.length; i++) {
+      var st = checks[AUDIT_CHECKS[i].id];
+      if (!st) { continue; }
+      checked++;
+      if (st.status === "fail") { fails.push({ check: AUDIT_CHECKS[i], st: st }); }
+    }
+
+    var logged = (issues || studioIssues())[room] || [];
+    var open = [];
+    for (i = 0; i < logged.length; i++) {
+      if (!logged[i].done) { open.push(logged[i]); }
+    }
+
+    return {
+      checked: checked,
+      fails: fails,
+      open: open,
+      outstanding: fails.length + open.length,
+      complete: checked === AUDIT_CHECKS.length && !fails.length && !open.length
+    };
   }
 
   /* ---- Writing ---- */
@@ -2710,14 +2843,21 @@
       saveLocal();
     }
 
+    if (auditIn) { fillStudios(); }
     renderAudit();
     renderStudios();
     render();
   }
 
-  function setCheck(room, checkId, pass, comment) {
+  function setCheck(room, checkId, pass, comment, trade) {
+    var ck = CHECK_BY_ID[checkId];
+    var to = knownTrade(trade) ? trade : (ck ? ck.trade : "");
     postEntry("audit:" + room + ":" + checkId,
-      pass ? "PASS" : "FAIL: " + (comment || "no reason given"));
+      pass ? "PASS" : "FAIL(" + to + "): " + (comment || "no reason given"));
+  }
+
+  function setIssueDone(issueId) {
+    postEntry("issue-done:" + issueId, "DONE");
   }
 
   /* ---- The audit view ---- */
@@ -2739,17 +2879,45 @@
       auditStudioEl.disabled = true;
       return;
     }
-    var html = "";
+    var state = auditState();
+    var issues = studioIssues();
+    var todo = "";
+    var done = "";
+
     for (var i = 0; i < AUDIT_STUDIOS.length; i++) {
       var st = AUDIT_STUDIOS[i];
-      html += '<option value="' + esc(st.room) + '">' +
+      var sum = studioSummary(st.room, state, issues);
+      var opt = '<option value="' + esc(st.room) + '">' +
         st.priority + ". " + esc(st.room) + " \u2014 " + esc(st.type) +
         (st.movein ? ", in " + esc(st.movein) : "") + "</option>";
+      if (sum.complete) { done += opt; } else { todo += opt; }
+    }
+
+    // Finished studios drop out of the working list into their own group,
+    // still reachable so a studio can be re-audited.
+    var html = "";
+    if (todo) {
+      html += '<optgroup label="Still to audit">' + todo + "</optgroup>";
+    }
+    if (done) {
+      html += '<optgroup label="Completed">' + done + "</optgroup>";
     }
     auditStudioEl.innerHTML = html;
     auditStudioEl.disabled = false;
     if (!STUDIO_BY_ROOM[auditStudio]) { auditStudio = AUDIT_STUDIOS[0].room; }
     auditStudioEl.value = auditStudio;
+  }
+
+  function tradeOptions(sel) {
+    var html = "";
+    for (var i = 0; i < sections.length; i++) {
+      var k = sections[i].key;
+      html += '<option value="' + esc(k) + '"' + (k === sel ? " selected" : "") +
+        ">" + esc(sections[i].title) + "</option>";
+    }
+    html += '<option value="' + UNASSIGNED + '"' +
+      (sel === UNASSIGNED ? " selected" : "") + ">Unassigned</option>";
+    return html;
   }
 
   function renderAudit() {
@@ -2771,6 +2939,7 @@
     for (var i = 0; i < AUDIT_CHECKS.length; i++) {
       var ck = AUDIT_CHECKS[i];
       var st = state[ck.id];
+      var goesTo = st && st.trade ? st.trade : ck.trade;
       var cls = st ? (st.status === "fail" ? " is-fail" : " is-pass") : "";
       if (st && st.status === "pass") { passed++; }
       if (st && st.status === "fail") { failed++; }
@@ -2788,8 +2957,11 @@
         '<div class="check-head">' +
         '<span class="check-rank">' + (i + 1) + "</span>" +
         '<span class="check-label">' + esc(ck.label) +
-        '<span class="check-trade">Fails into ' +
-        esc(sectionTitles[ck.trade] || ck.trade) + "</span></span></div>" +
+        '<span class="check-trade">' +
+        (goesTo === UNASSIGNED
+          ? "Not assigned to a trade yet"
+          : (st && st.status === "fail" ? "Assigned to " : "Fails into ") +
+            esc(tradeName(goesTo))) + "</span></span></div>" +
         '<div class="check-actions">' +
         '<button type="button" class="pf' +
         (st && st.status === "pass" ? " on-pass" : "") +
@@ -2801,7 +2973,11 @@
         '<div class="check-why"' + (st && st.status === "fail" ? "" : " hidden") + ">" +
         '<input type="text" id="why-' + esc(ck.id) + '" placeholder="Why did it fail?"' +
         ' value="' + esc(st && st.comment ? st.comment : "") + '"' +
-        ' aria-label="Reason ' + esc(ck.label) + ' failed"></div>' +
+        ' aria-label="Reason ' + esc(ck.label) + ' failed">' +
+        '<label class="check-assign" for="trade-' + esc(ck.id) + '">Send to</label>' +
+        '<select id="trade-' + esc(ck.id) + '" data-check="' + esc(ck.id) + '"' +
+        ' aria-label="Trade to send ' + esc(ck.label) + ' to">' +
+        tradeOptions(goesTo) + "</select></div>" +
         '<span class="check-stamp">' + stamp + "</span>" +
         "</div>";
     }
@@ -2834,8 +3010,17 @@
         var meta = esc(issues[q].author || "Someone");
         var iw = shortDate(issues[q].created_at);
         if (iw) { meta += " \u00b7 " + esc(iw); }
-        ih += '<li><span class="note-who">' + meta + "</span>" +
-          '<span class="note-body">' + esc(issues[q].body || "") + "</span></li>";
+        var fin = issues[q].done;
+        var tail = fin
+          ? '<span class="note-who">Done' +
+            (fin.by ? " by " + esc(fin.by) : "") +
+            (shortDate(fin.at) ? " \u00b7 " + esc(shortDate(fin.at)) : "") + "</span>"
+          : '<button type="button" class="note-btn issue-done" data-issue="' +
+            esc(issues[q].id) + '">Mark done</button>';
+        ih += '<li' + (fin ? ' class="is-done"' : "") + '>' +
+          '<span class="note-who">' + meta + "</span>" +
+          '<span class="note-body">' + esc(issues[q].body || "") + "</span>" +
+          tail + "</li>";
       }
       issueListEl.innerHTML = ih;
     }
@@ -2846,66 +3031,118 @@
   var studioListEl = document.getElementById("studio-list");
   var studioEmptyEl = document.getElementById("studio-empty");
 
+  function studioCard(room, sum) {
+    var items = "";
+    var i;
+
+    for (i = 0; i < sum.fails.length; i++) {
+      var f = sum.fails[i];
+      var to = f.st.trade || f.check.trade;
+      items += "<li><strong>" + esc(f.check.label) + "</strong>" +
+        (f.st.comment ? " \u2014 " + esc(f.st.comment) : "") +
+        '<span class="note-who">' + esc(tradeName(to)) +
+        (f.st.by ? " \u00b7 " + esc(f.st.by) : "") + "</span></li>";
+    }
+
+    for (i = 0; i < sum.open.length; i++) {
+      items += '<li class="logged">' + esc(sum.open[i].body || "") +
+        '<span class="note-who">Logged' +
+        (sum.open[i].author ? " by " + esc(sum.open[i].author) : "") + "</span></li>";
+    }
+
+    var head;
+    var cls = "";
+    if (sum.complete) {
+      head = "complete";
+      cls = " is-clear";
+    } else if (sum.outstanding) {
+      head = sum.outstanding + " outstanding";
+    } else if (!sum.checked) {
+      head = "not audited yet";
+      cls = " is-untouched";
+    } else {
+      head = "nothing outstanding so far";
+    }
+
+    var sm = STUDIO_BY_ROOM[room];
+    var meta = sm
+      ? "Priority " + sm.priority + " \u00b7 " + esc(sm.floor) + " \u00b7 " +
+        esc(sm.type) + (sm.movein ? " \u00b7 moves in " + esc(sm.movein) : "") +
+        " \u00b7 "
+      : "";
+
+    return '<div class="studio-card' + cls + '" data-room="' + esc(room) + '">' +
+      "<h3>" + esc(room) + " \u2014 " + esc(head) + "</h3>" +
+      '<p class="studio-meta">' + meta + sum.checked + " of " +
+      AUDIT_CHECKS.length + " checks done</p>" +
+      (items ? "<ul>" + items + "</ul>" : "") + "</div>";
+  }
+
+  // Every studio on the audit shows here, not just the ones with something
+  // against them: a studio with nothing on it is a fact worth seeing. Once
+  // it is finished it drops out of the working list into Completed.
   function renderStudios() {
     var state = auditState();
     var issues = studioIssues();
-    var rooms = {};
+    var rooms = [];
+    var seen = {};
+    var i;
     var k;
 
-    for (k in state) { if (Object.prototype.hasOwnProperty.call(state, k)) { rooms[k] = true; } }
-    for (k in issues) { if (Object.prototype.hasOwnProperty.call(issues, k)) { rooms[k] = true; } }
+    for (i = 0; i < AUDIT_STUDIOS.length; i++) {
+      rooms.push(AUDIT_STUDIOS[i].room);
+      seen[AUDIT_STUDIOS[i].room] = true;
+    }
+
+    // A room that was audited but is not on the list still gets shown,
+    // rather than its work disappearing.
+    var extra = {};
+    for (k in state) {
+      if (Object.prototype.hasOwnProperty.call(state, k) && !seen[k]) { extra[k] = true; }
+    }
+    for (k in issues) {
+      if (Object.prototype.hasOwnProperty.call(issues, k) && !seen[k]) { extra[k] = true; }
+    }
+    var extras = Object.keys(extra).sort();
+    for (i = 0; i < extras.length; i++) { rooms.push(extras[i]); }
 
     // Nearest move-in first, so what is most urgent is at the top.
-    var names = Object.keys(rooms).sort(function (a, b) {
+    rooms.sort(function (a, b) {
       var pa = STUDIO_BY_ROOM[a] ? STUDIO_BY_ROOM[a].priority : 9999;
       var pb = STUDIO_BY_ROOM[b] ? STUDIO_BY_ROOM[b].priority : 9999;
       if (pa !== pb) { return pa - pb; }
       return a.localeCompare(b);
     });
+
+    var openCards = "";
+    var doneCards = "";
+    var openCount = 0;
+    var doneCount = 0;
+
+    for (i = 0; i < rooms.length; i++) {
+      var sum = studioSummary(rooms[i], state, issues);
+      if (sum.complete) {
+        doneCount++;
+        doneCards += studioCard(rooms[i], sum);
+      } else {
+        openCount++;
+        openCards += studioCard(rooms[i], sum);
+      }
+    }
+
     var html = "";
-
-    for (var i = 0; i < names.length; i++) {
-      var room = names[i];
-      var checks = state[room] || {};
-      var items = "";
-      var count = 0;
-
-      for (var c = 0; c < AUDIT_CHECKS.length; c++) {
-        var ck = AUDIT_CHECKS[c];
-        var st = checks[ck.id];
-        if (!st || st.status !== "fail") { continue; }
-        count++;
-        items += "<li><strong>" + esc(ck.label) + "</strong>" +
-          (st.comment ? " \u2014 " + esc(st.comment) : "") +
-          '<span class="note-who">' +
-          esc(sectionTitles[ck.trade] || ck.trade) +
-          (st.by ? " \u00b7 " + esc(st.by) : "") + "</span></li>";
-      }
-
-      var logged = issues[room] || [];
-      for (var g = 0; g < logged.length; g++) {
-        count++;
-        items += '<li class="logged">' + esc(logged[g].body || "") +
-          '<span class="note-who">Logged' +
-          (logged[g].author ? " by " + esc(logged[g].author) : "") + "</span></li>";
-      }
-
-      if (!count) { continue; }
-      var sm = STUDIO_BY_ROOM[room];
-      html += '<div class="studio-card"><h3>' + esc(room) + " \u2014 " + count +
-        " outstanding</h3>" +
-        (sm
-          ? '<p class="studio-meta">Priority ' + sm.priority + " \u00b7 " +
-            esc(sm.floor) + " \u00b7 " + esc(sm.type) +
-            (sm.movein ? " \u00b7 moves in " + esc(sm.movein) : "") + "</p>"
-          : "") +
-        "<ul>" + items + "</ul></div>";
+    if (openCount) {
+      html += '<h3 class="studio-group" id="studio-open-head">Still to clear ' +
+        "\u2014 " + openCount + "</h3>" + openCards;
+    }
+    if (doneCount) {
+      html += '<h3 class="studio-group" id="studio-done-head">Completed ' +
+        "\u2014 " + doneCount + "</h3>" + doneCards;
     }
 
     studioListEl.innerHTML = html;
     studioEmptyEl.hidden = html !== "";
   }
-
 
   /* ---- Wiring ---- */
 
@@ -2918,7 +3155,17 @@
     document.getElementById("view-studio").hidden = name !== "studio";
     document.getElementById("view-audit").hidden = name !== "audit";
     if (name === "studio") { renderStudios(); }
-    if (name === "audit") { renderAudit(); }
+    if (name === "audit") {
+      if (auditIn) { fillStudios(); }
+      renderAudit();
+    }
+  }
+
+  // An audit done on someone else's phone changes both of these, so they
+  // are redrawn whenever new records land.
+  function refreshAuditViews() {
+    renderAudit();
+    renderStudios();
   }
 
   viewsEl.addEventListener("click", function (ev) {
@@ -2971,11 +3218,13 @@
     var pass = btn.getAttribute("data-pass") === "1";
     var why = document.getElementById("why-" + checkId);
     var box = document.getElementById("check-" + checkId);
+    var tsel = document.getElementById("trade-" + checkId);
 
     if (!pass) {
       var reason = why ? why.value.trim() : "";
       if (!reason) {
-        // Show the box and let them say why before it is recorded.
+        // Show the box and let them say why, and who it is for, before it
+        // is recorded.
         var wrap = box ? box.querySelector(".check-why") : null;
         if (wrap && wrap.hidden) {
           wrap.hidden = false;
@@ -2983,7 +3232,7 @@
           return;
         }
       }
-      setCheck(auditStudio, checkId, false, reason);
+      setCheck(auditStudio, checkId, false, reason, tsel ? tsel.value : "");
       return;
     }
 
@@ -2994,7 +3243,29 @@
     var field = ev.target;
     if (!field || ev.key !== "Enter" || field.id.indexOf("why-") !== 0) { return; }
     ev.preventDefault();
-    setCheck(auditStudio, field.id.slice(4), false, field.value.trim());
+    var cid = field.id.slice(4);
+    var sel = document.getElementById("trade-" + cid);
+    setCheck(auditStudio, cid, false, field.value.trim(), sel ? sel.value : "");
+  });
+
+  // Changing the trade on a check that has already failed moves it there
+  // and then, rather than making them fail it again.
+  auditChecksEl.addEventListener("change", function (ev) {
+    var sel = ev.target;
+    if (!sel || !sel.id || sel.id.indexOf("trade-") !== 0) { return; }
+    var cid = sel.getAttribute("data-check");
+    var st = (auditState()[auditStudio] || {})[cid];
+    if (!st || st.status !== "fail") { return; }
+    if (st.trade === sel.value) { return; }
+    var why = document.getElementById("why-" + cid);
+    setCheck(auditStudio, cid, false, why ? why.value.trim() : st.comment, sel.value);
+  });
+
+  issueListEl.addEventListener("click", function (ev) {
+    var btn = ev.target;
+    if (!btn || !btn.classList || !btn.classList.contains("issue-done")) { return; }
+    var id = btn.getAttribute("data-issue");
+    if (id) { setIssueDone(id); }
   });
 
   document.getElementById("issue-add").addEventListener("click", function () {
@@ -3034,6 +3305,7 @@
 
   render();
   renderComments();
+  document.getElementById("studio-check-total").textContent = AUDIT_CHECKS.length;
   renderStudios();
   applyGate();
 
@@ -3160,6 +3432,7 @@
         // stay blank on a fresh load until something else redraws.
         render();
         renderComments();
+        refreshAuditViews();
         renderUnsaved();
       });
   }
@@ -3193,6 +3466,7 @@
           queuedComments = queuedComments.filter(function (q) { return q.id !== row.id; });
           saveQueue();
           if (row.snag_id) { render(); } else { renderComments(); }
+          refreshAuditViews();
           renderUnsaved();
         })
       .subscribe(function (status) {
