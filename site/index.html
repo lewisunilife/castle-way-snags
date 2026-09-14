@@ -994,6 +994,50 @@
     }
   ];
 
+  /* Every room in the building, taken off the floor plans. The 1st, 2nd
+     and 4th floors share a layout; the 5th is shorter; the ground floor and
+     the annexe are their own shapes. Built rather than typed out so a
+     missing or repeated room number is not possible. */
+
+  function pad2(n) { return n < 10 ? "0" + n : "" + n; }
+
+  function standardFloor(n) {
+    var out = [];
+    var i;
+    for (i = 1; i <= 39; i++) { out.push("CW" + n + pad2(i)); }
+    for (i = 40; i <= 42; i++) { out.push("CW" + n + i + "A", "CW" + n + i + "B"); }
+    for (i = 43; i <= 48; i++) { out.push("CW" + n + i); }
+    return out;
+  }
+
+  function fifthFloor() {
+    var out = [];
+    var i;
+    for (i = 1; i <= 21; i++) { out.push("CW5" + pad2(i)); }
+    for (i = 22; i <= 24; i++) { out.push("CW5" + i + "A", "CW5" + i + "B"); }
+    for (i = 25; i <= 30; i++) { out.push("CW5" + i); }
+    return out;
+  }
+
+  var EVERY_ROOM = ["CW001", "CW002", "CW003", "CW004", "CW005", "CW006",
+    "CW007A", "CW007B", "CW008A", "CW008B", "CW009A", "CW009B"]
+    .concat(standardFloor(1), ["CW601", "CW602", "CW603", "CW604"])
+    .concat(standardFloor(2), ["CW701", "CW702", "CW703", "CW704"])
+    .concat(standardFloor(4))
+    .concat(fifthFloor());
+
+  var mvhrRows = [];
+  for (var mr = 0; mr < EVERY_ROOM.length; mr++) {
+    mvhrRows.push([EVERY_ROOM[mr], U, "Secure the MVHR cupboard."]);
+  }
+
+  sections.push({
+    key: "mvhr",
+    title: "MVHR Cupboards",
+    col3: "Source",
+    rows: mvhrRows
+  });
+
   /* The summary and the per-trade counts are worked out from the list
      itself. They used to be typed in alongside it, which meant adding a job
      was two edits and the totals could drift out of step with the rows. */
@@ -1016,13 +1060,25 @@
     secRooms.sort();
     sc.issues = sc.rows.length;
     sc.rooms = secRooms.length;
-    summary.push([sc.title, sc.issues, sc.rooms, secRooms.join(", ")]);
+    summary.push([sc.title, sc.issues, sc.rooms, secRooms]);
   }
 
-  var ORDINALS = { "1": "1st", "2": "2nd", "3": "3rd", "4": "4th", "5": "5th" };
+  // Keyed on the first digit of the room number. The annexe block is
+  // numbered 6xx and 7xx but sits at first and second floor level, which
+  // is how it is drawn on those two floor plans.
+  var FLOORS = {
+    "0": "Ground Floor",
+    "1": "1st Floor",
+    "2": "2nd Floor",
+    "3": "3rd Floor",
+    "4": "4th Floor",
+    "5": "5th Floor",
+    "6": "1st Floor (annexe)",
+    "7": "2nd Floor (annexe)"
+  };
 
   function floorOf(room) {
-    return ORDINALS[room.charAt(2)] + " Floor";
+    return FLOORS[room.charAt(2)] || "";
   }
 
   function esc(s) {
@@ -1210,9 +1266,15 @@
     sectionTitles[sections[t].key] = sections[t].title;
   }
 
-  function roomCells(tradeTitle, roomList) {
+  function roomCells(tradeTitle, rooms) {
     var key = tradeKeyByTitle[tradeTitle] || "";
-    var rooms = roomList.split(", ");
+
+    // A sweep covering the whole building would print hundreds of room
+    // numbers here and bury every other trade. The count says it better.
+    if (rooms.length > 30) {
+      return esc(rooms.length + " rooms \u2014 see the section below");
+    }
+
     var cells = [];
     for (var r = 0; r < rooms.length; r++) {
       cells.push(
