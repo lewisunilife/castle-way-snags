@@ -311,6 +311,12 @@
     font-size: 16px;
   }
 
+  .studio-meta {
+    margin: -4px 0 10px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
   .studio-card ul { list-style: none; margin: 0; padding: 0; }
 
   .studio-card li {
@@ -2532,9 +2538,57 @@
   var AUDIT_SEEN = "cw-tower1-audit-in";
   var AUDIT_STUDIO_KEY = "cw-tower1-audit-studio";
 
-  // Waiting on the studio list. Fill this in and everything below works:
-  // var AUDIT_STUDIOS = ["CW501", "CW502", ...];
-  var AUDIT_STUDIOS = [];
+  /* Tower 1 rooms Stelling still have to audit, from the Control
+     Spreadsheet, kept in the priority order that sheet gives them. That
+     order runs on move-in date, so working down the list is working
+     towards the nearest deadline first. Checked on import: 37 rooms, no
+     repeats, priorities 1-37 unbroken, and every stated floor agrees with
+     both the room number and the floor plans. */
+  var AUDIT_STUDIOS = [
+    { room: "CW244", floor: "2nd Floor", type: "Luxury", movein: "Fri 18 Sep 2026" },
+    { room: "CW302", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW305", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW307", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW308", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW310", floor: "3rd Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW344", floor: "3rd Floor", type: "Luxury", movein: "Fri 18 Sep 2026" },
+    { room: "CW403", floor: "4th Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW405", floor: "4th Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW410", floor: "4th Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW411", floor: "4th Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW412", floor: "4th Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW447", floor: "4th Floor", type: "Luxury", movein: "Fri 18 Sep 2026" },
+    { room: "CW301", floor: "3rd Floor", type: "Luxury Plus", movein: "Sat 19 Sep 2026" },
+    { room: "CW203", floor: "2nd Floor", type: "Luxury Plus", movein: "Sun 20 Sep 2026" },
+    { room: "CW210", floor: "2nd Floor", type: "Premium Plus", movein: "Sun 20 Sep 2026" },
+    { room: "CW309", floor: "3rd Floor", type: "Premium Plus", movein: "Tue 22 Sep 2026" },
+    { room: "CW112", floor: "1st Floor", type: "Premium Plus", movein: "Thu 24 Sep 2026" },
+    { room: "CW101", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW103", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW105", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW106", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW108", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW144", floor: "1st Floor", type: "Luxury", movein: "Fri 25 Sep 2026" },
+    { room: "CW147", floor: "1st Floor", type: "Luxury", movein: "Fri 25 Sep 2026" },
+    { room: "CW206", floor: "2nd Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW207", floor: "2nd Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW306", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW343", floor: "3rd Floor", type: "Luxury", movein: "Sat 26 Sep 2026" },
+    { room: "CW406", floor: "4th Floor", type: "Luxury Plus", movein: "Mon 28 Sep 2026" },
+    { room: "CW110", floor: "1st Floor", type: "Premium Plus", movein: "Thu 01 Oct 2026" },
+    { room: "CW208", floor: "2nd Floor", type: "Luxury Plus", movein: "Thu 01 Oct 2026" },
+    { room: "CW143", floor: "1st Floor", type: "Luxury", movein: "Fri 02 Oct 2026" },
+    { room: "CW102", floor: "1st Floor", type: "Luxury Plus", movein: "Wed 07 Oct 2026" },
+    { room: "CW146", floor: "1st Floor", type: "Luxury", movein: "Fri 09 Oct 2026" },
+    { room: "CW107", floor: "1st Floor", type: "Luxury Plus", movein: "" },
+    { room: "CW205", floor: "2nd Floor", type: "Luxury Plus", movein: "" }
+  ];
+
+  var STUDIO_BY_ROOM = {};
+  for (var sx = 0; sx < AUDIT_STUDIOS.length; sx++) {
+    AUDIT_STUDIOS[sx].priority = sx + 1;
+    STUDIO_BY_ROOM[AUDIT_STUDIOS[sx].room] = AUDIT_STUDIOS[sx];
+  }
 
   var AUDIT_CHECKS = [
     { id: "fire-detect", trade: "electrical",
@@ -2687,12 +2741,14 @@
     }
     var html = "";
     for (var i = 0; i < AUDIT_STUDIOS.length; i++) {
-      html += '<option value="' + esc(AUDIT_STUDIOS[i]) + '">' +
-        esc(AUDIT_STUDIOS[i]) + "</option>";
+      var st = AUDIT_STUDIOS[i];
+      html += '<option value="' + esc(st.room) + '">' +
+        st.priority + ". " + esc(st.room) + " \u2014 " + esc(st.type) +
+        (st.movein ? ", in " + esc(st.movein) : "") + "</option>";
     }
     auditStudioEl.innerHTML = html;
     auditStudioEl.disabled = false;
-    if (AUDIT_STUDIOS.indexOf(auditStudio) === -1) { auditStudio = AUDIT_STUDIOS[0]; }
+    if (!STUDIO_BY_ROOM[auditStudio]) { auditStudio = AUDIT_STUDIOS[0].room; }
     auditStudioEl.value = auditStudio;
   }
 
@@ -2753,9 +2809,19 @@
     auditChecksEl.innerHTML = html;
     auditProgressEl.textContent = "\u2014 " + (passed + failed) + " of " +
       AUDIT_CHECKS.length + " checked";
-    auditStateEl.textContent = failed
-      ? failed + (failed === 1 ? " failure" : " failures") + " outstanding"
-      : (passed === AUDIT_CHECKS.length ? "All checks passed" : "");
+    var meta = STUDIO_BY_ROOM[auditStudio];
+    var line = meta
+      ? "Priority " + meta.priority + " of " + AUDIT_STUDIOS.length + " \u00b7 " +
+        meta.floor + " \u00b7 " + meta.type +
+        (meta.movein ? " \u00b7 moves in " + meta.movein : " \u00b7 no move-in date")
+      : "";
+    if (failed) {
+      line += (line ? " \u2014 " : "") + failed +
+        (failed === 1 ? " failure outstanding" : " failures outstanding");
+    } else if (passed === AUDIT_CHECKS.length) {
+      line += (line ? " \u2014 " : "") + "all checks passed";
+    }
+    auditStateEl.textContent = line;
 
     var issues = studioIssues()[auditStudio] || [];
     if (!issues.length) {
@@ -2789,7 +2855,13 @@
     for (k in state) { if (Object.prototype.hasOwnProperty.call(state, k)) { rooms[k] = true; } }
     for (k in issues) { if (Object.prototype.hasOwnProperty.call(issues, k)) { rooms[k] = true; } }
 
-    var names = Object.keys(rooms).sort();
+    // Nearest move-in first, so what is most urgent is at the top.
+    var names = Object.keys(rooms).sort(function (a, b) {
+      var pa = STUDIO_BY_ROOM[a] ? STUDIO_BY_ROOM[a].priority : 9999;
+      var pb = STUDIO_BY_ROOM[b] ? STUDIO_BY_ROOM[b].priority : 9999;
+      if (pa !== pb) { return pa - pb; }
+      return a.localeCompare(b);
+    });
     var html = "";
 
     for (var i = 0; i < names.length; i++) {
@@ -2819,8 +2891,15 @@
       }
 
       if (!count) { continue; }
+      var sm = STUDIO_BY_ROOM[room];
       html += '<div class="studio-card"><h3>' + esc(room) + " \u2014 " + count +
-        (count === 1 ? " outstanding" : " outstanding") + "</h3><ul>" + items + "</ul></div>";
+        " outstanding</h3>" +
+        (sm
+          ? '<p class="studio-meta">Priority ' + sm.priority + " \u00b7 " +
+            esc(sm.floor) + " \u00b7 " + esc(sm.type) +
+            (sm.movein ? " \u00b7 moves in " + esc(sm.movein) : "") + "</p>"
+          : "") +
+        "<ul>" + items + "</ul></div>";
     }
 
     studioListEl.innerHTML = html;

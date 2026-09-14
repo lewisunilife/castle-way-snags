@@ -66,7 +66,13 @@ Results are append-only: re-auditing a studio adds to the record rather than
 overwriting it, and the newest entry for a check is its status. Nothing is
 edited or deleted, which is the point of an audit trail.
 
-Studios come from `AUDIT_STUDIOS` in `site/index.html`.
+The 37 studios Stelling are auditing in Tower 1 are listed in priority
+order — nearest move-in first — with the floor, room type and move-in date
+showing against whichever is selected. **By studio** is sorted the same way,
+so the studio closest to being let is at the top.
+
+Studios come from `AUDIT_STUDIOS` in `site/index.html`; priority is the
+order of that array, so reordering it reorders the audit.
 
 ## Who is carrying each trade
 
