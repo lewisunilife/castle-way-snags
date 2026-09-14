@@ -100,6 +100,20 @@
     white-space: nowrap;
   }
 
+  .assignee {
+    display: inline-block;
+    padding: 2px 9px;
+    border: 1px solid var(--rule);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  td.t-who { font-weight: 700; white-space: nowrap; }
+  .unassigned { color: var(--muted); font-weight: 400; }
+
   .setup {
     margin-top: 20px;
     border: 1px solid var(--warn);
@@ -629,8 +643,23 @@
       grid-template-columns: 1fr auto auto;
       grid-template-areas:
         "trade  issues rooms"
+        "who    who    who"
         "nums   nums   nums";
     }
+
+    #summary-table td.t-who {
+      grid-area: who;
+      margin-top: 4px;
+      font-size: 13px;
+    }
+
+    #summary-table td.t-who:not(:empty)::before {
+      content: "Assigned: ";
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    #summary-table tr.total td.t-who { display: none; }
 
     #summary-table td.t-trade { grid-area: trade; font-weight: 700; font-size: 15px; }
     #summary-table td.t-issues { grid-area: issues; }
@@ -745,6 +774,7 @@
       <thead>
         <tr>
           <th>Trade</th>
+          <th>Assigned</th>
           <th>Issues</th>
           <th>Rooms</th>
           <th>Room numbers</th>
@@ -1033,10 +1063,16 @@
     }
   ];
 
-  /* Every room in the building, taken off the floor plans. The 1st, 2nd
-     and 4th floors share a layout; the 5th is shorter; the ground floor and
-     the annexe are their own shapes. Built rather than typed out so a
-     missing or repeated room number is not possible. */
+  /* Every room in the building. The 1st, 2nd, 3rd and 4th floors share a
+     layout; the 5th is shorter; the ground floor and the annexe are their
+     own shapes. Built rather than typed out so a missing or repeated room
+     number is not possible.
+
+     No floor plan was supplied for the 3rd, so it is taken as a standard
+     floor. Three things agree: the building has 257 studios and the other
+     floors account for 206, leaving exactly one standard floor; the 3rd is
+     the only one without a plan; and every 3rd-floor room already on the
+     snagging list falls inside that layout. */
 
   function pad2(n) { return n < 10 ? "0" + n : "" + n; }
 
@@ -1062,6 +1098,7 @@
     "CW007A", "CW007B", "CW008A", "CW008B", "CW009A", "CW009B"]
     .concat(standardFloor(1), ["CW601", "CW602", "CW603", "CW604"])
     .concat(standardFloor(2), ["CW701", "CW702", "CW703", "CW704"])
+    .concat(standardFloor(3))
     .concat(standardFloor(4))
     .concat(fifthFloor());
 
@@ -1300,6 +1337,19 @@
   // The summary's trades are the trade sections below, by title. The two
   // walk-round sections are not summarised (their items are counted once,
   // under their trade), so they are absent from this map by design.
+  // Who is carrying each trade. A trade with nobody against it shows a
+  // dash rather than a blank, so an unassigned one is visible rather than
+  // just quiet.
+  var ASSIGNED = {
+    access: "Kane",
+    blinds: "Kane",
+    joinery: "Kane",
+    flooring: "Charlie",
+    electrical: "Neil",
+    decorating: "Jordan",
+    mvhr: "Marius"
+  };
+
   var tradeKeyByTitle = {};
   var sectionTitles = {};
   for (var t = 0; t < sections.length; t++) {
@@ -1332,9 +1382,14 @@
   for (var i = 0; i < summary.length; i++) {
     var s = summary[i];
     totalIssues += s[1];
+    var sKey = tradeKeyByTitle[s[0]] || "";
+    var sWho = ASSIGNED[sKey];
+
     summaryHtml +=
-      '<tr data-key="' + esc(tradeKeyByTitle[s[0]] || "") + '">' +
+      '<tr data-key="' + esc(sKey) + '">' +
       '<td class="room t-trade">' + esc(s[0]) + "</td>" +
+      '<td class="t-who">' +
+      (sWho ? esc(sWho) : '<span class="unassigned">\u2014</span>') + "</td>" +
       '<td class="num t-issues">' + s[1] + "</td>" +
       '<td class="num t-rooms">' + s[2] + "</td>" +
       '<td class="t-nums">' + roomCells(s[0], s[3]) + "</td>" +
@@ -1344,6 +1399,7 @@
   summaryHtml +=
     '<tr class="total">' +
     '<td class="t-trade">Total</td>' +
+    '<td class="t-who"></td>' +
     '<td class="num t-issues">' + totalIssues + "</td>" +
     '<td class="num t-rooms">' + totalRooms + "</td>" +
     '<td class="t-nums"></td>' +
@@ -1360,6 +1416,9 @@
     out +=
       '<div class="section" id="sec-' + sec.key + '">' +
       "<h2>" + esc(sec.title) + " (" + sec.issues + " issues, " + sec.rooms + " rooms) " +
+      (ASSIGNED[sec.key]
+        ? '<span class="assignee">' + esc(ASSIGNED[sec.key]) + "</span> "
+        : "") +
       '<span class="sec-count" id="count-' + sec.key + '"></span>' +
       '<label class="sec-all on-phone" for="all-' + sec.key + '-phone">' +
       '<input type="checkbox" class="all-box" id="all-' + sec.key + '-phone"' +

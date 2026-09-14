@@ -40,6 +40,13 @@ Then open the page on two devices — the bar at the top should read
 > here can call that project's API, so it should have nothing in it but this
 > snagging list.
 
+## Who is carrying each trade
+
+Set in the `ASSIGNED` map in `site/index.html`, keyed on the section key. It
+shows against the section heading and in the summary; a trade with nobody
+against it shows a dash rather than a blank, so an unassigned one is visible
+rather than just quiet.
+
 ## Hiding what is done
 
 **Hide completed** at the top drops every ticked line out of the list, and a
