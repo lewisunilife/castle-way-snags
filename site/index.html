@@ -156,6 +156,183 @@
     min-height: 40px;
   }
 
+  .views {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 22px;
+  }
+
+  .view-btn {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 9px 16px;
+    min-height: 40px;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--rule);
+  }
+
+  .view-btn.is-on {
+    color: var(--on-ink);
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+
+  .login label { margin-top: 12px; }
+  .login label:first-child { margin-top: 0; }
+
+  .login input {
+    width: 100%;
+    max-width: 320px;
+    font: inherit;
+    font-size: 16px;
+    color: var(--text);
+    background: var(--field);
+    border: 1px solid var(--rule);
+    padding: 10px;
+    min-height: 44px;
+  }
+
+  #audit-studio {
+    width: 100%;
+    max-width: 320px;
+    font: inherit;
+    font-size: 16px;
+    color: var(--text);
+    background: var(--field);
+    border: 1px solid var(--rule);
+    padding: 10px;
+    min-height: 44px;
+  }
+
+  /* One check: its rank, what it is, and pass/fail. */
+  .check {
+    border: 1px solid var(--rule);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+
+  .check.is-pass { background: var(--done-bg); }
+  .check.is-fail { border-color: var(--strike); }
+
+  .check-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .check-rank {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    flex: none;
+  }
+
+  .check-label { font-size: 14px; line-height: 1.4; font-weight: 700; }
+
+  .check-trade {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 400;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .check-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .pf {
+    flex: 1 1 auto;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 9px 12px;
+    min-height: 44px;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--rule);
+  }
+
+  .pf.on-pass { color: var(--on-ink); background: var(--live); border-color: var(--live); }
+  .pf.on-fail { color: var(--on-ink); background: var(--strike); border-color: var(--strike); }
+
+  .check-why { margin-top: 10px; }
+
+  .check-why input {
+    width: 100%;
+    font: inherit;
+    font-size: 16px;
+    color: var(--text);
+    background: var(--field);
+    border: 1px solid var(--rule);
+    padding: 9px 10px;
+    min-height: 44px;
+  }
+
+  .check-stamp {
+    display: block;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  .fails { margin-top: 12px; }
+
+  .fails-head {
+    margin: 0 0 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--strike);
+  }
+
+  .fail-row {
+    border-left: 3px solid var(--strike);
+    padding: 4px 0 4px 11px;
+    margin-bottom: 8px;
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+
+  .fail-what { }
+  .fail-why { display: block; color: var(--muted); }
+
+  .studio-card {
+    border: 1px solid var(--rule);
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+
+  .studio-card h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+  }
+
+  .studio-card ul { list-style: none; margin: 0; padding: 0; }
+
+  .studio-card li {
+    border-left: 3px solid var(--strike);
+    padding: 2px 0 2px 10px;
+    margin-bottom: 8px;
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+
+  .studio-card li.logged { border-left-color: var(--rule); }
+
+  #issue-list { list-style: none; margin: 16px 0 0; padding: 0; }
+
+  #issue-list li {
+    border-left: 3px solid var(--rule);
+    padding: 2px 0 2px 12px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
   .filter {
     display: inline-flex;
     align-items: center;
@@ -539,6 +716,9 @@
     h2 { font-size: 17px; margin: 34px 0 10px; }
     .sec-count { display: block; font-size: 13px; }
 
+    .view-btn { flex: 1 1 auto; }
+    .check-actions { flex-direction: column; }
+
     .filter {
       flex: 1 1 100%;
       justify-content: center;
@@ -768,6 +948,13 @@
 
   <p class="gate" id="gate-notice">Enter your name and company above before ticking anything off or adding notes.</p>
 
+  <nav class="views" id="views">
+    <button type="button" class="view-btn is-on" data-view="trade">By trade</button>
+    <button type="button" class="view-btn" data-view="studio">By studio</button>
+    <button type="button" class="view-btn" data-view="audit">Audit log</button>
+  </nav>
+
+  <div id="view-trade">
   <h2>Summary by trade</h2>
   <div class="scroller">
     <table id="summary-table">
@@ -801,6 +988,58 @@
         <span class="status" id="copy-status"></span>
       </div>
       <textarea id="copy-out" hidden aria-label="Progress summary, ready to copy"></textarea>
+    </div>
+  </div>
+  </div><!-- /view-trade -->
+
+  <div id="view-studio" hidden>
+    <h2>By studio</h2>
+    <p class="note-line">Every studio with an outstanding audit failure or a
+      logged issue. Cleared failures drop off once the check is passed again.</p>
+    <div id="studio-list"></div>
+    <p class="all-clear" id="studio-empty" hidden>Nothing outstanding against any
+      studio.</p>
+  </div>
+
+  <div id="view-audit" hidden>
+    <div id="audit-login">
+      <h2>Audit log</h2>
+      <div class="panel login">
+        <label for="audit-user">Username</label>
+        <input id="audit-user" type="text" autocomplete="username">
+        <label for="audit-pass">Password</label>
+        <input id="audit-pass" type="password" autocomplete="current-password">
+        <div class="panel-actions">
+          <button type="button" id="audit-in">Sign in</button>
+          <span class="status" id="audit-msg"></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="audit-body" hidden>
+      <h2>Audit log <span class="sec-count" id="audit-progress"></span></h2>
+
+      <div class="panel">
+        <label for="audit-studio">Studio</label>
+        <select id="audit-studio"></select>
+        <div class="panel-actions">
+          <span class="status" id="audit-studio-state"></span>
+          <button type="button" class="secondary" id="audit-out">Sign out</button>
+        </div>
+      </div>
+
+      <div id="audit-checks"></div>
+
+      <h2>Log an issue</h2>
+      <div class="panel">
+        <label for="issue-text">Anything else found in this studio</label>
+        <textarea id="issue-text" placeholder="Something not covered by the checks above."></textarea>
+        <div class="panel-actions">
+          <button type="button" id="issue-add">Add issue</button>
+        </div>
+        <ul id="issue-list"></ul>
+        <p class="empty" id="issue-empty">No issues logged against this studio.</p>
+      </div>
     </div>
   </div>
 </div>
@@ -1482,7 +1721,8 @@
         "</tr>";
     }
 
-    out += "</tbody></table></div></div>";
+    out += '</tbody></table></div><div class="fails" id="fails-' + sec.key +
+      '" hidden></div></div>';
   }
 
   var sectionsEl = document.getElementById("sections");
@@ -1629,6 +1869,75 @@
     return html;
   }
 
+  /* A failed audit check is work for a trade, so it appears on that
+     trade's list. The line is keyed on the studio and the check, so
+     re-failing the same check does not create a second one, and passing
+     it later takes the line away again. The reason given at audit time
+     rides along as the line's note. */
+  function auditFailRows() {
+    var state = auditState();
+    var out = {};
+    var room;
+
+    for (room in state) {
+      if (!Object.prototype.hasOwnProperty.call(state, room)) { continue; }
+      for (var cid in state[room]) {
+        if (!Object.prototype.hasOwnProperty.call(state[room], cid)) { continue; }
+        var st = state[room][cid];
+        var ck = CHECK_BY_ID[cid];
+        if (!ck || st.status !== "fail") { continue; }
+        if (!out[ck.trade]) { out[ck.trade] = []; }
+        out[ck.trade].push({
+          room: room,
+          action: "Audit fail: " + ck.label,
+          why: st.comment,
+          by: st.by,
+          at: st.at
+        });
+      }
+    }
+
+    for (var t in out) {
+      if (!Object.prototype.hasOwnProperty.call(out, t)) { continue; }
+      out[t].sort(function (a, b) { return a.room.localeCompare(b.room); });
+    }
+    return out;
+  }
+
+  function renderAuditFails() {
+    var byTrade = auditFailRows();
+
+    for (var si = 0; si < sections.length; si++) {
+      var key = sections[si].key;
+      var holder = document.getElementById("fails-" + key);
+      if (!holder) { continue; }
+
+      var rows = byTrade[key] || [];
+      if (!rows.length) {
+        if (holder.innerHTML !== "") { holder.innerHTML = ""; }
+        holder.hidden = true;
+        continue;
+      }
+
+      var html = '<p class="fails-head">From the audit \u2014 ' + rows.length +
+        (rows.length === 1 ? " failed check" : " failed checks") + "</p>";
+
+      for (var r = 0; r < rows.length; r++) {
+        var f = rows[r];
+        var stamp = f.by ? "Failed by " + esc(f.by) : "";
+        var when = shortDate(f.at);
+        if (when) { stamp += (stamp ? " \u00b7 " : "") + esc(when); }
+        html += '<div class="fail-row"><span class="room">' + esc(f.room) + "</span> " +
+          '<span class="fail-what">' + esc(f.action) + "</span>" +
+          (f.why ? '<span class="fail-why">' + esc(f.why) + "</span>" : "") +
+          '<span class="note-who">' + stamp + "</span></div>";
+      }
+
+      holder.innerHTML = html;
+      holder.hidden = false;
+    }
+  }
+
   function render() {
     var doneCount = 0;
     var id;
@@ -1710,6 +2019,7 @@
 
     allClearEl.hidden = !(hideDone && !anyVisible);
 
+    renderAuditFails();
     renderSummary();
     progressEl.textContent = doneCount + " of " + total + " items ticked";
     renderUnsaved();
@@ -2199,6 +2509,424 @@
     }
   });
 
+
+  /* ==================================================================
+     AUDIT LOG
+
+     Eighteen checks per studio, in priority order: life safety first,
+     then what makes a studio habitable, then what makes it work, then
+     handover. A failed check names the trade it belongs to and appears
+     on that trade's list.
+
+     Results are kept as append-only entries rather than one editable
+     row per check, so re-auditing a studio adds to the record instead
+     of overwriting it. The latest entry for a check is its status.
+
+     The sign-in is a gate on the view, not on the data: this page is
+     public and its source carries the credentials. It keeps the audit
+     out of the way of people who should not be in it; it is not a lock.
+     ================================================================== */
+
+  var AUDIT_USER = "JBA";
+  var AUDIT_PASS = "2004";
+  var AUDIT_SEEN = "cw-tower1-audit-in";
+  var AUDIT_STUDIO_KEY = "cw-tower1-audit-studio";
+
+  // Waiting on the studio list. Fill this in and everything below works:
+  // var AUDIT_STUDIOS = ["CW501", "CW502", ...];
+  var AUDIT_STUDIOS = [];
+
+  var AUDIT_CHECKS = [
+    { id: "fire-detect", trade: "electrical",
+      label: "Fire detection operational, protective covers removed" },
+    { id: "fire-doors", trade: "joinery",
+      label: "Fire doors close and latch properly" },
+    { id: "fob", trade: "access",
+      label: "Room key fob tested on door (not master) \u2014 lock works" },
+    { id: "restrictors", trade: "restrictors",
+      label: "Window restrictors fitted" },
+    { id: "furniture", trade: "joinery",
+      label: "Bed and furniture secure and safe" },
+    { id: "sockets", trade: "electrical",
+      label: "All sockets working" },
+    { id: "leaks", trade: "plumbing",
+      label: "No leaks" },
+    { id: "hw-duration", trade: "plumbing",
+      label: "Hot water runs long enough \u2014 hot, consistent, safe temp" },
+    { id: "hw-pressure", trade: "plumbing",
+      label: "Hot water pressure \u2014 sink, shower, kitchen" },
+    { id: "cw-pressure", trade: "plumbing",
+      label: "Cold water pressure \u2014 sink, shower, kitchen" },
+    { id: "toilets", trade: "plumbing",
+      label: "Toilets flushing and refilling properly" },
+    { id: "lights", trade: "electrical",
+      label: "All lights working" },
+    { id: "switches", trade: "electrical",
+      label: "All switches working" },
+    { id: "heating", trade: "electrical",
+      label: "Heating and thermostats working" },
+    { id: "extraction", trade: "ventilation",
+      label: "Bathroom and kitchen extraction working" },
+    { id: "appliances", trade: "appliances",
+      label: "Hob, microwave/oven, fridge working" },
+    { id: "windows-blinds", trade: "blinds",
+      label: "Windows close/lock, blinds working" },
+    { id: "clean", trade: "cleaning",
+      label: "Full clean completed \u2014 room clean, packaging/stickers removed" }
+  ];
+
+  var CHECK_BY_ID = {};
+  for (var ci = 0; ci < AUDIT_CHECKS.length; ci++) {
+    CHECK_BY_ID[AUDIT_CHECKS[ci].id] = AUDIT_CHECKS[ci];
+  }
+
+  var auditIn = false;
+  var auditStudio = "";
+
+  /* ---- Reading the record ---- */
+
+  // The newest entry per studio and check wins, so an audit that is run
+  // again supersedes the last one without losing it.
+  function auditState() {
+    var all = comments.concat(queuedComments);
+    var out = {};
+
+    for (var i = 0; i < all.length; i++) {
+      var c = all[i];
+      if (!c || !c.snag_id || c.snag_id.indexOf("audit:") !== 0) { continue; }
+      var bits = c.snag_id.split(":");
+      if (bits.length < 3) { continue; }
+
+      var room = bits[1];
+      var checkId = bits[2];
+      var body = String(c.body || "");
+      var failed = body.indexOf("FAIL") === 0;
+
+      if (!out[room]) { out[room] = {}; }
+      var prior = out[room][checkId];
+      if (prior && String(prior.at || "") > String(c.created_at || "")) { continue; }
+
+      out[room][checkId] = {
+        status: failed ? "fail" : "pass",
+        comment: failed ? body.replace(/^FAIL:?\s*/, "") : "",
+        by: c.author || "",
+        at: c.created_at || ""
+      };
+    }
+
+    return out;
+  }
+
+  function studioIssues() {
+    var all = comments.concat(queuedComments);
+    var out = {};
+    for (var i = 0; i < all.length; i++) {
+      var c = all[i];
+      if (!c || !c.snag_id || c.snag_id.indexOf("issue:") !== 0) { continue; }
+      var room = c.snag_id.split(":")[1];
+      if (!out[room]) { out[room] = []; }
+      out[room].push(c);
+    }
+    for (var k in out) {
+      if (!Object.prototype.hasOwnProperty.call(out, k)) { continue; }
+      out[k].sort(function (x, y) {
+        return String(x.created_at || "").localeCompare(String(y.created_at || ""));
+      });
+    }
+    return out;
+  }
+
+  /* ---- Writing ---- */
+
+  function postEntry(tag, body) {
+    var entry = {
+      id: uuid(),
+      snag_id: tag,
+      body: body,
+      author: who(),
+      created_at: new Date().toISOString()
+    };
+
+    if (live) {
+      queuedComments.push(entry);
+      saveQueue();
+      flush();
+    } else {
+      comments.push(entry);
+      saveLocal();
+    }
+
+    renderAudit();
+    renderStudios();
+    render();
+  }
+
+  function setCheck(room, checkId, pass, comment) {
+    postEntry("audit:" + room + ":" + checkId,
+      pass ? "PASS" : "FAIL: " + (comment || "no reason given"));
+  }
+
+  /* ---- The audit view ---- */
+
+  var viewsEl = document.getElementById("views");
+  var auditLoginEl = document.getElementById("audit-login");
+  var auditBodyEl = document.getElementById("audit-body");
+  var auditStudioEl = document.getElementById("audit-studio");
+  var auditChecksEl = document.getElementById("audit-checks");
+  var auditMsgEl = document.getElementById("audit-msg");
+  var auditProgressEl = document.getElementById("audit-progress");
+  var auditStateEl = document.getElementById("audit-studio-state");
+  var issueListEl = document.getElementById("issue-list");
+  var issueEmptyEl = document.getElementById("issue-empty");
+
+  function fillStudios() {
+    if (!AUDIT_STUDIOS.length) {
+      auditStudioEl.innerHTML = '<option value="">No studios set up yet</option>';
+      auditStudioEl.disabled = true;
+      return;
+    }
+    var html = "";
+    for (var i = 0; i < AUDIT_STUDIOS.length; i++) {
+      html += '<option value="' + esc(AUDIT_STUDIOS[i]) + '">' +
+        esc(AUDIT_STUDIOS[i]) + "</option>";
+    }
+    auditStudioEl.innerHTML = html;
+    auditStudioEl.disabled = false;
+    if (AUDIT_STUDIOS.indexOf(auditStudio) === -1) { auditStudio = AUDIT_STUDIOS[0]; }
+    auditStudioEl.value = auditStudio;
+  }
+
+  function renderAudit() {
+    if (!auditIn) { return; }
+    if (!AUDIT_STUDIOS.length) {
+      auditChecksEl.innerHTML = '<p class="all-clear">No studios have been set ' +
+        'up for auditing yet. Add them to <code>AUDIT_STUDIOS</code> in the page ' +
+        'source and they will appear here.</p>';
+      auditProgressEl.textContent = "";
+      auditStateEl.textContent = "";
+      return;
+    }
+
+    var state = auditState()[auditStudio] || {};
+    var html = "";
+    var passed = 0;
+    var failed = 0;
+
+    for (var i = 0; i < AUDIT_CHECKS.length; i++) {
+      var ck = AUDIT_CHECKS[i];
+      var st = state[ck.id];
+      var cls = st ? (st.status === "fail" ? " is-fail" : " is-pass") : "";
+      if (st && st.status === "pass") { passed++; }
+      if (st && st.status === "fail") { failed++; }
+
+      var stamp = "";
+      if (st) {
+        stamp = (st.status === "fail" ? "Failed" : "Passed") +
+          (st.by ? " by " + esc(st.by) : "");
+        var when = shortDate(st.at);
+        if (when) { stamp += " \u00b7 " + esc(when); }
+      }
+
+      html +=
+        '<div class="check' + cls + '" id="check-' + esc(ck.id) + '">' +
+        '<div class="check-head">' +
+        '<span class="check-rank">' + (i + 1) + "</span>" +
+        '<span class="check-label">' + esc(ck.label) +
+        '<span class="check-trade">Fails into ' +
+        esc(sectionTitles[ck.trade] || ck.trade) + "</span></span></div>" +
+        '<div class="check-actions">' +
+        '<button type="button" class="pf' +
+        (st && st.status === "pass" ? " on-pass" : "") +
+        '" data-check="' + esc(ck.id) + '" data-pass="1">Pass</button>' +
+        '<button type="button" class="pf' +
+        (st && st.status === "fail" ? " on-fail" : "") +
+        '" data-check="' + esc(ck.id) + '" data-pass="0">Fail</button>' +
+        "</div>" +
+        '<div class="check-why"' + (st && st.status === "fail" ? "" : " hidden") + ">" +
+        '<input type="text" id="why-' + esc(ck.id) + '" placeholder="Why did it fail?"' +
+        ' value="' + esc(st && st.comment ? st.comment : "") + '"' +
+        ' aria-label="Reason ' + esc(ck.label) + ' failed"></div>' +
+        '<span class="check-stamp">' + stamp + "</span>" +
+        "</div>";
+    }
+
+    auditChecksEl.innerHTML = html;
+    auditProgressEl.textContent = "\u2014 " + (passed + failed) + " of " +
+      AUDIT_CHECKS.length + " checked";
+    auditStateEl.textContent = failed
+      ? failed + (failed === 1 ? " failure" : " failures") + " outstanding"
+      : (passed === AUDIT_CHECKS.length ? "All checks passed" : "");
+
+    var issues = studioIssues()[auditStudio] || [];
+    if (!issues.length) {
+      issueListEl.innerHTML = "";
+      issueEmptyEl.hidden = false;
+    } else {
+      issueEmptyEl.hidden = true;
+      var ih = "";
+      for (var q = 0; q < issues.length; q++) {
+        var meta = esc(issues[q].author || "Someone");
+        var iw = shortDate(issues[q].created_at);
+        if (iw) { meta += " \u00b7 " + esc(iw); }
+        ih += '<li><span class="note-who">' + meta + "</span>" +
+          '<span class="note-body">' + esc(issues[q].body || "") + "</span></li>";
+      }
+      issueListEl.innerHTML = ih;
+    }
+  }
+
+  /* ---- The public by-studio view ---- */
+
+  var studioListEl = document.getElementById("studio-list");
+  var studioEmptyEl = document.getElementById("studio-empty");
+
+  function renderStudios() {
+    var state = auditState();
+    var issues = studioIssues();
+    var rooms = {};
+    var k;
+
+    for (k in state) { if (Object.prototype.hasOwnProperty.call(state, k)) { rooms[k] = true; } }
+    for (k in issues) { if (Object.prototype.hasOwnProperty.call(issues, k)) { rooms[k] = true; } }
+
+    var names = Object.keys(rooms).sort();
+    var html = "";
+
+    for (var i = 0; i < names.length; i++) {
+      var room = names[i];
+      var checks = state[room] || {};
+      var items = "";
+      var count = 0;
+
+      for (var c = 0; c < AUDIT_CHECKS.length; c++) {
+        var ck = AUDIT_CHECKS[c];
+        var st = checks[ck.id];
+        if (!st || st.status !== "fail") { continue; }
+        count++;
+        items += "<li><strong>" + esc(ck.label) + "</strong>" +
+          (st.comment ? " \u2014 " + esc(st.comment) : "") +
+          '<span class="note-who">' +
+          esc(sectionTitles[ck.trade] || ck.trade) +
+          (st.by ? " \u00b7 " + esc(st.by) : "") + "</span></li>";
+      }
+
+      var logged = issues[room] || [];
+      for (var g = 0; g < logged.length; g++) {
+        count++;
+        items += '<li class="logged">' + esc(logged[g].body || "") +
+          '<span class="note-who">Logged' +
+          (logged[g].author ? " by " + esc(logged[g].author) : "") + "</span></li>";
+      }
+
+      if (!count) { continue; }
+      html += '<div class="studio-card"><h3>' + esc(room) + " \u2014 " + count +
+        (count === 1 ? " outstanding" : " outstanding") + "</h3><ul>" + items + "</ul></div>";
+    }
+
+    studioListEl.innerHTML = html;
+    studioEmptyEl.hidden = html !== "";
+  }
+
+
+  /* ---- Wiring ---- */
+
+  function showView(name) {
+    var btns = viewsEl.querySelectorAll(".view-btn");
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle("is-on", btns[i].getAttribute("data-view") === name);
+    }
+    document.getElementById("view-trade").hidden = name !== "trade";
+    document.getElementById("view-studio").hidden = name !== "studio";
+    document.getElementById("view-audit").hidden = name !== "audit";
+    if (name === "studio") { renderStudios(); }
+    if (name === "audit") { renderAudit(); }
+  }
+
+  viewsEl.addEventListener("click", function (ev) {
+    var btn = ev.target;
+    if (!btn || !btn.classList || !btn.classList.contains("view-btn")) { return; }
+    showView(btn.getAttribute("data-view"));
+  });
+
+  function setSignedIn(on) {
+    auditIn = on;
+    auditLoginEl.hidden = on;
+    auditBodyEl.hidden = !on;
+    if (on) { fillStudios(); renderAudit(); }
+  }
+
+  document.getElementById("audit-in").addEventListener("click", function () {
+    var u = document.getElementById("audit-user").value.trim();
+    var w = document.getElementById("audit-pass").value;
+    if (u.toLowerCase() === AUDIT_USER.toLowerCase() && w === AUDIT_PASS) {
+      auditMsgEl.textContent = "";
+      document.getElementById("audit-pass").value = "";
+      store(AUDIT_SEEN, true);
+      setSignedIn(true);
+    } else {
+      auditMsgEl.textContent = "That username and password did not match.";
+    }
+  });
+
+  document.getElementById("audit-pass").addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter") { document.getElementById("audit-in").click(); }
+  });
+
+  document.getElementById("audit-out").addEventListener("click", function () {
+    store(AUDIT_SEEN, false);
+    setSignedIn(false);
+  });
+
+  auditStudioEl.addEventListener("change", function () {
+    auditStudio = auditStudioEl.value;
+    store(AUDIT_STUDIO_KEY, auditStudio);
+    renderAudit();
+  });
+
+  // Pass is one tap. Fail asks why, and the reason travels with it.
+  auditChecksEl.addEventListener("click", function (ev) {
+    var btn = ev.target;
+    if (!btn || !btn.classList || !btn.classList.contains("pf")) { return; }
+
+    var checkId = btn.getAttribute("data-check");
+    var pass = btn.getAttribute("data-pass") === "1";
+    var why = document.getElementById("why-" + checkId);
+    var box = document.getElementById("check-" + checkId);
+
+    if (!pass) {
+      var reason = why ? why.value.trim() : "";
+      if (!reason) {
+        // Show the box and let them say why before it is recorded.
+        var wrap = box ? box.querySelector(".check-why") : null;
+        if (wrap && wrap.hidden) {
+          wrap.hidden = false;
+          if (why) { why.focus(); }
+          return;
+        }
+      }
+      setCheck(auditStudio, checkId, false, reason);
+      return;
+    }
+
+    setCheck(auditStudio, checkId, true, "");
+  });
+
+  auditChecksEl.addEventListener("keydown", function (ev) {
+    var field = ev.target;
+    if (!field || ev.key !== "Enter" || field.id.indexOf("why-") !== 0) { return; }
+    ev.preventDefault();
+    setCheck(auditStudio, field.id.slice(4), false, field.value.trim());
+  });
+
+  document.getElementById("issue-add").addEventListener("click", function () {
+    var field = document.getElementById("issue-text");
+    var body = field.value.trim();
+    if (!body) { field.focus(); return; }
+    if (!auditStudio) { return; }
+    field.value = "";
+    postEntry("issue:" + auditStudio, body);
+  });
+
   /* ---- Boot ---- */
 
   var localState = load(LOCAL_KEY, null);
@@ -2222,8 +2950,12 @@
     queuedComments.forEach(function (e) { delete e.inflight; });
   }
 
+  auditStudio = load(AUDIT_STUDIO_KEY, "") || "";
+  setSignedIn(load(AUDIT_SEEN, false) === true);
+
   render();
   renderComments();
+  renderStudios();
   applyGate();
 
   function applyRow(rowData) {

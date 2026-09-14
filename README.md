@@ -40,6 +40,34 @@ Then open the page on two devices — the bar at the top should read
 > here can call that project's API, so it should have nothing in it but this
 > snagging list.
 
+## The audit log
+
+Three views, one URL: **By trade** (the snagging list), **By studio**, and
+**Audit log**. The first two are public; the audit log asks for a username
+and password.
+
+**That sign-in guards the view, not the data.** This is a public page and its
+source carries the credentials, so anyone who opens developer tools or reads
+this repository can see them and get in, and the audit records are reachable
+through the same key the public page already uses. It keeps the audit out of
+the way of people who have no business in it. It is not a lock. Treat the
+audit log as readable by anyone who goes looking.
+
+Eighteen checks per studio in priority order — life safety, then what makes a
+studio habitable, then what makes it work, then handover. Pass is one tap;
+Fail asks why before it records anything, and the reason travels with it.
+
+A failed check appears on its trade's list under "From the audit", carrying
+the studio, the check and the reason. Passing that check later takes the line
+away again. **By studio** shows every studio with an outstanding failure or a
+logged issue, and is public.
+
+Results are append-only: re-auditing a studio adds to the record rather than
+overwriting it, and the newest entry for a check is its status. Nothing is
+edited or deleted, which is the point of an audit trail.
+
+Studios come from `AUDIT_STUDIOS` in `site/index.html`.
+
 ## Who is carrying each trade
 
 Set in the `ASSIGNED` map in `site/index.html`, keyed on the section key. It
