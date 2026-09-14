@@ -1252,14 +1252,16 @@
     out +=
       "<h2>" + esc(sec.title) + " (" + sec.issues + " issues, " + sec.rooms + " rooms) " +
       '<span class="sec-count" id="count-' + sec.key + '"></span>' +
-      '<label class="sec-all on-phone"><input type="checkbox" class="all-box"' +
+      '<label class="sec-all on-phone" for="all-' + sec.key + '-phone">' +
+      '<input type="checkbox" class="all-box" id="all-' + sec.key + '-phone"' +
       ' data-section="' + sec.key + '"' +
       ' aria-label="Tick every item under ' + esc(sec.title) + '"> Tick all</label>' +
       "</h2>" +
       '<div class="scroller"><table><thead><tr>' +
       "<th>Room</th><th>Floor</th><th>" + esc(sec.col3) + "</th><th>Action</th>" +
-      '<th class="done-h">Done<label class="sec-all"><input type="checkbox"' +
-      ' class="all-box" data-section="' + sec.key + '"' +
+      '<th class="done-h">Done<label class="sec-all" for="all-' + sec.key + '-head">' +
+      '<input type="checkbox" class="all-box" id="all-' + sec.key + '-head"' +
+      ' data-section="' + sec.key + '"' +
       ' aria-label="Tick every item under ' + esc(sec.title) + '"> All</label></th>' +
       "</tr></thead><tbody>";
 
