@@ -40,6 +40,14 @@ Then open the page on two devices — the bar at the top should read
 > here can call that project's API, so it should have nothing in it but this
 > snagging list.
 
+## Hiding what is done
+
+**Hide completed** at the top drops every ticked line out of the list, and a
+trade with nothing left in it disappears whole rather than leaving a heading
+over an empty table. The counts still count everything, so "18 of 27 ticked"
+stays true whatever is on screen. The choice is remembered on that device and
+is per person — it changes nobody else's view.
+
 ## Who can edit the list
 
 Anyone with the URL. That is the trade-off for having no logins, the same as a

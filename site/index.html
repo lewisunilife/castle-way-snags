@@ -142,6 +142,31 @@
     min-height: 40px;
   }
 
+  .filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    align-self: flex-end;
+    padding: 9px 13px;
+    min-height: 40px;
+    border: 1px solid var(--rule);
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .filter input { width: 17px; height: 17px; }
+
+  .all-clear {
+    margin: 28px 0 0;
+    padding: 16px;
+    border: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
   /* Until we know who is ticking, nothing is tickable. */
   .gate {
     margin: 10px 0 0;
@@ -500,6 +525,15 @@
     h2 { font-size: 17px; margin: 34px 0 10px; }
     .sec-count { display: block; font-size: 13px; }
 
+    .filter {
+      flex: 1 1 100%;
+      justify-content: center;
+      align-self: stretch;
+      min-height: 44px;
+    }
+
+    .filter input { width: 20px; height: 20px; }
+
     .sec-all.on-phone {
       display: inline-flex;
       margin-top: 8px;
@@ -693,6 +727,9 @@
       <label for="company">Company</label>
       <input id="company" type="text" placeholder="e.g. Stelling" autocomplete="organization">
     </div>
+    <label class="filter" for="hide-done">
+      <input type="checkbox" id="hide-done"> Hide completed
+    </label>
     <div class="bar-meta">
       <span id="progress">0 of 130 items ticked</span>
       <span id="live-status">Connecting&hellip;</span>
@@ -718,6 +755,8 @@
   </div>
 
   <div id="sections"></div>
+  <p class="all-clear" id="all-clear" hidden>Everything is ticked off. Untick
+    <strong>Hide completed</strong> above to see the full list.</p>
 
   <h2>Comments</h2>
   <div class="panel">
@@ -1142,6 +1181,7 @@
 
   var NAME_KEY = "cw-tower1-name";
   var COMPANY_KEY = "cw-tower1-company";
+  var HIDE_DONE_KEY = "cw-tower1-hide-done";
   var LOCAL_KEY = "cw-tower1-snags-local-v2";
   var QUEUE_KEY = "cw-tower1-snags-queue-v2";
   var MIGRATED_KEY = "cw-tower1-snags-migrated-v2";
@@ -1154,6 +1194,7 @@
   var client = null;
   var live = false;
   var channel = null;
+  var hideDone = false;
   var index = {};          // job key -> {room, floor, action}
   var occurrences = {};    // job key -> the DOM ids showing it
   var sectionRows = {};    // section key -> job keys it lists
@@ -1317,6 +1358,7 @@
   for (var j = 0; j < sections.length; j++) {
     var sec = sections[j];
     out +=
+      '<div class="section" id="sec-' + sec.key + '">' +
       "<h2>" + esc(sec.title) + " (" + sec.issues + " issues, " + sec.rooms + " rooms) " +
       '<span class="sec-count" id="count-' + sec.key + '"></span>' +
       '<label class="sec-all on-phone" for="all-' + sec.key + '-phone">' +
@@ -1381,14 +1423,25 @@
         "</tr>";
     }
 
-    out += "</tbody></table></div>";
+    out += "</tbody></table></div></div>";
   }
 
   var sectionsEl = document.getElementById("sections");
   sectionsEl.innerHTML = out;
 
   var progressEl = document.getElementById("progress");
+  var allClearEl = document.getElementById("all-clear");
+  var hideDoneEl = document.getElementById("hide-done");
   var statusEl = document.getElementById("live-status");
+
+  hideDone = load(HIDE_DONE_KEY, false) === true;
+  hideDoneEl.checked = hideDone;
+
+  hideDoneEl.addEventListener("change", function () {
+    hideDone = hideDoneEl.checked;
+    store(HIDE_DONE_KEY, hideDone);
+    render();
+  });
   var unsavedEl = document.getElementById("unsaved");
 
   progressEl.textContent = "0 of " + total + " items ticked";
@@ -1557,11 +1610,15 @@
         if (rowEl) {
           rowEl.classList.toggle("ticked", isDone);
           rowEl.classList.toggle("unsaved", isPending && live);
+          var hide = hideDone && isDone;
+          if (rowEl.hidden !== hide) { rowEl.hidden = hide; }
         }
         if (notesEl && notesEl.innerHTML !== thread) { notesEl.innerHTML = thread; }
         if (byEl) { byEl.textContent = stamp; }
       }
     }
+
+    var anyVisible = false;
 
     for (var sk in sectionRows) {
       if (!Object.prototype.hasOwnProperty.call(sectionRows, sk)) { continue; }
@@ -1581,7 +1638,18 @@
         boxes[ab].checked = ids.length > 0 && secDone === ids.length;
         boxes[ab].indeterminate = secDone > 0 && secDone < ids.length;
       }
+
+      // A trade with nothing left in it is a heading over an empty table,
+      // so the whole section goes rather than just its rows.
+      var secEl = document.getElementById("sec-" + sk);
+      if (secEl) {
+        var hideSec = hideDone && ids.length > 0 && secDone === ids.length;
+        if (secEl.hidden !== hideSec) { secEl.hidden = hideSec; }
+        if (!hideSec) { anyVisible = true; }
+      }
     }
+
+    allClearEl.hidden = !(hideDone && !anyVisible);
 
     renderSummary();
     progressEl.textContent = doneCount + " of " + total + " items ticked";
