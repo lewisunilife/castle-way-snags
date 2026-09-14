@@ -22,15 +22,27 @@ create table if not exists public.castle_way_snags (
   updated_at  timestamptz not null default now()
 );
 
+-- Every note and comment, in one place. snag_id null means it is a
+-- general comment on the job; snag_id set means it is a note against that
+-- line of the list. Lines can carry as many notes as people need to add,
+-- and none of them overwrite each other.
 create table if not exists public.castle_way_comments (
   id         uuid        primary key default gen_random_uuid(),
+  snag_id    text,
   body       text        not null,
   author     text        not null default '',
   created_at timestamptz not null default now()
 );
 
+-- For a project created before per-line notes existed.
+alter table public.castle_way_comments
+  add column if not exists snag_id text;
+
 create index if not exists castle_way_comments_created_at_idx
   on public.castle_way_comments (created_at);
+
+create index if not exists castle_way_comments_snag_idx
+  on public.castle_way_comments (snag_id, created_at);
 
 -- ---------------------------------------------------------------------
 -- Row level security
@@ -39,6 +51,9 @@ create index if not exists castle_way_comments_created_at_idx
 -- exactly the rights the page needs and nothing more:
 --   snags     read, create, amend     (no delete: a line cannot vanish)
 --   comments  read, create            (no amend, no delete: an audit trail)
+--
+-- Notes live in the comments table, so a note once added cannot be
+-- quietly edited or removed either.
 -- ---------------------------------------------------------------------
 
 alter table public.castle_way_snags    enable row level security;

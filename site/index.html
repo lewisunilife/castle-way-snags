@@ -313,11 +313,46 @@
 
   .by:empty { display: none; }
 
-  .note-field {
+  /* Notes on a line: a thread, oldest first, nothing overwritten. */
+  .notes {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .notes:empty { display: none; }
+
+  .notes li {
+    border-left: 2px solid var(--rule);
+    padding: 1px 0 1px 9px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .notes li.sending { border-left-color: var(--warn); }
+
+  .note-who {
     display: block;
-    width: 100%;
-    margin-top: 7px;
-    padding: 4px 0;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .note-body { overflow-wrap: anywhere; }
+
+  .note-add {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .note-field {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 5px 0;
     font: inherit;
     font-size: 13px;
     color: var(--text);
@@ -329,6 +364,19 @@
   .note-field::placeholder { color: var(--muted); opacity: 0.75; }
   .note-field:focus { border-bottom-color: var(--tick); outline: none; }
   .note-field:not(:placeholder-shown) { border-bottom-style: solid; }
+
+  .note-btn {
+    flex: none;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 11px;
+    min-height: 0;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--rule);
+  }
+
+  .note-btn:hover { border-color: var(--tick); opacity: 1; }
 
   .panel { border: 1px solid var(--rule); padding: 18px; }
 
@@ -537,6 +585,14 @@
 
     .panel { padding: 14px; }
     button { width: 100%; }
+
+    /* ...except the note Submit, which sits beside its field and would
+       otherwise squeeze it to nothing. */
+    .note-btn {
+      width: auto;
+      padding: 8px 14px;
+      min-height: 40px;
+    }
   }
 
   @media print {
@@ -1102,7 +1158,7 @@
     gateOpen = open;
 
     if (!gatedInputs) {
-      gatedInputs = document.querySelectorAll("#sections input");
+      gatedInputs = document.querySelectorAll("#sections input, #sections button");
     }
     for (var g = 0; g < gatedInputs.length; g++) {
       gatedInputs[g].disabled = !open;
@@ -1219,9 +1275,14 @@
         '<td class="floor">' + esc(floor) + "</td>" +
         '<td class="src">' + esc(row[1]) + "</td>" +
         '<td class="action"><span class="action-text">' + esc(row[2]) + "</span>" +
+        '<ul class="notes" id="notes-' + domId + '"></ul>' +
+        '<div class="note-add">' +
         '<input class="note-field" type="text" id="note-' + domId + '" data-id="' + id + '"' +
         ' placeholder="Add a note"' +
         ' aria-label="Note for ' + esc(row[0]) + " " + esc(row[2]) + '">' +
+        '<button type="button" class="note-btn" data-id="' + id + '"' +
+        ' aria-label="Submit note for ' + esc(row[0]) + '">Submit</button>' +
+        "</div>" +
         '<span class="by" id="by-' + domId + '"></span></td>' +
         '<td class="done"><label for="tick-' + domId + '">' +
         '<input type="checkbox" id="tick-' + domId + '" data-id="' + id + '"' +
@@ -1261,9 +1322,67 @@
       : "";
   }
 
+  // Notes live in the comments table, tagged with the job they belong to,
+  // so a line can carry as many as people need and none overwrite.
+  function groupNotes() {
+    var all = comments.concat(queuedComments);
+    var confirmed = {};
+    var m = {};
+    var i;
+
+    for (i = 0; i < comments.length; i++) {
+      if (comments[i] && comments[i].id) { confirmed[comments[i].id] = true; }
+    }
+
+    for (i = 0; i < all.length; i++) {
+      var c = all[i];
+      if (!c || !c.snag_id) { continue; }
+      if (!m[c.snag_id]) { m[c.snag_id] = []; }
+      m[c.snag_id].push(c);
+    }
+
+    for (var k in m) {
+      if (!Object.prototype.hasOwnProperty.call(m, k)) { continue; }
+      m[k].sort(function (x, y) {
+        return String(x.created_at || "").localeCompare(String(y.created_at || ""));
+      });
+    }
+
+    m.__confirmed = confirmed;
+    return m;
+  }
+
+  function notesHtml(list, confirmed, legacy) {
+    var html = "";
+
+    // A note written before this line kept a thread; keep showing it.
+    if (legacy && legacy.note) {
+      var lw = legacy.updated_by ? esc(legacy.updated_by) : "Someone";
+      var lt = shortDate(legacy.updated_at);
+      html += '<li><span class="note-who">' + lw + (lt ? " · " + esc(lt) : "") +
+        '</span><span class="note-body">' + esc(legacy.note) + "</span></li>";
+    }
+
+    for (var i = 0; i < list.length; i++) {
+      var c = list[i];
+      var sending = live && !confirmed[c.id];
+      var meta = esc(c.author || "Someone");
+      var when = shortDate(c.created_at);
+      if (when) { meta += " · " + esc(when); }
+      if (sending) { meta += " · sending…"; }
+      html += "<li" + (sending ? ' class="sending"' : "") + '>' +
+        '<span class="note-who">' + meta + "</span>" +
+        '<span class="note-body">' + esc(c.body || "") + "</span></li>";
+    }
+
+    return html;
+  }
+
   function render() {
     var doneCount = 0;
     var id;
+    var grouped = groupNotes();
+    var confirmed = grouped.__confirmed;
 
     for (id in index) {
       if (!Object.prototype.hasOwnProperty.call(index, id)) { continue; }
@@ -1272,6 +1391,7 @@
       var isDone = rec.done === true;
       var note = typeof rec.note === "string" ? rec.note : "";
       var isPending = Object.prototype.hasOwnProperty.call(queued, id);
+      var thread = notesHtml(grouped[id] || [], confirmed, rec);
 
       if (isDone) { doneCount++; }
 
@@ -1291,7 +1411,7 @@
         var domId = where[w];
         var rowEl = document.getElementById("row-" + domId);
         var tickEl = document.getElementById("tick-" + domId);
-        var noteEl = document.getElementById("note-" + domId);
+        var notesEl = document.getElementById("notes-" + domId);
         var byEl = document.getElementById("by-" + domId);
 
         if (tickEl && tickEl.checked !== isDone) { tickEl.checked = isDone; }
@@ -1299,10 +1419,7 @@
           rowEl.classList.toggle("ticked", isDone);
           rowEl.classList.toggle("unsaved", isPending && live);
         }
-        // Never yank text out from under someone mid-sentence.
-        if (noteEl && document.activeElement !== noteEl && noteEl.value !== note) {
-          noteEl.value = note;
-        }
+        if (notesEl && notesEl.innerHTML !== thread) { notesEl.innerHTML = thread; }
         if (byEl) { byEl.textContent = stamp; }
       }
     }
@@ -1366,8 +1483,17 @@
   var listEl = document.getElementById("comment-list");
   var emptyEl = document.getElementById("comment-empty");
 
+  function generalOnly(list) {
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && !list[i].snag_id) { out.push(list[i]); }
+    }
+    return out;
+  }
+
   function renderComments() {
-    var all = comments.concat(queuedComments);
+    var confirmed = generalOnly(comments);
+    var all = confirmed.concat(generalOnly(queuedComments));
     if (!all.length) {
       listEl.innerHTML = "";
       emptyEl.hidden = false;
@@ -1377,7 +1503,7 @@
     var html = "";
     for (var c = 0; c < all.length; c++) {
       var item = all[c];
-      var unsent = c >= comments.length && live;
+      var unsent = c >= confirmed.length && live;
       var meta = esc(item.author || "Someone");
       var when = shortDate(item.created_at);
       if (when) { meta += " · " + esc(when); }
@@ -1489,6 +1615,7 @@
 
       client.from(COMMENTS_TABLE).insert({
         id: entry.id,
+        snag_id: entry.snag_id || null,
         body: entry.body,
         author: entry.author
       }).then(function (res) {
@@ -1549,33 +1676,50 @@
     enqueue(box.getAttribute("data-id"), { done: box.checked });
   });
 
-  var noteTimers = {};
+  // A note is submitted deliberately and joins the line's thread, so one
+  // person can leave several and nobody overwrites anyone.
+  function submitNote(id, field) {
+    var body = field.value.trim();
+    if (!body) { field.focus(); return; }
 
-  sectionsEl.addEventListener("input", function (ev) {
-    var field = ev.target;
-    if (!field || !field.classList.contains("note-field")) { return; }
-    var id = field.getAttribute("data-id");
-    if (noteTimers[id]) { window.clearTimeout(noteTimers[id].timer); }
-    noteTimers[id] = {
-      el: field,
-      timer: window.setTimeout(function () {
-        enqueue(id, { note: field.value.trim() });
-      }, 700)
+    var entry = {
+      id: uuid(),
+      snag_id: id,
+      body: body,
+      author: who(),
+      created_at: new Date().toISOString()
     };
+
+    field.value = "";
+
+    if (live) {
+      queuedComments.push(entry);
+      saveQueue();
+      render();
+      flush();
+    } else {
+      comments.push(entry);
+      saveLocal();
+      render();
+    }
+
+    field.focus();
+  }
+
+  sectionsEl.addEventListener("click", function (ev) {
+    var btn = ev.target;
+    if (!btn || !btn.classList || !btn.classList.contains("note-btn")) { return; }
+    var id = btn.getAttribute("data-id");
+    var field = btn.parentNode.querySelector(".note-field");
+    if (field) { submitNote(id, field); }
   });
 
-  // A note still inside its debounce when the page closes would otherwise
-  // never be written at all.
-  window.addEventListener("pagehide", function () {
-    Object.keys(noteTimers).forEach(function (id) {
-      window.clearTimeout(noteTimers[id].timer);
-      var field = noteTimers[id].el;
-      if (!field) { return; }
-      var current = effective(id).note || "";
-      if (field.value.trim() !== current) {
-        enqueue(id, { note: field.value.trim() });
-      }
-    });
+  sectionsEl.addEventListener("keydown", function (ev) {
+    var field = ev.target;
+    if (!field || !field.classList || !field.classList.contains("note-field")) { return; }
+    if (ev.key !== "Enter") { return; }
+    ev.preventDefault();
+    submitNote(field.getAttribute("data-id"), field);
   });
 
   var commentBtn = document.getElementById("comment-btn");
@@ -1587,6 +1731,7 @@
 
     var entry = {
       id: uuid(),
+      snag_id: null,
       body: body,
       author: who(),
       created_at: new Date().toISOString()
@@ -1614,14 +1759,12 @@
   function buildReport() {
     var lines = ["Castle Way Tower 1 — snagging progress", new Date().toLocaleString("en-GB"), ""];
     var doneIds = [];
-    var noteIds = [];
     var id;
 
     for (id in index) {
       if (!Object.prototype.hasOwnProperty.call(index, id)) { continue; }
       var rec = effective(id);
       if (rec.done) { doneIds.push(id); }
-      if (rec.note) { noteIds.push(id); }
     }
 
     lines.push("TICKED (" + doneIds.length + " of " + total + ")");
@@ -1636,23 +1779,38 @@
       lines.push("- none yet");
     }
 
+    var grouped = groupNotes();
+    var withNotes = [];
+    for (id in index) {
+      if (!Object.prototype.hasOwnProperty.call(index, id)) { continue; }
+      if ((grouped[id] && grouped[id].length) || effective(id).note) { withNotes.push(id); }
+    }
+
     lines.push("");
-    lines.push("NOTES (" + noteIds.length + ")");
-    if (noteIds.length) {
-      for (var b = 0; b < noteIds.length; b++) {
-        var n = index[noteIds[b]];
-        var nr = effective(noteIds[b]);
+    lines.push("NOTES (" + withNotes.length + " item" + (withNotes.length === 1 ? "" : "s") + ")");
+    if (withNotes.length) {
+      for (var b = 0; b < withNotes.length; b++) {
+        var n = index[withNotes[b]];
+        var legacy = effective(withNotes[b]);
         lines.push("- " + n.room + " — " + n.action);
-        lines.push("  " + nr.note + (nr.updated_by ? "  [" + nr.updated_by + "]" : ""));
+        if (legacy.note) {
+          lines.push("    " + legacy.note +
+            (legacy.updated_by ? "  [" + legacy.updated_by + "]" : ""));
+        }
+        var thread = grouped[withNotes[b]] || [];
+        for (var tn = 0; tn < thread.length; tn++) {
+          lines.push("    " + thread[tn].body +
+            "  [" + (thread[tn].author || "Someone") + "]");
+        }
       }
     } else {
       lines.push("- none yet");
     }
 
-    var allComments = comments.concat(queuedComments);
+    var allComments = generalOnly(comments).concat(generalOnly(queuedComments));
     if (allComments.length) {
       lines.push("");
-      lines.push("COMMENTS (" + allComments.length + ")");
+      lines.push("GENERAL COMMENTS (" + allComments.length + ")");
       for (var c = 0; c < allComments.length; c++) {
         lines.push("- " + (allComments[c].author || "Someone") + ": " + allComments[c].body);
       }
@@ -1861,7 +2019,7 @@
           comments.push(row);
           queuedComments = queuedComments.filter(function (q) { return q.id !== row.id; });
           saveQueue();
-          renderComments();
+          if (row.snag_id) { render(); } else { renderComments(); }
           renderUnsaved();
         })
       .subscribe(function (status) {
