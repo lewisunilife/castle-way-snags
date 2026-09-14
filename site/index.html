@@ -1327,6 +1327,55 @@
       : "";
   }
 
+  /* A note belongs to a job. Ideally that lives in a snag_id column, but
+     a project set up before notes existed has no such column, and asking
+     someone to run a migration before they can write "tenant in, rebook"
+     is a poor trade. So: try the column, and if the project does not have
+     it, fold the job into the body as a tag instead. Both forms read back
+     the same, so notes written either way sit in one thread and adding
+     the column later changes nothing that is already saved. */
+
+  var snagColumn = true;
+  var SNAG_TAG = /^\[\[snag:([^\]\s]{1,120})\]\]\s?/;
+
+  function commentPayload(entry, useColumn) {
+    var payload = { id: entry.id, body: entry.body, author: entry.author };
+    if (!entry.snag_id) { return payload; }
+    if (useColumn) {
+      payload.snag_id = entry.snag_id;
+    } else {
+      payload.body = "[[snag:" + entry.snag_id + "]] " + entry.body;
+    }
+    return payload;
+  }
+
+  function readComment(row) {
+    if (!row) { return null; }
+    var body = String(row.body || "");
+    var snag = row.snag_id || null;
+    var tagged = body.match(SNAG_TAG);
+    if (tagged) {
+      if (!snag) { snag = tagged[1]; }
+      body = body.slice(tagged[0].length);
+    }
+    return {
+      id: row.id,
+      snag_id: snag,
+      body: body,
+      author: row.author || "",
+      created_at: row.created_at || ""
+    };
+  }
+
+  function readComments(rows) {
+    var out = [];
+    for (var i = 0; i < (rows || []).length; i++) {
+      var c = readComment(rows[i]);
+      if (c && c.id) { out.push(c); }
+    }
+    return out;
+  }
+
   // Notes live in the comments table, tagged with the job they belong to,
   // so a line can carry as many as people need and none overwrite.
   function groupNotes() {
@@ -1638,32 +1687,49 @@
       if (entry.inflight) { return; }
       entry.inflight = true;
 
-      client.from(COMMENTS_TABLE).insert({
-        id: entry.id,
-        snag_id: entry.snag_id || null,
-        body: entry.body,
-        author: entry.author
-      }).then(function (res) {
+      function landed() {
         entry.inflight = false;
-        // 23505 = already there from an earlier attempt that landed but
-        // whose reply we never saw. That is a success, not a failure.
-        if (res.error && res.error.code !== "23505") {
-          reportWriteError(res.error, "notes");
-          scheduleFlush();
-          return;
-        }
         var at = queuedComments.indexOf(entry);
         if (at !== -1) {
           queuedComments.splice(at, 1);
           saveQueue();
         }
         settled();
+        render();
         renderComments();
         renderUnsaved();
-      }, function () {
+      }
+
+      function failed(err) {
         entry.inflight = false;
+        if (err) { reportWriteError(err, "notes"); }
         scheduleFlush();
-      });
+      }
+
+      // The id is the same on every attempt, so a retry after a reply we
+      // never saw comes back as 23505 rather than posting the note twice.
+      function attempt(useColumn) {
+        client.from(COMMENTS_TABLE).insert(commentPayload(entry, useColumn))
+          .then(function (res) {
+            if (res.error && res.error.code === "23505") { landed(); return; }
+
+            if (res.error) {
+              // This project has no snag_id column. Fold the job into the
+              // body instead and carry on: the note saves either way.
+              if (useColumn && entry.snag_id && schemaError(res.error)) {
+                snagColumn = false;
+                attempt(false);
+                return;
+              }
+              failed(res.error);
+              return;
+            }
+
+            landed();
+          }, function () { failed(null); });
+      }
+
+      attempt(snagColumn);
     });
 
     renderUnsaved();
@@ -1996,7 +2062,7 @@
         // was in flight is not in the reply, and must not be dropped.
         var seen = {};
         var merged = [];
-        (res.data || []).concat(comments).forEach(function (c) {
+        readComments(res.data).concat(comments).forEach(function (c) {
           if (!c || !c.id || seen[c.id]) { return; }
           seen[c.id] = true;
           merged.push(c);
@@ -2011,6 +2077,10 @@
           return !comments.some(function (c) { return c.id === q.id; });
         });
         saveQueue();
+        // render() as well: the fetched rows carry the notes hanging off
+        // each line, not just the general comments, and without this they
+        // stay blank on a fresh load until something else redraws.
+        render();
         renderComments();
         renderUnsaved();
       });
@@ -2038,8 +2108,8 @@
       .on("postgres_changes",
         { event: "INSERT", schema: "public", table: COMMENTS_TABLE },
         function (payload) {
-          var row = payload.new;
-          if (!row) { return; }
+          var row = readComment(payload.new);
+          if (!row || !row.id) { return; }
           if (comments.some(function (c) { return c.id === row.id; })) { return; }
           comments.push(row);
           queuedComments = queuedComments.filter(function (q) { return q.id !== row.id; });
