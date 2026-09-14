@@ -78,10 +78,30 @@ audit is started. The rest of the building has been audited already, so what
 shows against those rooms is simply what is left on the trade lists; a room
 with nothing left reads **no tickets outstanding**.
 
-A count above the list gives the split — waiting, outstanding, clear — and
-**Hide rooms with nothing outstanding** drops the clear ones. The count still
-counts everything, so it stays true whatever is on screen; the choice is
-remembered on that device and changes nobody else's view.
+Each card leads with the move-in date where there is one, then the floor, room
+type and Stelling priority. **Order by** switches between room number and
+move-in date, soonest arrival first; rooms with no date given go to the end
+rather than the front.
+
+A count above the list gives the split — waiting, outstanding, clear. Three
+filters narrow it:
+
+- **Hide rooms with nothing outstanding** drops the clear ones.
+- **Hide ground floor** drops CW0xx.
+- **Filter tasks by trade** hides a trade's jobs from every card, so the view
+  can be read without, say, the building-wide MVHR sweep on top of it.
+
+The counts follow the filters, and an amber line above the list says which are
+on, because a room can read clear only because what is left in it is hidden.
+The audit log's own idea of whether a studio is finished ignores the filters
+entirely — that is a fact about the studio, not about what someone chose to
+look at. All four choices are remembered on that device and change nobody
+else's view.
+
+The list is Castle Way Tower 1 only. It is generated from the floor layouts —
+ground floor, five standard floors, the short fifth, and the two annexe
+landings — which is where the 257 comes from; nothing outside those layouts
+can appear on it.
 
 The audit log's studio picker offers only Stelling's 37, since the rest of the
 building does not need auditing. Finished ones move into a **Completed** group
