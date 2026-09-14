@@ -665,7 +665,7 @@
     </div>
   </div>
 
-  <p class="gate" id="gate-notice">Enter your name and company above to start ticking items off.</p>
+  <p class="gate" id="gate-notice">Enter your name and company above before ticking anything off or adding notes.</p>
 
   <h2>Summary by trade</h2>
   <div class="scroller">
@@ -1156,6 +1156,7 @@
 
   var gateOpen = null;
   var gatedInputs = null;
+  var gatedNotes = null;
 
   function applyGate() {
     var open = identified();
@@ -1167,6 +1168,18 @@
     }
     for (var g = 0; g < gatedInputs.length; g++) {
       gatedInputs[g].disabled = !open;
+    }
+
+    // A disabled box that refuses to type looks broken unless it says
+    // why, and the notice at the top is off screen by the time someone
+    // is tapping a note field.
+    if (!gatedNotes) {
+      gatedNotes = document.querySelectorAll("#sections .note-field");
+    }
+    for (var f = 0; f < gatedNotes.length; f++) {
+      gatedNotes[f].placeholder = open
+        ? "Add a note"
+        : "Add your name and company at the top first";
     }
 
     commentText.disabled = !open;
