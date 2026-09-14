@@ -120,7 +120,7 @@
     padding: 14px 16px;
   }
 
-  .bar .who { flex: 1 1 220px; min-width: 0; }
+  .bar .field { flex: 1 1 180px; min-width: 0; }
 
   .bar label {
     display: block;
@@ -129,7 +129,7 @@
     margin-bottom: 5px;
   }
 
-  #who {
+  .bar input[type="text"] {
     width: 100%;
     font: inherit;
     font-size: 14px;
@@ -139,6 +139,28 @@
     padding: 9px 10px;
     min-height: 40px;
   }
+
+  /* Until we know who is ticking, nothing is tickable. */
+  .gate {
+    margin: 10px 0 0;
+    padding: 10px 14px;
+    border-left: 3px solid var(--warn);
+    background: var(--warn-bg);
+    color: var(--warn);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .gate[hidden] { display: none; }
+
+  input:disabled,
+  textarea:disabled,
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  td.done label:has(input:disabled) { cursor: not-allowed; }
 
   .bar-meta {
     display: flex;
@@ -265,6 +287,22 @@
   /* A row whose change has not reached the server yet. */
   tr.unsaved td.done { border-left-color: var(--warn); }
   tr.unsaved .by { color: var(--warn); }
+
+  /* Summary: a room clears once that trade has nothing left in it. */
+  .sum-room.done {
+    color: var(--muted);
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+  }
+
+  #summary-table tr.trade-done td.t-trade {
+    color: var(--muted);
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+  }
+
+  #summary-table tr.trade-done td { background: var(--done-bg); }
+  #summary-table tr.trade-done:hover td { background: var(--done-bg); }
 
   .by {
     display: block;
@@ -542,8 +580,6 @@
 
 <div class="page">
   <h1>Castle Way Tower 1: issues by trade</h1>
-  <p class="lede">One section per trade, ordered by floor then room. No deadlines: timings will be agreed in person. Cleaning list updated 13 Sep: only 528 and 530 outstanding. Sources: CW Issues Log (Control Spreadsheet 2026-27), the Stelling and Unilife walk-round lists and the snagging column of the arrivals list, all as at 13 September 2026.</p>
-
   <div class="setup" id="setup-notice" hidden>
     <strong>Not connected yet</strong>
     Ticks and notes are saving to this device only. To make the list shared,
@@ -553,9 +589,13 @@
   </div>
 
   <div class="bar">
-    <div class="who">
-      <label for="who">Your name — so everyone can see who did what</label>
-      <input id="who" type="text" placeholder="e.g. Dave, Stelling" autocomplete="name">
+    <div class="field">
+      <label for="who">Your name</label>
+      <input id="who" type="text" placeholder="e.g. Dave Wilson" autocomplete="name">
+    </div>
+    <div class="field">
+      <label for="company">Company</label>
+      <input id="company" type="text" placeholder="e.g. Stelling" autocomplete="organization">
     </div>
     <div class="bar-meta">
       <span id="progress">0 of 130 items ticked</span>
@@ -563,6 +603,8 @@
       <span id="unsaved"></span>
     </div>
   </div>
+
+  <p class="gate" id="gate-notice">Enter your name and company above to start ticking items off.</p>
 
   <h2>Summary by trade</h2>
   <div class="scroller">
@@ -977,6 +1019,7 @@
      ------------------------------------------------------------------ */
 
   var NAME_KEY = "cw-tower1-name";
+  var COMPANY_KEY = "cw-tower1-company";
   var LOCAL_KEY = "cw-tower1-snags-local-v2";
   var QUEUE_KEY = "cw-tower1-snags-queue-v2";
   var MIGRATED_KEY = "cw-tower1-snags-migrated-v2";
@@ -990,6 +1033,7 @@
   var live = false;
   var channel = null;
   var index = {};
+  var roomIndex = {};
   var total = 0;
   var retryTimer = null;
   var retryDelay = 4000;
@@ -1021,20 +1065,80 @@
   }
 
   var whoEl = document.getElementById("who");
+  var companyEl = document.getElementById("company");
+  var gateNotice = document.getElementById("gate-notice");
 
   try {
     whoEl.value = window.localStorage.getItem(NAME_KEY) || "";
+    companyEl.value = window.localStorage.getItem(COMPANY_KEY) || "";
   } catch (e) { /* ignore */ }
 
-  whoEl.addEventListener("input", function () {
-    try { window.localStorage.setItem(NAME_KEY, whoEl.value); } catch (e) { /* ignore */ }
-  });
-
-  function who() {
-    return whoEl.value.trim() || "Someone";
+  // Every tick and note is attributed, so the list is only usable once we
+  // know who is using it.
+  function identified() {
+    return whoEl.value.trim().length > 0 && companyEl.value.trim().length > 0;
   }
 
+  function who() {
+    var n = whoEl.value.trim();
+    var co = companyEl.value.trim();
+    if (n && co) { return n + ", " + co; }
+    return n || co || "Someone";
+  }
+
+  var gateOpen = null;
+  var gatedInputs = null;
+
+  function applyGate() {
+    var open = identified();
+    if (open === gateOpen) { return; }
+    gateOpen = open;
+
+    if (!gatedInputs) {
+      gatedInputs = document.querySelectorAll("#sections input");
+    }
+    for (var g = 0; g < gatedInputs.length; g++) {
+      gatedInputs[g].disabled = !open;
+    }
+
+    commentText.disabled = !open;
+    commentBtn.disabled = !open;
+    gateNotice.hidden = open;
+  }
+
+  function rememberIdentity() {
+    try {
+      window.localStorage.setItem(NAME_KEY, whoEl.value);
+      window.localStorage.setItem(COMPANY_KEY, companyEl.value);
+    } catch (e) { /* ignore */ }
+    applyGate();
+  }
+
+  whoEl.addEventListener("input", rememberIdentity);
+  companyEl.addEventListener("input", rememberIdentity);
+
   /* ---- Summary table ---- */
+
+  // The summary's trades are the trade sections below, by title. The two
+  // walk-round sections are not summarised (their items are counted once,
+  // under their trade), so they are absent from this map by design.
+  var tradeKeyByTitle = {};
+  for (var t = 0; t < sections.length; t++) {
+    tradeKeyByTitle[sections[t].title] = sections[t].key;
+  }
+
+  function roomCells(tradeTitle, roomList) {
+    var key = tradeKeyByTitle[tradeTitle] || "";
+    var rooms = roomList.split(", ");
+    var cells = [];
+    for (var r = 0; r < rooms.length; r++) {
+      cells.push(
+        '<span class="sum-room" data-key="' + esc(key) +
+        '" data-room="' + esc(rooms[r]) + '">' + esc(rooms[r]) + "</span>"
+      );
+    }
+    return cells.join(", ");
+  }
 
   var summaryHtml = "";
   var totalIssues = 0;
@@ -1043,11 +1147,11 @@
     var s = summary[i];
     totalIssues += s[1];
     summaryHtml +=
-      "<tr>" +
+      '<tr data-key="' + esc(tradeKeyByTitle[s[0]] || "") + '">' +
       '<td class="room t-trade">' + esc(s[0]) + "</td>" +
       '<td class="num t-issues">' + s[1] + "</td>" +
       '<td class="num t-rooms">' + s[2] + "</td>" +
-      '<td class="t-nums">' + esc(s[3]) + "</td>" +
+      '<td class="t-nums">' + roomCells(s[0], s[3]) + "</td>" +
       "</tr>";
   }
 
@@ -1096,6 +1200,12 @@
         action: row[2]
       };
       total++;
+
+      // Every line for this trade in this room, so the summary can cross
+      // the room off once the last of them is ticked.
+      if (!roomIndex[sec.key]) { roomIndex[sec.key] = {}; }
+      if (!roomIndex[sec.key][row[0]]) { roomIndex[sec.key][row[0]] = []; }
+      roomIndex[sec.key][row[0]].push(id);
 
       out +=
         '<tr id="row-' + id + '">' +
@@ -1204,8 +1314,45 @@
       }
     }
 
+    renderSummary();
     progressEl.textContent = doneCount + " of " + total + " items ticked";
     renderUnsaved();
+  }
+
+  // Cross a room off a trade's summary line once every job that trade has
+  // in that room is ticked, and strike the trade itself once every one of
+  // its rooms is clear.
+  var summaryRoomEls = null;
+  var summaryRowEls = null;
+
+  function renderSummary() {
+    if (!summaryRoomEls) {
+      summaryRoomEls = document.querySelectorAll("#summary-table .sum-room");
+      summaryRowEls = document.querySelectorAll("#summary-table tbody tr[data-key]");
+    }
+
+    var clearByTrade = {};
+
+    for (var n = 0; n < summaryRoomEls.length; n++) {
+      var el = summaryRoomEls[n];
+      var key = el.getAttribute("data-key");
+      var room = el.getAttribute("data-room");
+      var ids = (roomIndex[key] || {})[room] || [];
+
+      var clear = ids.length > 0;
+      for (var q = 0; q < ids.length; q++) {
+        if (effective(ids[q]).done !== true) { clear = false; break; }
+      }
+
+      el.classList.toggle("done", clear);
+      if (!(key in clearByTrade)) { clearByTrade[key] = true; }
+      if (!clear) { clearByTrade[key] = false; }
+    }
+
+    for (var m = 0; m < summaryRowEls.length; m++) {
+      var rowKeyAttr = summaryRowEls[m].getAttribute("data-key");
+      summaryRowEls[m].classList.toggle("trade-done", clearByTrade[rowKeyAttr] === true);
+    }
   }
 
   /* ---- Comments ---- */
@@ -1286,7 +1433,7 @@
   function settled() {
     retryDelay = 4000;
     if (pendingCount() === 0) {
-      setStatus("Live — everyone sees this list update", "is-live");
+      setStatus("Live", "is-live");
     }
   }
 
@@ -1552,6 +1699,7 @@
 
   render();
   renderComments();
+  applyGate();
 
   function applyRow(rowData) {
     if (!rowData || !rowData.id) { return; }
@@ -1641,7 +1789,7 @@
       renderComments();
       flush();
       if (pendingCount() === 0) {
-        setStatus("Live — everyone sees this list update", "is-live");
+        setStatus("Live", "is-live");
       }
     }, function () {
       goLocal("Can't reach the list — changes are held here and will send");
@@ -1712,7 +1860,7 @@
           live = true;
           flush();
           if (pendingCount() === 0) {
-            setStatus("Live — everyone sees this list update", "is-live");
+            setStatus("Live", "is-live");
           }
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
           setStatus("Reconnecting… your changes are held here", "is-local");
