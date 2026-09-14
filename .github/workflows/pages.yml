@@ -1,14 +1,23 @@
 name: Deploy page
 
+# Pages serves the `gh-pages` branch. Edit `site/index.html` on main and this
+# copies it across on every push.
+#
+# It does NOT use actions/deploy-pages: switching the Pages source to "GitHub
+# Actions" needs a token that can create the Pages site, and the workflow
+# token here cannot (`Resource not accessible by integration`). Publishing to
+# the branch only needs `contents: write`, which it does have.
+
 on:
   push:
     branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -17,21 +26,25 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
-      # enablement: true switches Pages on for this repo the first time the
-      # workflow runs, so nobody has to flip it in Settings by hand.
-      - uses: actions/configure-pages@v5
-        with:
-          enablement: true
+      - name: Publish site/ to gh-pages
+        run: |
+          set -euo pipefail
 
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          staged="$(mktemp -d)"
+          cp -R site/. "$staged"/
+          touch "$staged/.nojekyll"
+
+          git checkout --orphan publish
+          git rm -rq --cached .
+          find . -maxdepth 1 -mindepth 1 ! -name .git -exec rm -rf {} +
+          cp -R "$staged"/. .
+
+          git add -A
+          git commit -q -m "Publish ${GITHUB_SHA}"
+          git push -f origin publish:gh-pages
