@@ -23,6 +23,7 @@
     --live: #1c6b45;
     --warn: #8a5a00;
     --warn-bg: #fdf6e7;
+    --strike: #c62828;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -44,6 +45,7 @@
       --live: #5fc08d;
       --warn: #d9a441;
       --warn-bg: #241d0d;
+      --strike: #ff6b6b;
     }
   }
 
@@ -281,7 +283,8 @@
   tr.ticked .action-text {
     color: var(--muted);
     text-decoration: line-through;
-    text-decoration-thickness: 1px;
+    text-decoration-color: var(--strike);
+    text-decoration-thickness: 2px;
   }
 
   /* A row whose change has not reached the server yet. */
@@ -292,13 +295,15 @@
   .sum-room.done {
     color: var(--muted);
     text-decoration: line-through;
-    text-decoration-thickness: 1px;
+    text-decoration-color: var(--strike);
+    text-decoration-thickness: 2px;
   }
 
   #summary-table tr.trade-done td.t-trade {
     color: var(--muted);
     text-decoration: line-through;
-    text-decoration-thickness: 1px;
+    text-decoration-color: var(--strike);
+    text-decoration-thickness: 2px;
   }
 
   #summary-table tr.trade-done td { background: var(--done-bg); }
@@ -1562,6 +1567,26 @@
     retryDelay = Math.min(retryDelay * 2, 30000);
   }
 
+  // A missing column or table is not a bad signal and will never come
+  // good on its own — retrying quietly forever just looks like a hang.
+  // The entry stays queued so it lands once the database is updated.
+  function schemaError(err) {
+    if (!err) { return false; }
+    var code = String(err.code || "");
+    if (code === "PGRST204" || code === "PGRST205" || code === "42703" || code === "42P01") {
+      return true;
+    }
+    return /schema cache/i.test(String(err.message || ""));
+  }
+
+  function reportWriteError(err, what) {
+    if (schemaError(err)) {
+      setStatus("The database needs updating before " + what + " can save", "is-local");
+    } else {
+      setStatus("Can't reach the list — changes are held here and will send", "is-local");
+    }
+  }
+
   function settled() {
     retryDelay = 4000;
     if (pendingCount() === 0) {
@@ -1586,7 +1611,7 @@
       }).then(function (res) {
         rec.inflight = false;
         if (res.error) {
-          setStatus("Can't reach the list — changes are held here and will send", "is-local");
+          reportWriteError(res.error, "ticks");
           scheduleFlush();
           return;
         }
@@ -1623,7 +1648,7 @@
         // 23505 = already there from an earlier attempt that landed but
         // whose reply we never saw. That is a success, not a failure.
         if (res.error && res.error.code !== "23505") {
-          setStatus("Can't reach the list — your comment is held here and will send", "is-local");
+          reportWriteError(res.error, "notes");
           scheduleFlush();
           return;
         }
