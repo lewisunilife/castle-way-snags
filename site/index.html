@@ -766,6 +766,7 @@
   var S = "Stelling";
   var U = "Unilife";
   var A = "Arrivals list";
+  var JBA = "JBA";
 
   var ACCESS = "Access / Locks";
   var APPLI = "Appliances";
@@ -780,27 +781,10 @@
   var VENT = "Ventilation / Extract";
   var WIN = "Window Restrictors";
 
-  var summary = [
-    [CLEAN, 2, 2, "CW528, CW530"],
-    [ELEC, 4, 4, "CW109, CW345, CW346, CW448"],
-    [PLUMB, 11, 11, "CW104, CW111, CW209, CW212, CW247, CW311, CW347, CW402, CW407, CW409, CW448"],
-    [ACCESS, 5, 4, "CW111, CW145, CW247, CW407"],
-    [VENT, 4, 4, "CW104, CW211, CW212, CW304"],
-    [APPLI, 1, 1, "CW246"],
-    [FLOOR, 10, 8, "CW111, CW212, CW346, CW408, CW409, CW445, CW446, CW448"],
-    [WIN, 13, 13, "CW201, CW246, CW247, CW248, CW346, CW347, CW401, CW402, CW407, CW408, CW445, CW446, CW448"],
-    [BLINDS, 3, 2, "CW303, CW348"],
-    [JOIN, 22, 16, "CW111, CW202, CW209, CW212, CW246, CW247, CW304, CW311, CW347, CW402, CW403, CW408, CW409, CW445, CW446, CW448"],
-    [DECOR, 9, 9, "CW145, CW248, CW304, CW346, CW347, CW401, CW402, CW408, CW448"],
-    [SETUP, 24, 22, "CW111, CW145, CW201, CW202, CW205, CW211, CW212, CW246, CW247, CW248, CW304, CW311, CW346, CW347, CW348, CW401, CW402, CW408, CW409, CW445, CW446, CW448"]
-  ];
-
   var sections = [
     {
       key: "cleaning",
       title: CLEAN,
-      issues: 2,
-      rooms: 2,
       col3: "Source",
       rows: [
         ["CW528", A, "Deep clean (priority: Red)."],
@@ -810,21 +794,20 @@
     {
       key: "electrical",
       title: ELEC,
-      issues: 4,
-      rooms: 4,
       col3: "Source",
       rows: [
         ["CW109", L, "Repair room lights fault."],
         ["CW345", A, "Light clip."],
         ["CW346", L, "Check/replace very dim shower light."],
-        ["CW448", L, "Fix Live Neutral Reverse electrical fault."]
+        ["CW448", L, "Fix Live Neutral Reverse electrical fault."],
+        ["CW502", JBA, "Fix Live Neutral Reverse fault on the sockets."],
+        ["CW526", JBA, "Repair the LED switch on the sink at the foot of the bed."],
+        ["CW530", JBA, "Repair thermostat: will not go below 20."]
       ]
     },
     {
       key: "plumbing",
       title: PLUMB,
-      issues: 11,
-      rooms: 11,
       col3: "Source",
       rows: [
         ["CW104", L, "Investigate basin low pressure/leak."],
@@ -843,8 +826,6 @@
     {
       key: "access",
       title: ACCESS,
-      issues: 5,
-      rooms: 4,
       col3: "Source",
       rows: [
         ["CW111", S, "Door will not close and is very difficult to open."],
@@ -857,21 +838,18 @@
     {
       key: "ventilation",
       title: VENT,
-      issues: 4,
-      rooms: 4,
       col3: "Source",
       rows: [
         ["CW104", L, "Check/repair extractor."],
         ["CW211", L, "Check/repair extractor."],
         ["CW212", L, "Check/repair extractor."],
-        ["CW304", L, "Check/repair extractor."]
+        ["CW304", L, "Check/repair extractor."],
+        ["CW503", JBA, "Investigate MVHR error message."]
       ]
     },
     {
       key: "appliances",
       title: APPLI,
-      issues: 1,
-      rooms: 1,
       col3: "Source",
       rows: [
         ["CW246", L, "Repair oven - logged not working."]
@@ -880,8 +858,6 @@
     {
       key: "flooring",
       title: FLOOR,
-      issues: 10,
-      rooms: 8,
       col3: "Source",
       rows: [
         ["CW111", L, "Repair peeling flooring at bathroom threshold."],
@@ -893,14 +869,13 @@
         ["CW409", L, "Repair severe bubbling/lifting floor."],
         ["CW445", L, "Repair floor bubbling by bed."],
         ["CW446", L, "Repair bubbling kitchen floor."],
-        ["CW448", S, "Cut in the flooring by kitchen."]
+        ["CW448", S, "Cut in the flooring by kitchen."],
+        ["CW525", JBA, "Repair damaged flooring."]
       ]
     },
     {
       key: "restrictors",
       title: WIN,
-      issues: 13,
-      rooms: 13,
       col3: "Source",
       rows: [
         ["CW201", L, "Check/repair window restrictor."],
@@ -915,26 +890,29 @@
         ["CW408", L, "Check/repair window restrictor."],
         ["CW445", L, "Check/repair window restrictor."],
         ["CW446", L, "Check/repair window restrictor."],
-        ["CW448", L, "Check/repair window restrictor."]
+        ["CW448", L, "Check/repair window restrictor."],
+        ["CW525", JBA, "Check/repair window restrictor."],
+        ["CW526", JBA, "Check/repair window restrictor."],
+        ["CW527", JBA, "Check/repair window restrictor."],
+        ["CW528", JBA, "Check/repair window restrictor."],
+        ["CW529", JBA, "Check/repair window restrictor."],
+        ["CW530", JBA, "Check/repair window restrictor."]
       ]
     },
     {
       key: "blinds",
       title: BLINDS,
-      issues: 3,
-      rooms: 2,
       col3: "Source",
       rows: [
         ["CW303", S, "Blind cord broken; blind does not open/close."],
         ["CW348", S, "Cream blind will not go up; very dirty with paint splashes; needs replacing."],
-        ["CW348", A, "Badly stained blinds."]
+        ["CW348", A, "Badly stained blinds."],
+        ["CW529", JBA, "Free stiff privacy blind: almost stuck."]
       ]
     },
     {
       key: "joinery",
       title: JOIN,
-      issues: 22,
-      rooms: 16,
       col3: "Source",
       rows: [
         ["CW111", L, "Prop/support the drawer below the oven so it sits correctly."],
@@ -958,14 +936,17 @@
         ["CW409", L, "Fit/fix missing entrance skirting."],
         ["CW445", L, "Fit missing wardrobe shelving."],
         ["CW446", L, "Fit the loose brown circular cap."],
-        ["CW448", L, "Adjust left kitchen cupboard rubbing at ceiling/join."]
+        ["CW448", L, "Adjust left kitchen cupboard rubbing at ceiling/join."],
+        ["CW501", JBA, "Ease front door: dragging."],
+        ["CW501", JBA, "Secure bathroom door: loose and shakes when closed."],
+        ["CW526", JBA, "Ease bathroom door: drags and will not close."],
+        ["CW529", JBA, "Ease bathroom door: drags and will not close."],
+        ["CW530", JBA, "Ease bathroom door: drags and will not close."]
       ]
     },
     {
       key: "decorating",
       title: DECOR,
-      issues: 9,
-      rooms: 9,
       col3: "Source",
       rows: [
         ["CW145", L, "Add cosmetic sealant around entrance door."],
@@ -976,14 +957,13 @@
         ["CW401", L, "Touch up minor paint scuffs."],
         ["CW402", L, "Finish cosmetic work around mirror boxing."],
         ["CW408", L, "Minor sealant/cosmetic touch-ups."],
-        ["CW448", L, "Add bathroom sealant."]
+        ["CW448", L, "Add bathroom sealant."],
+        ["CW530", JBA, "Make good holes in the wall outside the room."]
       ]
     },
     {
       key: "setup",
       title: SETUP,
-      issues: 24,
-      rooms: 22,
       col3: "Source",
       rows: [
         ["CW111", L, "Remove or put away spare parts, manuals and TV/remote items."],
@@ -1013,6 +993,31 @@
       ]
     }
   ];
+
+  /* The summary and the per-trade counts are worked out from the list
+     itself. They used to be typed in alongside it, which meant adding a job
+     was two edits and the totals could drift out of step with the rows. */
+
+  var summary = [];
+  var allRooms = {};
+  var totalRooms = 0;
+
+  for (var si = 0; si < sections.length; si++) {
+    var sc = sections[si];
+    var secRooms = [];
+    var secSeen = {};
+
+    for (var sj = 0; sj < sc.rows.length; sj++) {
+      var rm = sc.rows[sj][0];
+      if (!secSeen[rm]) { secSeen[rm] = true; secRooms.push(rm); }
+      if (!allRooms[rm]) { allRooms[rm] = true; totalRooms++; }
+    }
+
+    secRooms.sort();
+    sc.issues = sc.rows.length;
+    sc.rooms = secRooms.length;
+    summary.push([sc.title, sc.issues, sc.rooms, secRooms.join(", ")]);
+  }
 
   var ORDINALS = { "1": "1st", "2": "2nd", "3": "3rd", "4": "4th", "5": "5th" };
 
@@ -1237,7 +1242,7 @@
     '<tr class="total">' +
     '<td class="t-trade">Total</td>' +
     '<td class="num t-issues">' + totalIssues + "</td>" +
-    '<td class="num t-rooms">31</td>' +
+    '<td class="num t-rooms">' + totalRooms + "</td>" +
     '<td class="t-nums"></td>' +
     "</tr>";
 

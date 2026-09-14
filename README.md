@@ -67,9 +67,13 @@ but nothing verifies it.
 
 ## Updating the list
 
-Edit the `sections` array in `site/index.html` and push. Row keys are derived
-from the room and the action, so **reordering rows, moving one between trades
-or inserting new ones is safe** — existing ticks and notes stay with their job.
+Edit the `sections` array in `site/index.html` and push. That is the only
+edit: the summary table, each trade's issue and room counts, and the totals
+are all worked out from the rows, so they cannot drift out of step.
+
+Row keys are derived from the room and the action, so **reordering rows,
+moving one between trades or inserting new ones is safe** — existing ticks
+and notes stay with their job.
 
 Rewording an action changes its key, which orphans that job's ticks and notes.
 That is deliberate: the job has changed, so it is no longer the thing that was
