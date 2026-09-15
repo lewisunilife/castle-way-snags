@@ -314,6 +314,48 @@
 
   .studio-card li.from-audit { border-left-color: var(--strike); }
 
+  .studio-row, .issue-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+  }
+
+  .studio-row input, .issue-row input {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    margin-top: 1px;
+  }
+
+  .studio-row > span, .issue-row > span { flex: 1 1 auto; min-width: 0; }
+
+  .studio-card li.ticked { border-left-color: var(--live); color: var(--muted); }
+  .studio-card li.ticked .studio-row > span > :first-child,
+  .studio-card li.ticked > .studio-row > span { text-decoration: line-through; }
+  .studio-card li.ticked .note-who { text-decoration: none; }
+
+  #issue-list li .issue-row .note-body { display: block; }
+
+  /* The untick-all question, asked in the page so every browser can
+     answer it. */
+  .untick-ask {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--warn);
+    background: var(--warn-bg);
+    border: 1px solid var(--warn);
+  }
+
+  .untick-ask span { flex: 1 1 260px; }
+  .untick-ask button { width: auto; }
+
   .studio-counts {
     margin: -6px 0 12px;
     font-size: 13px;
@@ -1991,12 +2033,13 @@
     if (open === gateOpen) { return; }
     gateOpen = open;
 
-    if (!gatedInputs) {
-      gatedInputs = document.querySelectorAll("#sections input, #sections button");
-    }
+    // Re-read each time: audit rows and the untick question are added
+    // after load, and a cached list would leave them out.
+    gatedInputs = document.querySelectorAll("#sections input, #sections button");
     for (var g = 0; g < gatedInputs.length; g++) {
       gatedInputs[g].disabled = !open;
     }
+    if (typeof renderStudios === "function") { renderStudios(); }
 
     // A disabled box that refuses to type looks broken unless it says
     // why, and the notice at the top is off screen by the time someone
@@ -2528,8 +2571,11 @@
     }
 
     if (changed) {
-      // New rows land at the end of their table until it is ordered again.
+      // New rows land at the end of their table until it is ordered again,
+      // and take the identity gate's current state like every other row.
       appliedOrder = null;
+      gateOpen = null;
+      applyGate();
       var wrap = document.getElementById("sec-unassigned");
       if (wrap) {
         wrap.hidden = !(sectionRows[UNASSIGNED] || []).length;
@@ -3131,16 +3177,43 @@
     if (!changing.length) { render(); return; }
 
     if (!want && changing.length > 1) {
-      var title = sectionTitles[key] || "this trade";
-      if (!window.confirm("Untick all " + changing.length + " ticked items under " +
-          title + "? Who ticked them, and when, will be lost.")) {
-        if (box) { box.checked = true; }
-        render();
-        return;
-      }
+      // window.confirm() is swallowed by in-app browsers (Teams, WhatsApp,
+      // Outlook previews, some Android webviews): it returns false without
+      // ever showing, so the untick silently never happened. The question
+      // is asked in the page instead, where every browser can answer it.
+      if (box) { box.checked = true; }
+      askUntick(key, changing);
+      render();
+      return;
     }
 
     enqueueMany(changing, { done: want });
+  }
+
+  var pendingUntick = null;
+
+  function askUntick(key, ids) {
+    clearUntick();
+    var secEl = document.getElementById("sec-" + key);
+    var head = secEl ? secEl.querySelector("h2") : null;
+    if (!head) { return; }
+    var title = sectionTitles[key] || "this trade";
+    var bar = document.createElement("div");
+    bar.className = "untick-ask";
+    bar.id = "untick-ask";
+    bar.innerHTML = "<span>Untick all " + ids.length + " ticked items under " +
+      esc(title) + "? Who ticked them, and when, will be lost.</span>" +
+      '<button type="button" class="untick-yes">Untick all ' + ids.length + "</button>" +
+      '<button type="button" class="secondary untick-no">Keep them</button>';
+    head.parentNode.insertBefore(bar, head.nextSibling);
+    pendingUntick = { key: key, ids: ids };
+    bar.querySelector(".untick-yes").focus();
+  }
+
+  function clearUntick() {
+    var old = document.getElementById("untick-ask");
+    if (old && old.parentNode) { old.parentNode.removeChild(old); }
+    pendingUntick = null;
   }
 
   sectionsEl.addEventListener("change", function (ev) {
@@ -3199,6 +3272,17 @@
     }
 
     var btn = ev.target;
+    if (btn && btn.classList && btn.classList.contains("untick-yes") && pendingUntick) {
+      var go = pendingUntick.ids;
+      clearUntick();
+      enqueueMany(go, { done: false });
+      return;
+    }
+    if (btn && btn.classList && btn.classList.contains("untick-no")) {
+      clearUntick();
+      render();
+      return;
+    }
     if (!btn || !btn.classList || !btn.classList.contains("note-btn")) { return; }
     var id = btn.getAttribute("data-id");
     var field = btn.parentNode.querySelector(".note-field");
@@ -3505,11 +3589,23 @@
   // record still shows it was raised and who cleared it.
   function issueResolutions() {
     var all = comments.concat(queuedComments);
-    var out = {};
+    var latest = {};
     for (var i = 0; i < all.length; i++) {
       var c = all[i];
-      if (!c || !c.snag_id || c.snag_id.indexOf("issue-done:") !== 0) { continue; }
-      out[c.snag_id.slice(11)] = { by: c.author || "", at: c.created_at || "" };
+      if (!c || !c.snag_id) { continue; }
+      var done = c.snag_id.indexOf("issue-done:") === 0;
+      var open = c.snag_id.indexOf("issue-open:") === 0;
+      if (!done && !open) { continue; }
+      var id = c.snag_id.slice(11);
+      var at = String(c.created_at || "");
+      if (latest[id] && String(latest[id].at) > at) { continue; }
+      latest[id] = { done: done, by: c.author || "", at: c.created_at || "" };
+    }
+    var out = {};
+    for (var k in latest) {
+      if (Object.prototype.hasOwnProperty.call(latest, k) && latest[k].done) {
+        out[k] = { by: latest[k].by, at: latest[k].at };
+      }
     }
     return out;
   }
@@ -3562,14 +3658,24 @@
     return out;
   }
 
-  function roomTickets(room, filtered) {
+  // Every job against the room that the filters allow, done or not.
+  function roomJobList(room, filtered) {
     var ids = roomJobs[room] || [];
     var out = [];
     for (var i = 0; i < ids.length; i++) {
-      var rec = effective(ids[i]);
-      if (rec && rec.done === true) { continue; }
       if (filtered && !jobVisible(index[ids[i]])) { continue; }
       out.push(ids[i]);
+    }
+    return out;
+  }
+
+  function roomTickets(room, filtered) {
+    var all = roomJobList(room, filtered);
+    var out = [];
+    for (var i = 0; i < all.length; i++) {
+      var rec = effective(all[i]);
+      if (rec && rec.done === true) { continue; }
+      out.push(all[i]);
     }
     return out;
   }
@@ -3605,6 +3711,7 @@
     }
 
     var tickets = roomTickets(room, filtered);
+    var jobs = roomJobList(room, filtered);
     var sm = STUDIO_BY_ROOM[room];
     var listed = !!(sm && sm.listed);
     // A failed check is a row on its trade's list, so it is already in
@@ -3617,6 +3724,8 @@
       checked: checked,
       fails: fails,
       open: open,
+      issues: logged,
+      jobs: jobs,
       tickets: tickets,
       outstanding: outstanding,
       // Stelling's rooms are not finished until their audit is; the rest
@@ -3664,6 +3773,12 @@
 
   function setIssueDone(issueId) {
     postEntry("issue-done:" + issueId, "DONE");
+  }
+
+  // Reopening is its own entry too, so the record shows it was closed and
+  // then found not to be.
+  function setIssueOpen(issueId) {
+    postEntry("issue-open:" + issueId, "REOPENED");
   }
 
   /* ---- The audit view ---- */
@@ -3882,12 +3997,14 @@
           ? '<span class="note-who">Done' +
             (fin.by ? " by " + esc(fin.by) : "") +
             (shortDate(fin.at) ? " \u00b7 " + esc(shortDate(fin.at)) : "") + "</span>"
-          : '<button type="button" class="note-btn issue-done" data-issue="' +
-            esc(issues[q].id) + '">Mark done</button>';
+          : "";
         ih += '<li' + (fin ? ' class="is-done"' : "") + '>' +
-          '<span class="note-who">' + meta + "</span>" +
+          '<label class="issue-row"><input type="checkbox" class="issue-tick" data-issue="' +
+          esc(issues[q].id) + '"' + (fin ? " checked" : "") +
+          ' aria-label="Done: ' + esc(issues[q].body || "") + '">' +
+          '<span><span class="note-who">' + meta + "</span>" +
           '<span class="note-body">' + esc(issues[q].body || "") + "</span>" +
-          tail + "</li>";
+          tail + "</span></label></li>";
       }
       issueListEl.innerHTML = ih;
     }
@@ -3905,24 +4022,42 @@
     var items = "";
     var i;
 
-    // Whatever is still open on the trade lists for this room, named the
-    // same way it is named there. Audit failures are among them.
-    for (i = 0; i < sum.tickets.length; i++) {
-      var job = index[sum.tickets[i]] || {};
+    // Every job on the trade lists for this room, named the same way it is
+    // named there, with the same tick box: ticking here is ticking there.
+    // Ticked ones show struck through until Hide completed takes them.
+    var gate = identified() ? "" : " disabled";
+    for (i = 0; i < sum.jobs.length; i++) {
+      var jid = sum.jobs[i];
+      var job = index[jid] || {};
+      var done = effective(jid).done === true;
+      if (done && hideDone) { continue; }
       var names = [];
       for (var t = 0; t < (job.trades || []).length; t++) {
         names.push(tradeName(job.trades[t]));
       }
-      items += '<li class="ticket' + (job.fromAudit ? " from-audit" : "") + '">' +
-        esc(job.action || "") +
+      items += '<li class="ticket' + (job.fromAudit ? " from-audit" : "") +
+        (done ? " ticked" : "") + '"><label class="studio-row">' +
+        '<input type="checkbox" class="studio-tick" data-id="' + esc(jid) + '"' +
+        (done ? " checked" : "") + gate +
+        ' aria-label="Mark ' + esc(room) + " " + esc(job.action || "") + ' as done">' +
+        "<span>" + esc(job.action || "") +
         (job.fromAudit && job.why ? " \u2014 " + esc(job.why) : "") +
-        '<span class="note-who">' + esc(names.join(" / ")) + "</span></li>";
+        '<span class="note-who">' + esc(names.join(" / ")) + "</span></span></label></li>";
     }
 
-    for (i = 0; i < sum.open.length; i++) {
-      items += '<li class="logged">' + esc(sum.open[i].body || "") +
+    for (i = 0; i < sum.issues.length; i++) {
+      var iss = sum.issues[i];
+      if (iss.done && hideDone) { continue; }
+      items += '<li class="logged' + (iss.done ? " ticked" : "") +
+        '"><label class="studio-row">' +
+        '<input type="checkbox" class="issue-tick" data-issue="' + esc(iss.id) + '"' +
+        (iss.done ? " checked" : "") + gate +
+        ' aria-label="Done: ' + esc(iss.body || "") + '">' +
+        "<span>" + esc(iss.body || "") +
         '<span class="note-who">Logged' +
-        (sum.open[i].author ? " by " + esc(sum.open[i].author) : "") + "</span></li>";
+        (iss.author ? " by " + esc(iss.author) : "") +
+        (iss.done && iss.done.by ? " \u00b7 done by " + esc(iss.done.by) : "") +
+        "</span></span></label></li>";
     }
 
     var head;
@@ -3965,6 +4100,16 @@
   // Every studio on the audit shows here, not just the ones with something
   // against them: a studio with nothing on it is a fact worth seeing. Once
   // it is finished it drops out of the working list into Completed.
+  studioListEl.addEventListener("change", function (ev) {
+    var box = ev.target;
+    if (!box || box.type !== "checkbox") { return; }
+    if (box.classList.contains("studio-tick")) {
+      enqueue(box.getAttribute("data-id"), { done: box.checked });
+      return;
+    }
+    onIssueTick(ev);
+  });
+
   function onDateToggle(ev) {
     var box = ev.currentTarget;
     var key = box.getAttribute("data-date");
@@ -4255,11 +4400,16 @@
   auditStudioEl.addEventListener("change", function () {
     auditStudio = auditStudioEl.value;
     store(AUDIT_STUDIO_KEY, auditStudio);
+    // Moving studio puts this tab's drafts down and picks up any kept for
+    // the new one. Nothing is written: a half-typed reason stays on the
+    // device against the studio it was typed for, so it is there again on
+    // return, and another tab mid-sentence on that studio is not wiped by
+    // this one leaving it.
     whyOpen = {};
     whyDraft = {};
     tradeDraft = {};
-    saveDrafts();
     lastChecksHtml = null;
+    loadDrafts();
     renderAudit();
   });
 
@@ -4337,12 +4487,15 @@
     setCheck(auditStudio, cid, false, why ? why.value.trim() : st.comment, sel.value);
   });
 
-  issueListEl.addEventListener("click", function (ev) {
-    var btn = ev.target;
-    if (!btn || !btn.classList || !btn.classList.contains("issue-done")) { return; }
-    var id = btn.getAttribute("data-issue");
-    if (id) { setIssueDone(id); }
-  });
+  function onIssueTick(ev) {
+    var box = ev.target;
+    if (!box || !box.classList || !box.classList.contains("issue-tick")) { return; }
+    var id = box.getAttribute("data-issue");
+    if (!id) { return; }
+    if (box.checked) { setIssueDone(id); } else { setIssueOpen(id); }
+  }
+
+  issueListEl.addEventListener("change", onIssueTick);
 
   var hideGroundEl = document.getElementById("hide-ground");
   var studioSortEl = document.getElementById("studio-sort");

@@ -239,6 +239,24 @@ says which kind of date it is — **Deferred to**, **Checks in** / **Checked
 in**, **Contract from**, or **Moves in** / **Moved in** for Stelling's own —
 in the card, the column and the date headers.
 
+## Ticking, everywhere
+
+Every job can be ticked and unticked from wherever it is shown: its row in
+By trade, and its line on the studio card in By studio. It is the same tick
+— one key, one record — so a box ticked on a card is struck through on the
+trade list with the same name and time against it. Ticked lines stay on the
+card struck through until **Hide completed** takes them. Logged issues work
+the same way, in the audit log and on the card, and can be reopened; closing
+and reopening are each their own entry, so the record shows both.
+
+**Tick all** on a trade ticks every job under it. Unticking all asks first,
+because who ticked what, and when, would be lost — and it asks *in the page*,
+not with a browser dialog. In-app browsers (Teams, WhatsApp, Outlook link
+previews, some Android webviews) swallow `window.confirm()` and answer "no"
+without ever showing it, which is why untick-all used to do nothing for some
+people. The question now appears under the trade's heading with **Untick
+all** and **Keep them**.
+
 ## Who can edit the list
 
 Anyone with the URL. That is the trade-off for having no logins, the same as a
