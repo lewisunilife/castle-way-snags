@@ -279,7 +279,8 @@ That is deliberate: the job has changed, so it is no longer the thing that was
 ticked. If you reword something and want to keep the history, re-tick it.
 
 Adding a batch of snags: append rows to the trade's array with a source of
-their own (`U15 = "Unilife 15 Sep"` was the 15 Sep walk-round), so the batch
+their own (`U15 = "Unilife 15th"` is everything logged on the 15 Sep
+inspection), so the batch
 can be filtered as one. Check each against what the room already carries
 first — the same room and action already on the list is the same job, and
 adding it again would double it. The summary table's room chips follow the
