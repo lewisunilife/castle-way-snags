@@ -184,8 +184,13 @@ that device and are per person — they change nobody else's view.
 
 - **Order by** — room number, or move-in date soonest first. It orders the
   rows inside every trade as well as the studio cards. Rooms with no move-in
-  date given go last rather than first. In By studio, date order also gathers
-  the rooms under a collapsible header per date.
+  date given go last rather than first. In date order both views gather what
+  they show under a collapsible header per date: By studio groups the rooms,
+  and each trade's table groups its rows, so Joinery's 18 Sep jobs open and
+  shut as one. Headers carry the count and how many are still outstanding,
+  and a header with nothing left showing goes with its rows. **Expand all
+  dates** / **Collapse all dates** move the lot; what is left open is
+  remembered per trade and date on that device.
 - **Hide completed** — drops ticked lines from the trade tables, and rooms
   with nothing outstanding from By studio. A trade with nothing left showing
   disappears whole rather than leaving a heading over an empty table.
@@ -197,12 +202,12 @@ that device and are per person — they change nobody else's view.
   Stelling, JBA, Arrivals list, Unilife, and one entry per audit round. The
   list is read off the rows, so a new round appears in it by itself.
 
-An audit round is a day on which anything was audited: the first such day is
-**Audit 1**, the next **Audit 2**, and so on. A failed check is filed under
-the round of its latest entry, so one that is still failing when it is looked
-at again moves from Audit 1 into Audit 2 on its own, and one nobody has been
-back to stays where it was. Hide Audit 1 once it has been dealt with and the
-trade lists show only what the later rounds found.
+An audit round is a day on which anything was audited, named by the day —
+**15 Sep audit**, **16 Sep audit**. A failed check is filed under the round
+of its latest entry, so one that is still failing when it is looked at again
+moves into that day's audit on its own, and one nobody has been back to stays
+where it was. Hide a day once it has been dealt with and the trade lists show
+only what later days found.
 
 An amber line says which filters are on, because a room can read clear only
 because what is left in it is hidden. What the counts do about it differs by
@@ -216,14 +221,23 @@ Each trade table carries a **Move-in** column. Only the rooms on Stelling's
 list have a date so far, so the rest are blank rather than guessed; on a phone
 the line is dropped entirely rather than leaving a gap on every card.
 
-`MOVE_IN_DATES` in `site/index.html` carries the dates from the control
-sheet — room number to date, one line each, and **nothing else from that
-sheet**: it holds tenants' names, emails, phone numbers and travel details,
-none of which belongs on a public page or in this public repository. So far
-it holds the seven rooms from the "Tuesday 15th Arrivals" tab (11–15 Sep
-2026); the master tab would cover the rest. Anything in it fills a room with
-no date of its own; a date already against a Stelling room wins. A date that
-has passed reads **Moved in** rather than **Moves in**.
+The date a room is actually let comes from three tabs of the control
+spreadsheet, held in `site/index.html` as room number to date and **nothing
+else from that sheet** — it holds tenants' names, emails, phone numbers and
+travel details, none of which belongs on a public page or in this public
+repository. They win in this order:
+
+1. `DEFERRED_TO` — the CW tabs: a tenant who has deferred, and the date they
+   now arrive (contract start plus the one or two weeks deferred).
+2. `CHECK_IN` — the check-in API: the check-in they have booked. So far this
+   holds the seven rooms from the "Tuesday 15th Arrivals" tab.
+3. `CONTRACT_START` — the tenants API: the contract start date.
+
+A room with none of the three falls back to the date on Stelling's audit
+list; one with nothing at all shows no date rather than a guess. The page
+says which kind of date it is — **Deferred to**, **Checks in** / **Checked
+in**, **Contract from**, or **Moves in** / **Moved in** for Stelling's own —
+in the card, the column and the date headers.
 
 ## Who can edit the list
 
