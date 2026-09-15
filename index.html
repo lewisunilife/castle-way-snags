@@ -1,0 +1,4991 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Castle Way Tower 1 Snagging</title>
+<style>
+  :root {
+    --paper: #ffffff;
+    --ink: #1f2a44;
+    --on-ink: #ffffff;
+    --band: #dfe5f0;
+    --rule: #d0d4dc;
+    --text: #101319;
+    --muted: #555555;
+    --box-face: #ffffff;
+    --box-line: #b3b9c4;
+    --tick: #1f2a44;
+    --hover: #f5f7fb;
+    --done-bg: #f7f9fc;
+    --field: #ffffff;
+    --live: #1c6b45;
+    --warn: #8a5a00;
+    --warn-bg: #fdf6e7;
+    --strike: #c62828;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --paper: #14171d;
+      --ink: #2b3a5c;
+      --on-ink: #f2f4f8;
+      --band: #222b3c;
+      --rule: #333a46;
+      --text: #e7eaef;
+      --muted: #9aa2ae;
+      --box-face: #1b1f27;
+      --box-line: #4a525f;
+      --tick: #c3cee6;
+      --hover: #1a1e26;
+      --done-bg: #191d25;
+      --field: #1a1e26;
+      --live: #5fc08d;
+      --warn: #d9a441;
+      --warn-bg: #241d0d;
+      --strike: #ff6b6b;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--text);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+
+  .page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 40px 72px;
+  }
+
+  h1 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+
+  .lede {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 0;
+    max-width: 70ch;
+  }
+
+  h2 {
+    font-size: 19px;
+    font-weight: 700;
+    margin: 44px 0 12px;
+    text-wrap: balance;
+  }
+
+  .sec-count {
+    font-weight: 400;
+    font-size: 14px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .assignee {
+    display: inline-block;
+    padding: 2px 9px;
+    border: 1px solid var(--rule);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  td.t-who { font-weight: 700; white-space: nowrap; }
+  .unassigned { color: var(--muted); font-weight: 400; }
+
+  .setup {
+    margin-top: 20px;
+    border: 1px solid var(--warn);
+    background: var(--warn-bg);
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .setup strong { display: block; margin-bottom: 4px; }
+  .setup code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 16px;
+    margin-top: 20px;
+    border: 1px solid var(--rule);
+    padding: 14px 16px;
+  }
+
+  .bar .field { flex: 1 1 180px; min-width: 0; }
+
+  .bar label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 5px;
+  }
+
+  .bar input[type="text"] {
+    width: 100%;
+    font: inherit;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--field);
+    border: 1px solid var(--rule);
+    padding: 9px 10px;
+    min-height: 40px;
+  }
+
+  .views {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 22px;
+  }
+
+  .view-btn {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 9px 16px;
+    min-height: 40px;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--rule);
+  }
+
+  .view-btn.is-on {
+    color: var(--on-ink);
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+
+  .login label { margin-top: 12px; }
+  .login label:first-child { margin-top: 0; }
+
+  .login input {
+    width: 100%;
+    max-width: 320px;
+    font: inherit;
+    font-size: 16px;
+    color: var(--text);
+    background: var(--field);
+    border: 1px solid var(--rule);
+    padding: 10px;
+    min-height: 44px;
+  }
+
+  #audit-studio {
+    width: 100%;
+    max-width: 320px;
+    font: inherit;
+    font-size: 16px;
+    color: var(--text);
+    background: var(--field);
+    border: 1px solid var(--rule);
+    padding: 10px;
+    min-height: 44px;
+  }
+
+  /* One check: its rank, what it is, and pass/fail. */
+  .check {
+    border: 1px solid var(--rule);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+
+  .check.is-pass { background: var(--done-bg); }
+  .check.is-fail { border-color: var(--strike); }
+
+  .check-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .check-rank {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    flex: none;
+  }
+
+  .check-label { font-size: 14px; line-height: 1.4; font-weight: 700; }
+
+  .check-trade {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 400;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .check-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .pf {
+    flex: 1 1 auto;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 9px 12px;
+    min-height: 44px;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--rule);
+  }
+
+  .pf.on-pass { color: var(--on-ink); background: var(--live); border-color: var(--live); }
+  .pf.on-fail { color: var(--on-ink); background: var(--strike); border-color: var(--strike); }
+
+  .check-why { margin-top: 10px; }
+
+  .check-why input {
+    width: 100%;
+    font: inherit;
+    font-size: 16px;
+    color: var(--text);
+    background: var(--field);
+    border: 1px solid var(--rule);
+    padding: 9px 10px;
+    min-height: 44px;
+  }
+
+  .check-assign {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--muted);
+    margin: 10px 0 4px;
+  }
+
+  .check-why select {
+    width: 100%;
+    font: inherit;
+    font-size: 16px;
+    color: var(--text);
+    background: var(--field);
+    border: 1px solid var(--rule);
+    padding: 9px 10px;
+    min-height: 44px;
+  }
+
+  .check-stamp {
+    display: block;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  .fail-why { display: block; color: var(--muted); font-size: 13px; }
+
+  /* A failed audit check is a job on the trade's list like any other, with
+     a red edge so it is clear where it came from. */
+  tbody tr.audit-row td.src { color: var(--strike); font-weight: 700; }
+
+  tbody tr.audit-row td.room {
+    box-shadow: inset 3px 0 0 var(--strike);
+    padding-left: 12px;
+  }
+
+  .head-count { font-weight: 400; }
+
+  .studio-card li.from-audit { border-left-color: var(--strike); }
+
+  .studio-row, .issue-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+  }
+
+  .studio-row input, .issue-row input {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    margin-top: 1px;
+  }
+
+  .studio-row > span, .issue-row > span { flex: 1 1 auto; min-width: 0; }
+
+  .studio-card li.ticked { border-left-color: var(--live); color: var(--muted); }
+  .studio-card li.ticked .studio-row > span > :first-child,
+  .studio-card li.ticked > .studio-row > span { text-decoration: line-through; }
+  .studio-card li.ticked .note-who { text-decoration: none; }
+
+  #issue-list li .issue-row .note-body { display: block; }
+
+  /* The untick-all question, asked in the page so every browser can
+     answer it. */
+  .untick-ask {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--warn);
+    background: var(--warn-bg);
+    border: 1px solid var(--warn);
+  }
+
+  .untick-ask span { flex: 1 1 260px; }
+  .untick-ask button { width: auto; }
+
+  .studio-counts {
+    margin: -6px 0 12px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  #controls {
+    border: 1px solid var(--rule);
+    padding: 14px;
+    margin-bottom: 22px;
+  }
+
+  #controls > :last-child { margin-bottom: 0; }
+
+  .movein { white-space: nowrap; }
+
+  .studio-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .studio-controls .field { flex: 0 1 260px; }
+
+  .studio-controls select {
+    width: 100%;
+    font: inherit;
+    font-size: 16px;
+    color: var(--text);
+    background: var(--field);
+    border: 1px solid var(--rule);
+    padding: 8px 10px;
+    min-height: 44px;
+  }
+
+  .trade-filter {
+    border: 1px solid var(--rule);
+    padding: 10px 12px;
+    margin-bottom: 16px;
+  }
+
+  .trade-filter summary {
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  #trade-boxes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 4px 14px;
+    margin: 12px 0 10px;
+  }
+
+  #trade-boxes label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    padding: 5px 0;
+    min-height: 34px;
+  }
+
+  #trade-boxes input, #src-boxes input { width: 18px; height: 18px; flex: none; }
+
+  #src-boxes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 4px 14px;
+    margin: 12px 0 10px;
+  }
+
+  #src-boxes label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    padding: 5px 0;
+    min-height: 34px;
+  }
+
+  .date-group { margin-bottom: 16px; }
+
+  .date-group > summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 12px;
+    min-height: 44px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--on-ink);
+    background: var(--ink);
+  }
+
+  .date-group > summary::-webkit-details-marker { display: none; }
+  .date-group > summary::before { content: "\25B8"; font-size: 11px; }
+  .date-group[open] > summary::before { content: "\25BE"; }
+  .date-group > summary .group-when { flex: 1 1 auto; }
+
+  .date-group > summary .group-count {
+    font-weight: 400;
+    font-size: 12.5px;
+    text-align: right;
+  }
+
+  .date-group .group-body { padding-top: 12px; }
+
+  tr.date-row td {
+    padding: 0;
+    border: 0;
+    background: var(--ink);
+  }
+
+  tbody tr.date-row:hover td { background: var(--ink); }
+
+  .date-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    text-align: left;
+    padding: 10px 12px;
+    min-height: 44px;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--on-ink);
+    background: var(--ink);
+    border: 0;
+    cursor: pointer;
+  }
+
+  .date-toggle::before { content: "\25BE"; font-size: 11px; }
+  tbody.date-block.shut .date-toggle::before { content: "\25B8"; }
+  tbody.date-block.shut tr:not(.date-row) { display: none; }
+  .date-toggle .group-when { flex: 1 1 auto; }
+  .date-toggle .group-count { font-weight: 400; font-size: 12.5px; }
+
+  .group-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .studio-filtered {
+    margin: 0 0 12px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--warn);
+    background: var(--warn-bg);
+    padding: 8px 10px;
+  }
+
+  .studio-card {
+    border: 1px solid var(--rule);
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+
+  .studio-card.is-clear { border-color: var(--live); background: var(--done-bg); }
+  .studio-card.is-clear h3 { color: var(--live); }
+  .studio-card.is-waiting { border-style: dashed; }
+  .studio-card li.ticket { border-left-color: var(--ink); }
+
+  .studio-card h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+  }
+
+  .studio-meta {
+    margin: -4px 0 10px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .studio-card ul { list-style: none; margin: 0; padding: 0; }
+
+  .studio-card li {
+    border-left: 3px solid var(--strike);
+    padding: 2px 0 2px 10px;
+    margin-bottom: 8px;
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+
+  .studio-card li.logged { border-left-color: var(--rule); }
+
+  #issue-list { list-style: none; margin: 16px 0 0; padding: 0; }
+
+  #issue-list li {
+    border-left: 3px solid var(--rule);
+    padding: 2px 0 2px 12px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  #issue-list li.is-done { border-left-color: var(--live); }
+  #issue-list li.is-done .note-body { text-decoration: line-through; color: var(--muted); }
+  #issue-list .note-btn { margin-top: 4px; }
+
+  .filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    align-self: flex-end;
+    padding: 9px 13px;
+    min-height: 40px;
+    border: 1px solid var(--rule);
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .filter input { width: 17px; height: 17px; }
+
+  .all-clear {
+    margin: 28px 0 0;
+    padding: 16px;
+    border: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Until we know who is ticking, nothing is tickable. */
+  .gate {
+    margin: 10px 0 0;
+    padding: 10px 14px;
+    border-left: 3px solid var(--warn);
+    background: var(--warn-bg);
+    color: var(--warn);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .gate[hidden] { display: none; }
+
+  input:disabled,
+  textarea:disabled,
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  td.done label:has(input:disabled) { cursor: not-allowed; }
+
+  .bar-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    line-height: 1.45;
+    text-align: right;
+    margin-left: auto;
+  }
+
+  #progress {
+    font-size: 15px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #live-status { color: var(--muted); }
+  #live-status.is-live { color: var(--live); font-weight: 700; }
+  #live-status.is-local { color: var(--warn); font-weight: 700; }
+
+  #unsaved { color: var(--warn); font-weight: 700; }
+  #unsaved:empty { display: none; }
+
+  .scroller { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  thead th {
+    background: var(--ink);
+    color: var(--on-ink);
+    font-weight: 700;
+    font-size: 13px;
+    text-align: left;
+    padding: 9px 10px;
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+
+  tbody tr:hover td { background: var(--hover); }
+
+  .room { font-weight: 700; white-space: nowrap; }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .floor { white-space: nowrap; }
+
+  tr.total td {
+    background: var(--band);
+    font-weight: 700;
+    border-bottom: none;
+  }
+
+  tr.total:hover td { background: var(--band); }
+
+  th.done-h { text-align: right; width: 74px; }
+
+  /* Tick a whole trade off at once. */
+  .sec-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  th.done-h .sec-all {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 3px;
+    color: var(--on-ink);
+    opacity: 0.85;
+  }
+
+  th.done-h .sec-all input { width: 14px; height: 14px; }
+
+  /* The table head is hidden on a phone, so the heading carries it there. */
+  .sec-all.on-phone { display: none; }
+
+  td.done {
+    border-left: 1px solid var(--rule);
+    border-right: 1px solid var(--rule);
+    padding: 0;
+    width: 58px;
+  }
+
+  td.done label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    height: 100%;
+    cursor: pointer;
+  }
+
+  input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 17px;
+    height: 17px;
+    margin: 0;
+    border: 1px solid var(--box-line);
+    background: var(--box-face);
+    cursor: pointer;
+    display: grid;
+    place-content: center;
+    flex: none;
+  }
+
+  input[type="checkbox"]::after {
+    content: "";
+    width: 10px;
+    height: 5px;
+    border-left: 2px solid var(--tick);
+    border-bottom: 2px solid var(--tick);
+    transform: rotate(-45deg) translate(1px, -1px);
+    opacity: 0;
+  }
+
+  input[type="checkbox"]:checked::after { opacity: 1; }
+
+  input[type="checkbox"]:focus-visible,
+  .note-field:focus-visible,
+  textarea:focus-visible,
+  button:focus-visible,
+  #who:focus-visible {
+    outline: 2px solid var(--tick);
+    outline-offset: 2px;
+  }
+
+  tr.ticked .room,
+  tr.ticked .action-text {
+    color: var(--muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--strike);
+    text-decoration-thickness: 2px;
+  }
+
+  /* A row whose change has not reached the server yet. */
+  tr.unsaved td.done { border-left-color: var(--warn); }
+  tr.unsaved .by { color: var(--warn); }
+
+  /* Summary: a room clears once that trade has nothing left in it. */
+  .sum-room.done {
+    color: var(--muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--strike);
+    text-decoration-thickness: 2px;
+  }
+
+  #summary-table tr.trade-done td.t-trade {
+    color: var(--muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--strike);
+    text-decoration-thickness: 2px;
+  }
+
+  #summary-table tr.trade-done td { background: var(--done-bg); }
+  #summary-table tr.trade-done:hover td { background: var(--done-bg); }
+
+  .by {
+    display: block;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 5px;
+  }
+
+  .by:empty { display: none; }
+
+  /* Notes on a line: a thread, oldest first, nothing overwritten. */
+  .notes {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .notes:empty { display: none; }
+
+  .notes li {
+    border-left: 2px solid var(--rule);
+    padding: 1px 0 1px 9px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .notes li.sending { border-left-color: var(--warn); }
+
+  .note-who {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .note-body { overflow-wrap: anywhere; }
+
+  .note-add {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .note-field {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 5px 0;
+    font: inherit;
+    font-size: 13px;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--rule);
+  }
+
+  .note-field::placeholder { color: var(--muted); opacity: 0.75; }
+  .note-field:focus { border-bottom-color: var(--tick); outline: none; }
+  .note-field:not(:placeholder-shown) { border-bottom-style: solid; }
+
+  .note-btn {
+    flex: none;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 11px;
+    min-height: 0;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--rule);
+  }
+
+  .note-btn:hover { border-color: var(--tick); opacity: 1; }
+
+  .panel { border: 1px solid var(--rule); padding: 18px; }
+
+  .panel label {
+    display: block;
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  textarea {
+    display: block;
+    width: 100%;
+    font: inherit;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--text);
+    background: var(--field);
+    border: 1px solid var(--rule);
+    padding: 10px;
+    resize: vertical;
+    min-height: 90px;
+  }
+
+  .panel-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  button {
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--on-ink);
+    background: var(--ink);
+    border: 1px solid var(--ink);
+    padding: 11px 18px;
+    cursor: pointer;
+    min-height: 44px;
+  }
+
+  button.secondary {
+    color: var(--text);
+    background: transparent;
+    border-color: var(--rule);
+  }
+
+  button:hover { opacity: 0.9; }
+
+  .status { font-size: 12px; color: var(--muted); }
+
+  #comment-list {
+    list-style: none;
+    margin: 0 0 18px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  #comment-list li {
+    border-left: 3px solid var(--rule);
+    padding: 2px 0 2px 12px;
+  }
+
+  #comment-list li.unsent { border-left-color: var(--warn); }
+
+  .c-meta {
+    display: block;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+
+  .c-text {
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .empty { font-size: 13px; color: var(--muted); margin: 0 0 18px; }
+
+  #copy-out { margin-top: 14px; }
+
+  @media (max-width: 700px) {
+    .page { padding-block: 28px 56px; }
+    h1 { font-size: 22px; }
+    h2 { font-size: 17px; margin: 34px 0 10px; }
+    .sec-count { display: block; font-size: 13px; }
+
+    .view-btn { flex: 1 1 auto; }
+    .check-actions { flex-direction: column; }
+
+    .filter {
+      flex: 1 1 100%;
+      justify-content: center;
+      align-self: stretch;
+      min-height: 44px;
+    }
+
+    .filter input { width: 20px; height: 20px; }
+
+    .sec-all.on-phone {
+      display: inline-flex;
+      margin-top: 8px;
+      padding: 7px 12px;
+      border: 1px solid var(--rule);
+      font-size: 13px;
+      gap: 8px;
+    }
+
+    .sec-all.on-phone input { width: 20px; height: 20px; }
+
+    .bar { gap: 12px; padding: 12px 14px; }
+
+    .bar-meta {
+      text-align: left;
+      margin-left: 0;
+      flex: 1 1 100%;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .scroller { overflow-x: visible; }
+
+    /* Tables become stacked cards: no sideways scrolling on a phone. */
+    table, tbody, tr, td { display: block; width: auto; }
+    thead { display: none; }
+
+    tbody tr {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      grid-template-areas:
+        "room   room   done"
+        "floor  src    done"
+        "movein movein done"
+        "action action action";
+      column-gap: 10px;
+      row-gap: 2px;
+      border: 1px solid var(--rule);
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      align-items: start;
+    }
+
+    tbody tr.unsaved { border-color: var(--warn); }
+
+    tbody tr:hover td,
+    tbody td {
+      background: transparent;
+      border: none;
+      padding: 0;
+      font-size: 14px;
+    }
+
+    tbody tr.ticked { background: var(--done-bg); }
+
+    td.room { grid-area: room; font-size: 15px; }
+    td.floor { grid-area: floor; color: var(--muted); font-size: 13px; }
+    td.src { grid-area: src; color: var(--muted); font-size: 13px; }
+
+    /* Most rooms have no move-in date, so the line goes rather than
+       leaving a gap on every card in the building. */
+    td.movein { grid-area: movein; color: var(--muted); font-size: 13px; }
+
+    tbody tr.audit-row { border-left: 3px solid var(--strike); }
+
+    tbody tr.date-row { display: block; border: 0; padding: 0; margin-bottom: 10px; }
+    tbody tr.date-row td { display: block; }
+    tbody.date-block.shut tr:not(.date-row) { display: none; }
+    tbody tr.audit-row td.room { box-shadow: none; padding-left: 0; }
+    td.movein:empty { display: none; }
+    td.movein:not(:empty)::before { content: "Moves in "; }
+    td.movein.past:not(:empty)::before { content: "Moved in "; }
+    td.movein.checkin:not(:empty)::before { content: "Checks in "; }
+    td.movein.checkin.past:not(:empty)::before { content: "Checked in "; }
+    td.movein.deferred:not(:empty)::before { content: "Deferred to "; }
+    td.movein.contract:not(:empty)::before { content: "Contract from "; }
+    td.action { grid-area: action; margin-top: 8px; }
+
+    /* Beats the base `td.done` column rules, which outrank `tbody td`. */
+    tbody td.done {
+      grid-area: done;
+      width: auto;
+      align-self: start;
+      border: none;
+    }
+
+    td.done label { min-height: 44px; padding-left: 12px; gap: 8px; }
+
+    td.done label::before {
+      content: "Done";
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    input[type="checkbox"] { width: 22px; height: 22px; }
+    input[type="checkbox"]::after { width: 12px; height: 6px; }
+
+    .note-field {
+      font-size: 16px; /* keeps iOS from zooming on focus */
+      padding: 8px 0;
+      margin-top: 10px;
+    }
+
+    #who, textarea { font-size: 16px; }
+
+    /* Summary table as cards */
+    #summary-table tbody tr {
+      grid-template-columns: 1fr auto auto;
+      grid-template-areas:
+        "trade  issues rooms"
+        "who    who    who"
+        "nums   nums   nums";
+    }
+
+    #summary-table td.t-who {
+      grid-area: who;
+      margin-top: 4px;
+      font-size: 13px;
+    }
+
+    #summary-table td.t-who:not(:empty)::before {
+      content: "Assigned: ";
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    #summary-table tr.total td.t-who { display: none; }
+
+    #summary-table td.t-trade { grid-area: trade; font-weight: 700; font-size: 15px; }
+    #summary-table td.t-issues { grid-area: issues; }
+    #summary-table td.t-rooms { grid-area: rooms; }
+
+    #summary-table td.t-issues,
+    #summary-table td.t-rooms {
+      font-size: 13px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    #summary-table td.t-issues::before { content: "Issues: "; }
+    #summary-table td.t-rooms::before { content: "Rooms: "; }
+
+    #summary-table td.t-nums {
+      grid-area: nums;
+      margin-top: 8px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    #summary-table tr.total { background: var(--band); }
+    #summary-table tr.total td { background: transparent; }
+    #summary-table tr.total td.t-nums { display: none; }
+
+    .panel { padding: 14px; }
+    button { width: 100%; }
+
+    /* ...except the note Submit, which sits beside its field and would
+       otherwise squeeze it to nothing. */
+    .note-btn {
+      width: auto;
+      padding: 8px 14px;
+      min-height: 40px;
+    }
+  }
+
+  @media print {
+    body { background: #fff; color: #000; }
+    .page { max-width: none; padding: 0; }
+    .bar, .setup, .panel-actions, #copy-out, #comment-form { display: none; }
+    table { display: table; }
+    thead { display: table-header-group; }
+    tbody { display: table-row-group; }
+
+    tbody tr {
+      display: table-row;
+      border: none;
+      padding: 0;
+      margin: 0;
+      background: none;
+    }
+
+    tbody td {
+      display: table-cell;
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    td.done label::before { content: none; }
+    tr { break-inside: avoid; }
+    h2 { break-after: avoid; }
+
+    thead th, tr.total td {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <h1>Castle Way Tower 1: issues by trade</h1>
+  <div class="setup" id="setup-notice" hidden>
+    <strong>Not connected yet</strong>
+    Ticks and notes are saving to this device only. To make the list shared,
+    open <code>site/index.html</code>, put your Supabase project URL and anon
+    key into the <code>SUPABASE</code> block near the top of the script, and
+    push. Setup steps are in <code>README.md</code>.
+  </div>
+
+  <div class="bar">
+    <div class="field">
+      <label for="who">Your name</label>
+      <input id="who" type="text" placeholder="e.g. Dave Wilson" autocomplete="name">
+    </div>
+    <div class="field">
+      <label for="company">Company</label>
+      <input id="company" type="text" placeholder="e.g. Stelling" autocomplete="organization">
+    </div>
+    <div class="bar-meta">
+      <span id="progress">0 of 130 items ticked</span>
+      <span id="live-status">Connecting&hellip;</span>
+      <span id="unsaved"></span>
+    </div>
+  </div>
+
+  <p class="gate" id="gate-notice">Enter your name and company above before ticking anything off or adding notes.</p>
+
+  <nav class="views" id="views">
+    <button type="button" class="view-btn is-on" data-view="trade">By trade</button>
+    <button type="button" class="view-btn" data-view="studio">By studio</button>
+    <button type="button" class="view-btn" data-view="audit">Audit log</button>
+  </nav>
+
+  <div id="controls">
+    <div class="studio-controls">
+      <div class="field">
+        <label for="studio-sort">Order by</label>
+        <select id="studio-sort">
+          <option value="room">Room number</option>
+          <option value="movein">Move-in date, soonest first</option>
+        </select>
+      </div>
+      <label class="filter" for="hide-done">
+        <input type="checkbox" id="hide-done"> Hide completed
+      </label>
+      <label class="filter" for="hide-ground">
+        <input type="checkbox" id="hide-ground"> Hide ground floor
+      </label>
+    </div>
+    <div class="group-actions" id="group-actions" hidden>
+      <button type="button" class="secondary" id="dates-open">Expand all dates</button>
+      <button type="button" class="secondary" id="dates-shut">Collapse all dates</button>
+    </div>
+    <details class="trade-filter">
+      <summary id="trade-filter-summary">Filter by trade</summary>
+      <div id="trade-boxes"></div>
+      <button type="button" class="secondary" id="trade-reset">Hide every trade</button>
+    </details>
+    <details class="trade-filter">
+      <summary id="src-filter-summary">Filter by source</summary>
+      <div id="src-boxes"></div>
+      <button type="button" class="secondary" id="src-reset">Hide every source</button>
+    </details>
+    <p class="studio-filtered" id="studio-filtered" hidden></p>
+  </div>
+
+  <div id="view-trade">
+  <h2>Summary by trade</h2>
+  <div class="scroller">
+    <table id="summary-table">
+      <thead>
+        <tr>
+          <th>Trade</th>
+          <th>Assigned</th>
+          <th>Issues</th>
+          <th>Rooms</th>
+          <th>Room numbers</th>
+        </tr>
+      </thead>
+      <tbody id="summary-body"></tbody>
+    </table>
+  </div>
+
+  <div id="sections"></div>
+  <p class="all-clear" id="all-clear" hidden>Everything is ticked off. Untick
+    <strong>Hide completed</strong> above to see the full list.</p>
+
+  <h2>Comments</h2>
+  <div class="panel">
+    <ul id="comment-list"></ul>
+    <p class="empty" id="comment-empty">No comments yet.</p>
+    <div id="comment-form">
+      <label for="comment-text">Add a comment</label>
+      <textarea id="comment-text" placeholder="Access problems, parts on order, dates you can attend, anything not covered above."></textarea>
+      <div class="panel-actions">
+        <button type="button" id="comment-btn">Post comment</button>
+        <button type="button" class="secondary" id="copy-btn">Copy progress summary</button>
+        <span class="status" id="copy-status"></span>
+      </div>
+      <textarea id="copy-out" hidden aria-label="Progress summary, ready to copy"></textarea>
+    </div>
+  </div>
+  </div><!-- /view-trade -->
+
+  <div id="view-studio" hidden>
+    <h2>By studio</h2>
+    <p class="note-line">All <span id="studio-total">257</span> studios in
+      Castle Way Tower 1, room by room: everything still outstanding against
+      each one on the trade lists, plus anything its audit found. The
+      <span id="studio-listed-total">37</span> rooms Stelling have yet to
+      audit say so; the rest have been audited already, so what is shown
+      against them is what is left to do. A room reads <strong>no tickets
+      outstanding</strong> once there is nothing against it &mdash; for
+      Stelling&rsquo;s rooms, once all <span id="studio-check-total">18</span>
+      checks have passed as well.</p>
+    <p class="studio-counts" id="studio-counts"></p>
+    <div id="studio-list"></div>
+    <p class="all-clear" id="studio-empty" hidden>No studios have been set up for
+      auditing yet.</p>
+  </div>
+
+  <div id="view-audit" hidden>
+    <div id="audit-login">
+      <h2>Audit log</h2>
+      <div class="panel login">
+        <label for="audit-user">Username</label>
+        <input id="audit-user" type="text" autocomplete="username">
+        <label for="audit-pass">Password</label>
+        <input id="audit-pass" type="password" autocomplete="current-password">
+        <div class="panel-actions">
+          <button type="button" id="audit-in">Sign in</button>
+          <span class="status" id="audit-msg"></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="audit-body" hidden>
+      <h2>Audit log <span class="sec-count" id="audit-progress"></span></h2>
+
+      <div class="panel">
+        <label for="audit-studio">Studio</label>
+        <select id="audit-studio"></select>
+        <div class="panel-actions">
+          <span class="status" id="audit-studio-state"></span>
+          <button type="button" class="secondary" id="audit-out">Sign out</button>
+        </div>
+      </div>
+
+      <div id="audit-checks"></div>
+
+      <h2>Log an issue</h2>
+      <div class="panel">
+        <label for="issue-text">Anything else found in this studio</label>
+        <textarea id="issue-text" placeholder="Something not covered by the checks above."></textarea>
+        <div class="panel-actions">
+          <button type="button" id="issue-add">Add issue</button>
+        </div>
+        <ul id="issue-list"></ul>
+        <p class="empty" id="issue-empty">No issues logged against this studio.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Latest v2 rather than a pinned patch: the project uses the newer
+     sb_publishable_ key format, which predates some older builds. If this
+     fetch fails the script below retries from a second CDN. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  /* ====================================================================
+     SUPABASE — project "castle-way-snags".
+
+     This is the PUBLISHABLE key. It is designed to be readable here and
+     grants only what the access rules in supabase-setup.sql allow: read,
+     tick and note the snagging lines, read and add comments, nothing
+     else. The secret / service_role key must NEVER go in this file — it
+     bypasses every one of those rules and this page is public.
+     ==================================================================== */
+
+  var SUPABASE_URL = "https://jwlycjikdqxkcvccvwiy.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_W2tTMpsK91CmRRby3WHVDQ_Yw0QgnYP";
+
+  var SNAGS_TABLE = "castle_way_snags";
+  var COMMENTS_TABLE = "castle_way_comments";
+
+  /* ==================================================================== */
+
+  var L = "CW Issues Log";
+  var S = "Stelling";
+  var U = "Unilife";
+  var A = "Arrivals list";
+  var U15 = "Unilife 15th";     // everything Lewis logged on the 15 Sep inspection
+  var JBA = "JBA";
+
+  var ACCESS = "Access / Locks";
+  var APPLI = "Appliances";
+  var BLINDS = "Blinds";
+  var CLEAN = "Cleaning";
+  var DECOR = "Decorating / Sealant";
+  var ELEC = "Electrical";
+  var FLOOR = "Flooring Repairs";
+  var JOIN = "Joinery / Carpentry";
+  var PLUMB = "Plumbing / Water";
+  var SETUP = "Room Setup / Removals";
+  var VENT = "Ventilation / Extract";
+  var WIN = "Window Restrictors";
+
+  var sections = [
+    {
+      key: "cleaning",
+      title: CLEAN,
+      col3: "Source",
+      rows: [
+        ["CW528", A, "Deep clean (priority: Red)."],
+        ["CW530", A, "Deep clean (priority: Red)."],
+        ["CW529", U15, "Deep clean."],
+        ["CW504", U15, "Deep clean."],
+        ["CW505", U15, "Deep clean."],
+        ["CW404", U15, "Deep clean."],
+        ["CW245", U15, "Clean room."],
+        ["CW213", U15, "Deep clean."],
+        ["CW113", U15, "Deep clean."],
+        ["CW148", U15, "Deep clean."],
+        ["CW302", U15, "Sparkle clean."]
+      ]
+    },
+    {
+      key: "electrical",
+      title: ELEC,
+      col3: "Source",
+      rows: [
+        ["CW109", L, "Repair room lights fault."],
+        ["CW345", A, "Light clip."],
+        ["CW346", L, "Check/replace very dim shower light."],
+        ["CW448", L, "Fix Live Neutral Reverse electrical fault."],
+        ["CW502", JBA, "Fix Live Neutral Reverse fault on the sockets."],
+        ["CW526", JBA, "Repair the LED switch on the sink at the foot of the bed."],
+        ["CW530", JBA, "Repair thermostat: will not go below 20."],
+        ["CW313", U15, "Secure cables hanging outside the window."]
+      ]
+    },
+    {
+      key: "plumbing",
+      title: PLUMB,
+      col3: "Source",
+      rows: [
+        ["CW104", L, "Investigate basin low pressure/leak."],
+        ["CW111", L, "Check small puddle beneath bathroom sink/tap for leak."],
+        ["CW209", L, "Investigate basin low pressure/leak."],
+        ["CW212", L, "Restore hot water and shower pressure."],
+        ["CW247", L, "Restore running water at shower."],
+        ["CW311", L, "Investigate possible bathroom sink leak."],
+        ["CW347", S, "Sink has a loose part."],
+        ["CW402", L, "Repair kitchen tap leak."],
+        ["CW407", L, "Repair kitchen tap leak."],
+        ["CW409", L, "Investigate possible bathroom sink leak."],
+        ["CW448", L, "Repair shower leak through closet vent."]
+      ]
+    },
+    {
+      key: "access",
+      title: ACCESS,
+      col3: "Source",
+      rows: [
+        ["CW111", S, "Door will not close and is very difficult to open."],
+        ["CW145", S, "Door lock/deadlock not working."],
+        ["CW247", L, "Repair door latch."],
+        ["CW407", L, "Fix front-door lock, restore key-card access and complete key-card recode."],
+        ["CW407", S, "Room could not be accessed; door lock broken. Room not checked."]
+      ]
+    },
+    {
+      key: "ventilation",
+      title: VENT,
+      col3: "Source",
+      rows: [
+        ["CW104", L, "Check/repair extractor."],
+        ["CW211", L, "Check/repair extractor."],
+        ["CW212", L, "Check/repair extractor."],
+        ["CW304", L, "Check/repair extractor."],
+        ["CW503", JBA, "Investigate MVHR error message."]
+      ]
+    },
+    {
+      key: "appliances",
+      title: APPLI,
+      col3: "Source",
+      rows: [
+        ["CW246", L, "Repair oven - logged not working."]
+      ]
+    },
+    {
+      key: "flooring",
+      title: FLOOR,
+      col3: "Source",
+      rows: [
+        ["CW111", L, "Repair peeling flooring at bathroom threshold."],
+        ["CW111", A, "Door jamming on vinyl; hole in vinyl."],
+        ["CW212", L, "Repair peeling laminate."],
+        ["CW346", L, "Repair torn vinyl."],
+        ["CW408", L, "Re-stick peeling entrance vinyl."],
+        ["CW408", S, "Flooring lifting at the entrance."],
+        ["CW409", L, "Repair severe bubbling/lifting floor."],
+        ["CW445", L, "Repair floor bubbling by bed."],
+        ["CW446", L, "Repair bubbling kitchen floor."],
+        ["CW448", S, "Cut in the flooring by kitchen."],
+        ["CW525", JBA, "Repair damaged flooring."],
+        ["CW502", U15, "Fix trip hazard in the flooring."],
+        ["CW148", U15, "Remove paint damage from the vinyl floor."]
+      ]
+    },
+    {
+      key: "restrictors",
+      title: WIN,
+      col3: "Source",
+      rows: [
+        ["CW201", L, "Check/repair window restrictor."],
+        ["CW246", L, "Check/repair window restrictor."],
+        ["CW247", L, "Check/repair window restrictor."],
+        ["CW248", L, "Check/repair window restrictor."],
+        ["CW346", L, "Check/repair window restrictor."],
+        ["CW347", L, "Check/repair window restrictor."],
+        ["CW401", L, "Check/repair window restrictor."],
+        ["CW402", L, "Check/repair window restrictor."],
+        ["CW407", L, "Check/repair window restrictor."],
+        ["CW408", L, "Check/repair window restrictor."],
+        ["CW445", L, "Check/repair window restrictor."],
+        ["CW446", L, "Check/repair window restrictor."],
+        ["CW448", L, "Check/repair window restrictor."],
+        ["CW525", JBA, "Check/repair window restrictor."],
+        ["CW526", JBA, "Check/repair window restrictor."],
+        ["CW527", JBA, "Check/repair window restrictor."],
+        ["CW528", JBA, "Check/repair window restrictor."],
+        ["CW529", JBA, "Check/repair window restrictor."],
+        ["CW530", JBA, "Check/repair window restrictor."],
+        ["CW245", U15, "Fit window restrictor."]
+      ]
+    },
+    {
+      key: "blinds",
+      title: BLINDS,
+      col3: "Source",
+      rows: [
+        ["CW303", S, "Blind cord broken; blind does not open/close."],
+        ["CW348", S, "Cream blind will not go up; very dirty with paint splashes; needs replacing."],
+        ["CW348", A, "Badly stained blinds."],
+        ["CW529", JBA, "Free stiff privacy blind: almost stuck."]
+      ]
+    },
+    {
+      key: "joinery",
+      title: JOIN,
+      col3: "Source",
+      rows: [
+        ["CW111", L, "Prop/support the drawer below the oven so it sits correctly."],
+        ["CW111", S, "Doorstep broken."],
+        ["CW111", S, "Shelves underneath the oven are not attached."],
+        ["CW111", A, "Kitchen shelves."],
+        ["CW202", S, "Missing skirting behind the door."],
+        ["CW209", S, "Missing skirting behind the door."],
+        ["CW212", S, "Door seal has come off."],
+        ["CW212", A, "Door fire stopping flapping around."],
+        ["CW246", L, "Fix entrance skirting gap."],
+        ["CW247", L, "Fit missing wardrobe shelf."],
+        ["CW304", S, "TV wobbles excessively."],
+        ["CW311", L, "Fix the gap at the bathroom door/panel."],
+        ["CW347", L, "Finish second wardrobe and repair stiff/wobbly kitchen drawer."],
+        ["CW347", S, "Wardrobe is missing its kickboard."],
+        ["CW347", A, "Wardrobe and sink cabinet."],
+        ["CW402", L, "Finish bathroom mirror boxing."],
+        ["CW403", S, "Kitchen bin cupboard will not close."],
+        ["CW408", S, "Work required around the door frame."],
+        ["CW409", L, "Fit/fix missing entrance skirting."],
+        ["CW445", L, "Fit missing wardrobe shelving."],
+        ["CW446", L, "Fit the loose brown circular cap."],
+        ["CW448", L, "Adjust left kitchen cupboard rubbing at ceiling/join."],
+        ["CW501", JBA, "Ease front door: dragging."],
+        ["CW501", JBA, "Secure bathroom door: loose and shakes when closed."],
+        ["CW526", JBA, "Ease bathroom door: drags and will not close."],
+        ["CW529", JBA, "Ease bathroom door: drags and will not close."],
+        ["CW530", JBA, "Ease bathroom door: drags and will not close."],
+        ["CW444", U15, "Fix wobbly dining table."],
+        ["CW213", U15, "Refix loose toilet roll holder."],
+        ["CW213", U15, "Finish boxing-in in the bathroom."],
+        ["CW113", U15, "Refix loose doorstop."],
+        ["CW245", S, "Refix panel: extremely loose."]
+      ]
+    },
+    {
+      key: "decorating",
+      title: DECOR,
+      col3: "Source",
+      rows: [
+        ["CW145", L, "Add cosmetic sealant around entrance door."],
+        ["CW248", A, "Paint behind bed; desk scratches."],
+        ["CW304", L, "Add sealant around entrance door."],
+        ["CW346", S, "Door frame chipped."],
+        ["CW347", L, "Seal toilet back panel and bathroom-door gap."],
+        ["CW401", L, "Touch up minor paint scuffs."],
+        ["CW402", L, "Finish cosmetic work around mirror boxing."],
+        ["CW408", L, "Minor sealant/cosmetic touch-ups."],
+        ["CW448", L, "Add bathroom sealant."],
+        ["CW530", JBA, "Make good holes in the wall outside the room."],
+        ["CW502", U15, "Repair wall damage behind the door."],
+        ["CW113", U15, "Touch up scuffs on the wall."]
+      ]
+    },
+    {
+      key: "setup",
+      title: SETUP,
+      col3: "Source",
+      rows: [
+        ["CW111", L, "Remove or put away spare parts, manuals and TV/remote items."],
+        ["CW145", L, "Remove spare parts."],
+        ["CW145", U, "TV power cable missing."],
+        ["CW201", L, "Remove spare parts."],
+        ["CW202", L, "Remove spare parts from the kitchen drawer."],
+        ["CW205", L, "Remove spare parts from kitchen drawers."],
+        ["CW211", L, "Remove items from kitchen drawers."],
+        ["CW212", L, "Put away TV remotes/spare parts."],
+        ["CW246", L, "Remove stickers and spare parts."],
+        ["CW247", L, "Remove spare parts."],
+        ["CW247", U, "TV remote missing."],
+        ["CW248", S, "Missing cutlery tray."],
+        ["CW304", L, "Remove spare parts."],
+        ["CW311", L, "Remove spare parts."],
+        ["CW346", L, "Remove spare parts."],
+        ["CW347", L, "Remove spare parts."],
+        ["CW348", L, "Remove rubbish, loose items and stickers."],
+        ["CW401", L, "Remove cables/TV controllers."],
+        ["CW402", L, "Remove spare parts."],
+        ["CW408", U, "TV batteries missing."],
+        ["CW409", L, "Remove spare parts."],
+        ["CW445", L, "Remove show-room items and spare controllers."],
+        ["CW446", L, "Remove spare parts."],
+        ["CW448", L, "Remove TV controllers/items and manuals."],
+        ["CW529", U15, "Replace missing chair."]
+      ]
+    }
+  ];
+
+  /* Every room in the building. The 1st, 2nd, 3rd and 4th floors share a
+     layout; the 5th is shorter; the ground floor and the annexe are their
+     own shapes. Built rather than typed out so a missing or repeated room
+     number is not possible.
+
+     No floor plan was supplied for the 3rd, so it is taken as a standard
+     floor. Three things agree: the building has 257 studios and the other
+     floors account for 206, leaving exactly one standard floor; the 3rd is
+     the only one without a plan; and every 3rd-floor room already on the
+     snagging list falls inside that layout. */
+
+  function pad2(n) { return n < 10 ? "0" + n : "" + n; }
+
+  function standardFloor(n) {
+    var out = [];
+    var i;
+    for (i = 1; i <= 39; i++) { out.push("CW" + n + pad2(i)); }
+    for (i = 40; i <= 42; i++) { out.push("CW" + n + i + "A", "CW" + n + i + "B"); }
+    for (i = 43; i <= 48; i++) { out.push("CW" + n + i); }
+    return out;
+  }
+
+  function fifthFloor() {
+    var out = [];
+    var i;
+    for (i = 1; i <= 21; i++) { out.push("CW5" + pad2(i)); }
+    for (i = 22; i <= 24; i++) { out.push("CW5" + i + "A", "CW5" + i + "B"); }
+    for (i = 25; i <= 30; i++) { out.push("CW5" + i); }
+    return out;
+  }
+
+  var EVERY_ROOM = ["CW001", "CW002", "CW003", "CW004", "CW005", "CW006",
+    "CW007A", "CW007B", "CW008A", "CW008B", "CW009A", "CW009B"]
+    .concat(standardFloor(1), ["CW601", "CW602", "CW603", "CW604"])
+    .concat(standardFloor(2), ["CW701", "CW702", "CW703", "CW704"])
+    .concat(standardFloor(3))
+    .concat(standardFloor(4))
+    .concat(fifthFloor());
+
+  var mvhrRows = [];
+  for (var mr = 0; mr < EVERY_ROOM.length; mr++) {
+    mvhrRows.push([EVERY_ROOM[mr], U, "Secure the MVHR cupboard."]);
+  }
+
+  sections.push({
+    key: "mvhr",
+    title: "MVHR Cupboards",
+    col3: "Source",
+    rows: mvhrRows
+  });
+
+  /* The summary and the per-trade counts are worked out from the list
+     itself. They used to be typed in alongside it, which meant adding a job
+     was two edits and the totals could drift out of step with the rows. */
+
+  var summary = [];
+  var allRooms = {};
+  var totalRooms = 0;
+
+  for (var si = 0; si < sections.length; si++) {
+    var sc = sections[si];
+    var secRooms = [];
+    var secSeen = {};
+
+    for (var sj = 0; sj < sc.rows.length; sj++) {
+      var rm = sc.rows[sj][0];
+      if (!secSeen[rm]) { secSeen[rm] = true; secRooms.push(rm); }
+      if (!allRooms[rm]) { allRooms[rm] = true; totalRooms++; }
+    }
+
+    secRooms.sort();
+    sc.issues = sc.rows.length;
+    sc.rooms = secRooms.length;
+    summary.push([sc.title, sc.issues, sc.rooms, secRooms]);
+  }
+
+  // Keyed on the first digit of the room number. The annexe block is
+  // numbered 6xx and 7xx but sits at first and second floor level, which
+  // is how it is drawn on those two floor plans.
+  var FLOORS = {
+    "0": "Ground Floor",
+    "1": "1st Floor",
+    "2": "2nd Floor",
+    "3": "3rd Floor",
+    "4": "4th Floor",
+    "5": "5th Floor",
+    "6": "1st Floor (annexe)",
+    "7": "2nd Floor (annexe)"
+  };
+
+  function floorOf(room) {
+    return FLOORS[room.charAt(2)] || "";
+  }
+
+  /* When each room is actually let, from the control spreadsheet. Three
+     tabs feed it, and they win in this order:
+
+       1. DEFERRED_TO  - the CW tabs: a tenant who has deferred, and the
+                         date they now arrive (contract start plus the one
+                         or two weeks deferred).
+       2. CHECK_IN     - the check-in API: the check-in they have booked.
+       3. CONTRACT_START - the tenants API: the contract start date.
+
+     A room with none of the three falls back to the date on Stelling's
+     audit list, and one with nothing at all shows no date rather than a
+     guess. Room number and date only, from every tab: the sheet carries
+     tenants' names, emails, phone numbers and travel details, none of which
+     belongs on a public page or in this public repository. */
+  var DEFERRED_TO = {};
+
+  var CHECK_IN = {
+    // "Tuesday 15th Arrivals" tab: the Fri 11 - Tue 15 Sep 2026 window.
+    "CW528": "Fri 11 Sep 2026",
+    "CW530": "Sat 12 Sep 2026",
+    "CW404": "Mon 14 Sep 2026",
+    "CW502": "Mon 14 Sep 2026",
+    "CW148": "Tue 15 Sep 2026",
+    "CW245": "Tue 15 Sep 2026",
+    "CW529": "Tue 15 Sep 2026",
+    // 15 Sep: this week's arrivals, now the top of Stelling's audit.
+    "CW204": "Wed 16 Sep 2026",
+    "CW302": "Wed 16 Sep 2026",
+    "CW243": "Thu 17 Sep 2026",
+    "CW307": "Thu 17 Sep 2026"
+  };
+
+  var CONTRACT_START = {};
+
+  // What the date is, so the page can say so, and the text it leads with.
+  var MOVEIN_KINDS = {
+    deferred: { future: "Deferred to", past: "Deferred to" },
+    checkin:  { future: "Checks in",  past: "Checked in" },
+    contract: { future: "Contract from", past: "Contract from" },
+    listed:   { future: "Moves in",    past: "Moved in" }
+  };
+
+  function resolveMoveIn(room, listed) {
+    if (DEFERRED_TO[room])     { return { date: DEFERRED_TO[room], kind: "deferred" }; }
+    if (CHECK_IN[room])        { return { date: CHECK_IN[room], kind: "checkin" }; }
+    if (CONTRACT_START[room])  { return { date: CONTRACT_START[room], kind: "contract" }; }
+    if (listed)                { return { date: listed, kind: "listed" }; }
+    return { date: "", kind: "" };
+  }
+
+  /* The rooms Stelling are auditing, in the priority order they gave, with
+     the floor, room type and move-in date against each. */
+  var STELLING_LIST = [
+    // 15 Sep: the top of the list is the next two days' arrivals.
+    { room: "CW204", floor: "2nd Floor", type: "", movein: "Wed 16 Sep 2026" },
+    { room: "CW302", floor: "3rd Floor", type: "Luxury Plus", movein: "Wed 16 Sep 2026" },
+    { room: "CW243", floor: "2nd Floor", type: "", movein: "Thu 17 Sep 2026" },
+    { room: "CW307", floor: "3rd Floor", type: "Luxury Plus", movein: "Thu 17 Sep 2026" },
+    { room: "CW244", floor: "2nd Floor", type: "Luxury", movein: "Fri 18 Sep 2026" },
+    { room: "CW305", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW308", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW310", floor: "3rd Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW344", floor: "3rd Floor", type: "Luxury", movein: "Fri 18 Sep 2026" },
+    { room: "CW403", floor: "4th Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW405", floor: "4th Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW410", floor: "4th Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW411", floor: "4th Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW412", floor: "4th Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW447", floor: "4th Floor", type: "Luxury", movein: "Fri 18 Sep 2026" },
+    { room: "CW301", floor: "3rd Floor", type: "Luxury Plus", movein: "Sat 19 Sep 2026" },
+    { room: "CW203", floor: "2nd Floor", type: "Luxury Plus", movein: "Sun 20 Sep 2026" },
+    { room: "CW210", floor: "2nd Floor", type: "Premium Plus", movein: "Sun 20 Sep 2026" },
+    { room: "CW309", floor: "3rd Floor", type: "Premium Plus", movein: "Tue 22 Sep 2026" },
+    { room: "CW112", floor: "1st Floor", type: "Premium Plus", movein: "Thu 24 Sep 2026" },
+    { room: "CW101", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW103", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW105", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW106", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW108", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW144", floor: "1st Floor", type: "Luxury", movein: "Fri 25 Sep 2026" },
+    { room: "CW147", floor: "1st Floor", type: "Luxury", movein: "Fri 25 Sep 2026" },
+    { room: "CW206", floor: "2nd Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW207", floor: "2nd Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW306", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW343", floor: "3rd Floor", type: "Luxury", movein: "Sat 26 Sep 2026" },
+    { room: "CW406", floor: "4th Floor", type: "Luxury Plus", movein: "Mon 28 Sep 2026" },
+    { room: "CW110", floor: "1st Floor", type: "Premium Plus", movein: "Thu 01 Oct 2026" },
+    { room: "CW208", floor: "2nd Floor", type: "Luxury Plus", movein: "Thu 01 Oct 2026" },
+    { room: "CW143", floor: "1st Floor", type: "Luxury", movein: "Fri 02 Oct 2026" },
+    { room: "CW102", floor: "1st Floor", type: "Luxury Plus", movein: "Wed 07 Oct 2026" },
+    { room: "CW146", floor: "1st Floor", type: "Luxury", movein: "Fri 09 Oct 2026" },
+    { room: "CW107", floor: "1st Floor", type: "Luxury Plus", movein: "" },
+    { room: "CW205", floor: "2nd Floor", type: "Luxury Plus", movein: "" }
+  ];
+
+  /* Every other room in the building follows them, so all 257 studios are on
+     the audit and a room nobody has been to is visible as exactly that.
+     EVERY_ROOM is the same building-wide list the MVHR sweep is built from,
+     so the two cannot drift apart. */
+  var AUDIT_STUDIOS = [];
+  var STUDIO_BY_ROOM = {};
+  var sx;
+
+  for (sx = 0; sx < STELLING_LIST.length; sx++) {
+    STELLING_LIST[sx].listed = true;
+    AUDIT_STUDIOS.push(STELLING_LIST[sx]);
+    STUDIO_BY_ROOM[STELLING_LIST[sx].room] = STELLING_LIST[sx];
+  }
+
+  for (sx = 0; sx < EVERY_ROOM.length; sx++) {
+    if (STUDIO_BY_ROOM[EVERY_ROOM[sx]]) { continue; }
+    var other = {
+      room: EVERY_ROOM[sx],
+      floor: floorOf(EVERY_ROOM[sx]),
+      type: "",
+      movein: "",
+      listed: false
+    };
+    AUDIT_STUDIOS.push(other);
+    STUDIO_BY_ROOM[other.room] = other;
+  }
+
+  /* "Fri 18 Sep 2026" sorts as 20260918, so the soonest arrival comes
+     first and a room with no date given sorts last rather than first. */
+  var MONTHS = { Jan: "01", Feb: "02", Mar: "03", Apr: "04", May: "05",
+    Jun: "06", Jul: "07", Aug: "08", Sep: "09", Oct: "10", Nov: "11", Dec: "12" };
+
+  function moveinKey(text) {
+    var m = /(\d{1,2})\s+([A-Z][a-z]{2})\s+(\d{4})/.exec(text || "");
+    if (!m || !MONTHS[m[2]]) { return ""; }
+    return m[3] + MONTHS[m[2]] + (m[1].length < 2 ? "0" + m[1] : m[1]);
+  }
+
+  for (sx = 0; sx < AUDIT_STUDIOS.length; sx++) {
+    var mv = AUDIT_STUDIOS[sx];
+    var got = resolveMoveIn(mv.room, mv.movein);
+    mv.listedDate = mv.movein;   // what Stelling's list said, kept for comparison
+    mv.movein = got.date;
+    mv.moveinKind = got.kind;
+    mv.moveinKey = moveinKey(mv.movein);
+  }
+
+  var STELLING_COUNT = STELLING_LIST.length;
+
+  for (sx = 0; sx < AUDIT_STUDIOS.length; sx++) {
+    AUDIT_STUDIOS[sx].priority = sx + 1;
+  }
+
+  function moveinFor(room) {
+    var st = STUDIO_BY_ROOM[room];
+    return (st && st.movein) || "";
+  }
+
+  // Today as yyyymmdd, the same shape as moveinKey, so a plain string
+  // compare says whether a date has been and gone.
+  var TODAY_KEY = (function () {
+    var d = new Date();
+    return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate());
+  })();
+
+  function moveinPast(key) {
+    return !!key && key < TODAY_KEY;
+  }
+
+  function moveinVerb(st) {
+    var kinds = MOVEIN_KINDS[(st && st.moveinKind) || "listed"] || MOVEIN_KINDS.listed;
+    return moveinPast(st && st.moveinKey) ? kinds.past : kinds.future;
+  }
+
+  function moveinClass(room) {
+    var st = STUDIO_BY_ROOM[room];
+    if (!st || !st.movein) { return "";  }
+    return " " + (st.moveinKind || "listed") + (moveinPast(st.moveinKey) ? " past" : "");
+  }
+
+  function moveinSortFor(room) {
+    var st = STUDIO_BY_ROOM[room];
+    return (st && st.moveinKey) || "";
+  }
+
+
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function shortDate(iso) {
+    if (!iso) { return ""; }
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) { return ""; }
+    return d.toLocaleString("en-GB", {
+      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
+    });
+  }
+
+  // A key identifies a JOB, not a line on the page. 22 jobs are listed
+  // twice — once in a walk-round list, once under their trade — and room
+  // plus action is what makes those two lines the same job. Keying on
+  // that means ticking either one ticks the job everywhere it appears,
+  // and 130 lines resolve to the 108 issues the summary totals.
+  //
+  // The key comes from content rather than position, so reordering or
+  // inserting rows never re-points an existing tick. Rewording an action
+  // does orphan its tick — the intended trade: the job itself changed.
+  function rowKey(room, action) {
+    var str = room + "|" + action;
+    var h = 0x811c9dc5;
+    for (var i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+    }
+    return room.toLowerCase() + "-" + h.toString(36);
+  }
+
+  function uuid() {
+    if (window.crypto && window.crypto.randomUUID) {
+      return window.crypto.randomUUID();
+    }
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+      var r = (Math.random() * 16) | 0;
+      var v = c === "x" ? r : ((r & 0x3) | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  /* ------------------------------------------------------------------
+     State.
+
+       items  — what the server last told us.
+       queued — changes made here that the server has not confirmed yet.
+                Written to this device and retried until they land, so a
+                dropped signal mid-tick loses nothing.
+
+     What you see is `queued` laid over `items`, so your own change shows
+     at once and an older server copy never overwrites it.
+     ------------------------------------------------------------------ */
+
+  var NAME_KEY = "cw-tower1-name";
+  var COMPANY_KEY = "cw-tower1-company";
+  var HIDE_DONE_KEY = "cw-tower1-hide-done";
+  var HIDE_GROUND_KEY = "cw-tower1-hide-ground";
+  var STUDIO_SORT_KEY = "cw-tower1-studio-sort";
+  var TRADE_OFF_KEY = "cw-tower1-trades-off";
+  var SRC_OFF_KEY = "cw-tower1-sources-off";
+  var DATE_OPEN_KEY = "cw-tower1-dates-open";
+  var LOCAL_KEY = "cw-tower1-snags-local-v2";
+  var QUEUE_KEY = "cw-tower1-snags-queue-v2";
+  var MIGRATED_KEY = "cw-tower1-snags-migrated-v2";
+
+  var items = {};
+  var comments = [];
+  var queued = {};
+  var queuedComments = [];
+
+  var client = null;
+  var live = false;
+  var channel = null;
+  var hideDone = false;
+  var index = {};          // job key -> {room, floor, action}
+  var occurrences = {};    // job key -> the DOM ids showing it
+  var sectionRows = {};    // section key -> job keys it lists
+  var roomIndex = {};
+  var roomJobs = {};       // room -> the job keys listed against it
+  var sectionDom = {};     // section key -> job key -> the row showing it there
+  var total = 0;
+  var retryTimer = null;
+  var retryDelay = 4000;
+
+  function store(key, value) {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) { /* private mode or full: carry on in memory */ }
+  }
+
+  function load(key, fallback) {
+    try {
+      var raw = window.localStorage.getItem(key);
+      if (!raw) { return fallback; }
+      var parsed = JSON.parse(raw);
+      return parsed === null || parsed === undefined ? fallback : parsed;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function saveQueue() {
+    store(QUEUE_KEY, { items: queued, comments: queuedComments });
+  }
+
+  function saveLocal() {
+    if (live) { return; }
+    store(LOCAL_KEY, { items: items, comments: comments });
+  }
+
+  var whoEl = document.getElementById("who");
+  var companyEl = document.getElementById("company");
+  var gateNotice = document.getElementById("gate-notice");
+
+  try {
+    whoEl.value = window.localStorage.getItem(NAME_KEY) || "";
+    companyEl.value = window.localStorage.getItem(COMPANY_KEY) || "";
+  } catch (e) { /* ignore */ }
+
+  // Every tick and note is attributed, so the list is only usable once we
+  // know who is using it.
+  function identified() {
+    return whoEl.value.trim().length > 0 && companyEl.value.trim().length > 0;
+  }
+
+  function who() {
+    var n = whoEl.value.trim();
+    var co = companyEl.value.trim();
+    if (n && co) { return n + ", " + co; }
+    return n || co || "Someone";
+  }
+
+  var gateOpen = null;
+  var gatedInputs = null;
+  var gatedNotes = null;
+
+  function applyGate() {
+    var open = identified();
+    if (open === gateOpen) { return; }
+    gateOpen = open;
+
+    // Re-read each time: audit rows and the untick question are added
+    // after load, and a cached list would leave them out.
+    gatedInputs = document.querySelectorAll("#sections input, #sections button");
+    for (var g = 0; g < gatedInputs.length; g++) {
+      gatedInputs[g].disabled = !open;
+    }
+    if (typeof renderStudios === "function") { renderStudios(); }
+
+    // A disabled box that refuses to type looks broken unless it says
+    // why, and the notice at the top is off screen by the time someone
+    // is tapping a note field.
+    if (!gatedNotes) {
+      gatedNotes = document.querySelectorAll("#sections .note-field");
+    }
+    for (var f = 0; f < gatedNotes.length; f++) {
+      gatedNotes[f].placeholder = open
+        ? "Add a note"
+        : "Add your name and company at the top first";
+    }
+
+    commentText.disabled = !open;
+    commentBtn.disabled = !open;
+    gateNotice.hidden = open;
+  }
+
+  function rememberIdentity() {
+    try {
+      window.localStorage.setItem(NAME_KEY, whoEl.value);
+      window.localStorage.setItem(COMPANY_KEY, companyEl.value);
+    } catch (e) { /* ignore */ }
+    applyGate();
+  }
+
+  whoEl.addEventListener("input", rememberIdentity);
+  companyEl.addEventListener("input", rememberIdentity);
+
+  /* ---- Summary table ---- */
+
+  // The summary's trades are the trade sections below, by title. The two
+  // walk-round sections are not summarised (their items are counted once,
+  // under their trade), so they are absent from this map by design.
+  // Who is carrying each trade. A trade with nobody against it shows a
+  // dash rather than a blank, so an unassigned one is visible rather than
+  // just quiet.
+  var ASSIGNED = {
+    access: "Kane",
+    blinds: "Kane",
+    joinery: "Kane",
+    flooring: "Charlie",
+    electrical: "Neil",
+    decorating: "Jordan",
+    mvhr: "Marius"
+  };
+
+  var tradeKeyByTitle = {};
+  var sectionTitles = {};
+  for (var t = 0; t < sections.length; t++) {
+    tradeKeyByTitle[sections[t].title] = sections[t].key;
+    sectionTitles[sections[t].key] = sections[t].title;
+  }
+
+  function roomCells(tradeTitle, rooms) {
+    var key = tradeKeyByTitle[tradeTitle] || "";
+
+    // A sweep covering the whole building would print hundreds of room
+    // numbers here and bury every other trade. The count says it better.
+    if (rooms.length > 30) {
+      return esc(rooms.length + " rooms \u2014 see the section below");
+    }
+
+    var cells = [];
+    for (var r = 0; r < rooms.length; r++) {
+      cells.push(
+        '<span class="sum-room" data-key="' + esc(key) +
+        '" data-room="' + esc(rooms[r]) + '">' + esc(rooms[r]) + "</span>"
+      );
+    }
+    return cells.join(", ");
+  }
+
+  var summaryHtml = "";
+  var totalIssues = 0;
+
+  for (var i = 0; i < summary.length; i++) {
+    var s = summary[i];
+    totalIssues += s[1];
+    var sKey = tradeKeyByTitle[s[0]] || "";
+    var sWho = ASSIGNED[sKey];
+
+    summaryHtml +=
+      '<tr data-key="' + esc(sKey) + '">' +
+      '<td class="room t-trade">' + esc(s[0]) + "</td>" +
+      '<td class="t-who">' +
+      (sWho ? esc(sWho) : '<span class="unassigned">\u2014</span>') + "</td>" +
+      '<td class="num t-issues">' + s[1] + "</td>" +
+      '<td class="num t-rooms">' + s[2] + "</td>" +
+      '<td class="t-nums">' + roomCells(s[0], s[3]) + "</td>" +
+      "</tr>";
+  }
+
+  summaryHtml +=
+    '<tr class="total">' +
+    '<td class="t-trade">Total</td>' +
+    '<td class="t-who"></td>' +
+    '<td class="num t-issues">' + totalIssues + "</td>" +
+    '<td class="num t-rooms">' + totalRooms + "</td>" +
+    '<td class="t-nums"></td>' +
+    "</tr>";
+
+  document.getElementById("summary-body").innerHTML = summaryHtml;
+
+  /* ---- Item tables ---- */
+
+  var out = "";
+
+  for (var j = 0; j < sections.length; j++) {
+    var sec = sections[j];
+    out +=
+      '<div class="section" id="sec-' + sec.key + '">' +
+      "<h2>" + esc(sec.title) + " " +
+      '<span class="head-count" id="head-' + sec.key + '"></span> ' +
+      (ASSIGNED[sec.key]
+        ? '<span class="assignee">' + esc(ASSIGNED[sec.key]) + "</span> "
+        : "") +
+      '<span class="sec-count" id="count-' + sec.key + '"></span>' +
+      '<label class="sec-all on-phone" for="all-' + sec.key + '-phone">' +
+      '<input type="checkbox" class="all-box" id="all-' + sec.key + '-phone"' +
+      ' data-section="' + sec.key + '"' +
+      ' aria-label="Tick every item under ' + esc(sec.title) + '"> Tick all</label>' +
+      "</h2>" +
+      '<div class="scroller"><table><thead><tr>' +
+      "<th>Room</th><th>Floor</th><th>Move-in</th><th>" + esc(sec.col3) +
+      "</th><th>Action</th>" +
+      '<th class="done-h">Done<label class="sec-all" for="all-' + sec.key + '-head">' +
+      '<input type="checkbox" class="all-box" id="all-' + sec.key + '-head"' +
+      ' data-section="' + sec.key + '"' +
+      ' aria-label="Tick every item under ' + esc(sec.title) + '"> All</label></th>' +
+      '</tr></thead><tbody id="tbody-' + sec.key + '">';
+
+    for (var k = 0; k < sec.rows.length; k++) {
+      var row = sec.rows[k];
+      var id = rowKey(row[0], row[2]);
+      var floor = floorOf(row[0]);
+
+      // One job, but it may be printed on two lines of the page, so the
+      // DOM needs its own unique id per line while the data key stays
+      // shared.
+      var domId = sec.key + "-" + k;
+
+      if (!index[id]) {
+        index[id] = { room: row[0], floor: floor, action: row[2], src: row[1], trades: [] };
+        total++;
+        if (!roomJobs[row[0]]) { roomJobs[row[0]] = []; }
+        roomJobs[row[0]].push(id);
+      }
+      // A job listed under more than one heading belongs to each of them.
+      if (index[id].trades.indexOf(sec.key) === -1) {
+        index[id].trades.push(sec.key);
+      }
+
+      if (!occurrences[id]) { occurrences[id] = []; }
+      occurrences[id].push(domId);
+
+      if (!sectionRows[sec.key]) { sectionRows[sec.key] = []; }
+      sectionRows[sec.key].push(id);
+      if (!sectionDom[sec.key]) { sectionDom[sec.key] = {}; }
+      sectionDom[sec.key][id] = domId;
+
+      // Every job this trade has in this room, so the summary can cross
+      // the room off once the last of them is ticked.
+      if (!roomIndex[sec.key]) { roomIndex[sec.key] = {}; }
+      if (!roomIndex[sec.key][row[0]]) { roomIndex[sec.key][row[0]] = []; }
+      roomIndex[sec.key][row[0]].push(id);
+
+      out +=
+        '<tr id="row-' + domId + '">' +
+        '<td class="room">' + esc(row[0]) + "</td>" +
+        '<td class="floor">' + esc(floor) + "</td>" +
+        '<td class="movein' + moveinClass(row[0]) + '">' + esc(moveinFor(row[0])) + "</td>" +
+        '<td class="src">' + esc(row[1]) + "</td>" +
+        '<td class="action"><span class="action-text">' + esc(row[2]) + "</span>" +
+        '<ul class="notes" id="notes-' + domId + '"></ul>' +
+        '<div class="note-add">' +
+        '<input class="note-field" type="text" id="note-' + domId + '" data-id="' + id + '"' +
+        ' placeholder="Add a note"' +
+        ' aria-label="Note for ' + esc(row[0]) + " " + esc(row[2]) + '">' +
+        '<button type="button" class="note-btn" data-id="' + id + '"' +
+        ' aria-label="Submit note for ' + esc(row[0]) + '">Submit</button>' +
+        "</div>" +
+        '<span class="by" id="by-' + domId + '"></span></td>' +
+        '<td class="done"><label for="tick-' + domId + '">' +
+        '<input type="checkbox" id="tick-' + domId + '" data-id="' + id + '"' +
+        ' aria-label="Mark ' + esc(row[0]) + " " + esc(row[2]) + ' as done">' +
+        "</label></td>" +
+        "</tr>";
+    }
+
+    out += "</tbody></table></div></div>";
+  }
+
+  /* Built in here rather than beside it: ticking, notes and Tick all are
+     all delegated from #sections, so a section outside it would be dead. */
+  out += '<div class="section" id="sec-unassigned" hidden>' +
+    "<h2>Unassigned " +
+    '<span class="head-count" id="head-unassigned"></span> ' +
+    '<span class="sec-count" id="count-unassigned"></span></h2>' +
+    '<div class="scroller"><table><thead><tr>' +
+    "<th>Room</th><th>Floor</th><th>Move-in</th><th>Source</th><th>Action</th>" +
+    '<th class="done-h">Done</th>' +
+    '</tr></thead><tbody id="tbody-unassigned"></tbody></table></div></div>';
+
+  var sectionsEl = document.getElementById("sections");
+  sectionsEl.innerHTML = out;
+
+  var progressEl = document.getElementById("progress");
+  var allClearEl = document.getElementById("all-clear");
+  var hideDoneEl = document.getElementById("hide-done");
+  var statusEl = document.getElementById("live-status");
+
+  hideDone = load(HIDE_DONE_KEY, false) === true;
+  hideDoneEl.checked = hideDone;
+
+  hideDoneEl.addEventListener("change", function () {
+    hideDone = hideDoneEl.checked;
+    store(HIDE_DONE_KEY, hideDone);
+    render();
+    renderStudios();
+  });
+  var unsavedEl = document.getElementById("unsaved");
+
+  progressEl.textContent = "0 of " + total + " items ticked";
+
+  /* ---- Render ---- */
+
+  // Your own unsent change always wins over the server's older copy.
+  function effective(id) {
+    return queued[id] || items[id] || {};
+  }
+
+  function pendingCount() {
+    return Object.keys(queued).length + queuedComments.length;
+  }
+
+  function renderUnsaved() {
+    if (!live) { unsavedEl.textContent = ""; return; }
+    var n = pendingCount();
+    unsavedEl.textContent = n
+      ? (n === 1 ? "1 change still saving" : n + " changes still saving")
+      : "";
+  }
+
+  /* A note belongs to a job. Ideally that lives in a snag_id column, but
+     a project set up before notes existed has no such column, and asking
+     someone to run a migration before they can write "tenant in, rebook"
+     is a poor trade. So: try the column, and if the project does not have
+     it, fold the job into the body as a tag instead. Both forms read back
+     the same, so notes written either way sit in one thread and adding
+     the column later changes nothing that is already saved. */
+
+  var snagColumn = true;
+  var SNAG_TAG = /^\[\[snag:([^\]\s]{1,120})\]\]\s?/;
+
+  function commentPayload(entry, useColumn) {
+    var payload = { id: entry.id, body: entry.body, author: entry.author };
+    if (!entry.snag_id) { return payload; }
+    if (useColumn) {
+      payload.snag_id = entry.snag_id;
+    } else {
+      payload.body = "[[snag:" + entry.snag_id + "]] " + entry.body;
+    }
+    return payload;
+  }
+
+  function readComment(row) {
+    if (!row) { return null; }
+    var body = String(row.body || "");
+    var snag = row.snag_id || null;
+    var tagged = body.match(SNAG_TAG);
+    if (tagged) {
+      if (!snag) { snag = tagged[1]; }
+      body = body.slice(tagged[0].length);
+    }
+    return {
+      id: row.id,
+      snag_id: snag,
+      body: body,
+      author: row.author || "",
+      created_at: row.created_at || ""
+    };
+  }
+
+  function readComments(rows) {
+    var out = [];
+    for (var i = 0; i < (rows || []).length; i++) {
+      var c = readComment(rows[i]);
+      if (c && c.id) { out.push(c); }
+    }
+    return out;
+  }
+
+  // Notes live in the comments table, tagged with the job they belong to,
+  // so a line can carry as many as people need and none overwrite.
+  function groupNotes() {
+    var all = comments.concat(queuedComments);
+    var confirmed = {};
+    var m = {};
+    var i;
+
+    for (i = 0; i < comments.length; i++) {
+      if (comments[i] && comments[i].id) { confirmed[comments[i].id] = true; }
+    }
+
+    for (i = 0; i < all.length; i++) {
+      var c = all[i];
+      if (!c || !c.snag_id) { continue; }
+      if (!m[c.snag_id]) { m[c.snag_id] = []; }
+      m[c.snag_id].push(c);
+    }
+
+    for (var k in m) {
+      if (!Object.prototype.hasOwnProperty.call(m, k)) { continue; }
+      m[k].sort(function (x, y) {
+        return String(x.created_at || "").localeCompare(String(y.created_at || ""));
+      });
+    }
+
+    m.__confirmed = confirmed;
+    return m;
+  }
+
+  function notesHtml(list, confirmed, legacy) {
+    var html = "";
+
+    // A note written before this line kept a thread; keep showing it.
+    if (legacy && legacy.note) {
+      var lw = legacy.updated_by ? esc(legacy.updated_by) : "Someone";
+      var lt = shortDate(legacy.updated_at);
+      html += '<li><span class="note-who">' + lw + (lt ? " · " + esc(lt) : "") +
+        '</span><span class="note-body">' + esc(legacy.note) + "</span></li>";
+    }
+
+    for (var i = 0; i < list.length; i++) {
+      var c = list[i];
+      var sending = live && !confirmed[c.id];
+      var meta = esc(c.author || "Someone");
+      var when = shortDate(c.created_at);
+      if (when) { meta += " · " + esc(when); }
+      if (sending) { meta += " · sending…"; }
+      html += "<li" + (sending ? ' class="sending"' : "") + '>' +
+        '<span class="note-who">' + meta + "</span>" +
+        '<span class="note-body">' + esc(c.body || "") + "</span></li>";
+    }
+
+    return html;
+  }
+
+  /* A failed audit check is work for a trade, so it appears on that
+     trade's list. The line is keyed on the studio and the check, so
+     re-failing the same check does not create a second one, and passing
+     it later takes the line away again. The reason given at audit time
+     rides along as the line's note. */
+  function auditFailRows() {
+    var state = auditState();
+    var out = {};
+    var room;
+
+    for (room in state) {
+      if (!Object.prototype.hasOwnProperty.call(state, room)) { continue; }
+      for (var cid in state[room]) {
+        if (!Object.prototype.hasOwnProperty.call(state[room], cid)) { continue; }
+        var st = state[room][cid];
+        var ck = CHECK_BY_ID[cid];
+        if (!ck || st.status !== "fail") { continue; }
+        var to = st.trade || ck.trade;
+        if (!out[to]) { out[to] = []; }
+        out[to].push({
+          room: room,
+          action: "Audit fail: " + ck.label,
+          why: st.comment,
+          by: st.by,
+          at: st.at
+        });
+      }
+    }
+
+    for (var t in out) {
+      if (!Object.prototype.hasOwnProperty.call(out, t)) { continue; }
+      out[t].sort(function (a, b) { return a.room.localeCompare(b.room); });
+    }
+    return out;
+  }
+
+  /* A failed audit check is work for a trade, so it becomes a row on that
+     trade's list like any other: tickable, noteable, counted, and caught by
+     Tick all and Hide completed. Its identity is the room and the action,
+     the same as every other job, so a tick stays with it.
+
+     The rows come and go as checks fail and pass, so they are added to and
+     removed from the same indexes the built-in rows live in rather than
+     being drawn separately. */
+  var auditRowIds = {};   // job key -> the trade it is currently filed under
+
+  function auditRowHtml(domId, id, f) {
+    var stamp = f.by ? "Failed by " + esc(f.by) : "";
+    var when = shortDate(f.at);
+    if (when) { stamp += (stamp ? " \u00b7 " : "") + esc(when); }
+
+    return '<tr id="row-' + domId + '" class="audit-row">' +
+      '<td class="room">' + esc(f.room) + "</td>" +
+      '<td class="floor">' + esc(floorOf(f.room)) + "</td>" +
+      '<td class="movein' + moveinClass(f.room) + '">' + esc(moveinFor(f.room)) + "</td>" +
+      '<td class="src">' + esc(f.src) + "</td>" +
+      '<td class="action"><span class="action-text">' + esc(f.action) + "</span>" +
+      '<span class="fail-why">' + esc(f.why || "no reason given") + "</span>" +
+      '<span class="note-who">' + stamp + "</span>" +
+      '<ul class="notes" id="notes-' + domId + '"></ul>' +
+      '<div class="note-add">' +
+      '<input class="note-field" type="text" id="note-' + domId + '" data-id="' + id + '"' +
+      ' placeholder="Add a note"' +
+      ' aria-label="Note for ' + esc(f.room) + " " + esc(f.action) + '">' +
+      '<button type="button" class="note-btn" data-id="' + id + '"' +
+      ' aria-label="Submit note for ' + esc(f.room) + '">Submit</button>' +
+      "</div>" +
+      '<span class="by" id="by-' + domId + '"></span></td>' +
+      '<td class="done"><label for="tick-' + domId + '">' +
+      '<input type="checkbox" id="tick-' + domId + '" data-id="' + id + '"' +
+      ' aria-label="Mark ' + esc(f.room) + " " + esc(f.action) + ' as done">' +
+      "</label></td>" +
+      "</tr>";
+  }
+
+  function dropFromList(list, value) {
+    if (!list) { return; }
+    var at = list.indexOf(value);
+    if (at > -1) { list.splice(at, 1); }
+  }
+
+  function removeAuditRow(id) {
+    var trade = auditRowIds[id];
+    var domId = (sectionDom[trade] || {})[id];
+    var el = domId ? document.getElementById("row-" + domId) : null;
+    if (el && el.parentNode) { el.parentNode.removeChild(el); }
+
+    if (sectionDom[trade]) { delete sectionDom[trade][id]; }
+    dropFromList(sectionRows[trade], id);
+    dropFromList(roomJobs[(index[id] || {}).room], id);
+    if (roomIndex[trade]) {
+      dropFromList(roomIndex[trade][(index[id] || {}).room], id);
+    }
+    delete occurrences[id];
+    delete index[id];
+    delete auditRowIds[id];
+    total--;
+  }
+
+  function addAuditRow(id, trade, f) {
+    var body = document.getElementById("tbody-" + trade);
+    if (!body) { return; }
+    var domId = "af-" + id;
+
+    index[id] = {
+      room: f.room,
+      floor: floorOf(f.room),
+      action: f.action,
+      src: f.src,
+      srcKey: f.srcKey,
+      why: f.why,
+      trades: [trade],
+      fromAudit: true
+    };
+    occurrences[id] = [domId];
+    if (!sectionRows[trade]) { sectionRows[trade] = []; }
+    sectionRows[trade].push(id);
+    if (!sectionDom[trade]) { sectionDom[trade] = {}; }
+    sectionDom[trade][id] = domId;
+    if (!roomJobs[f.room]) { roomJobs[f.room] = []; }
+    roomJobs[f.room].push(id);
+    if (!roomIndex[trade]) { roomIndex[trade] = {}; }
+    if (!roomIndex[trade][f.room]) { roomIndex[trade][f.room] = []; }
+    roomIndex[trade][f.room].push(id);
+    total++;
+
+    body.insertAdjacentHTML("beforeend", auditRowHtml(domId, id, f));
+    auditRowIds[id] = trade;
+  }
+
+  function syncAuditRows() {
+    var byTrade = auditFailRows();
+    var wanted = {};
+    var changed = false;
+    var t;
+    var id;
+
+    for (t in byTrade) {
+      if (!Object.prototype.hasOwnProperty.call(byTrade, t)) { continue; }
+      for (var r = 0; r < byTrade[t].length; r++) {
+        var f = byTrade[t][r];
+        f.src = auditRoundName(f.at);
+        f.srcKey = dayKey(f.at);
+        wanted[rowKey(f.room, f.action)] = { trade: t, f: f };
+      }
+    }
+
+    // Gone, or moved to another trade: take the row away.
+    for (id in auditRowIds) {
+      if (!Object.prototype.hasOwnProperty.call(auditRowIds, id)) { continue; }
+      if (!wanted[id] || wanted[id].trade !== auditRowIds[id]) {
+        removeAuditRow(id);
+        changed = true;
+      }
+    }
+
+    for (id in wanted) {
+      if (!Object.prototype.hasOwnProperty.call(wanted, id)) { continue; }
+      if (auditRowIds[id]) {
+        // Still here; the reason or who failed it may have changed.
+        var dom = sectionDom[auditRowIds[id]][id];
+        var whyEl = document.querySelector("#row-" + dom + " .fail-why");
+        var wantWhy = wanted[id].f.why || "no reason given";
+        if (whyEl && whyEl.textContent !== wantWhy) {
+          whyEl.textContent = wantWhy;
+          index[id].why = wanted[id].f.why;
+        }
+        // Looked at again on a later day: it moves into that round.
+        var srcEl = document.querySelector("#row-" + dom + " td.src");
+        if (srcEl && srcEl.textContent !== wanted[id].f.src) {
+          srcEl.textContent = wanted[id].f.src;
+          index[id].src = wanted[id].f.src;
+          index[id].srcKey = wanted[id].f.srcKey;
+          changed = true;
+        }
+        continue;
+      }
+      addAuditRow(id, wanted[id].trade, wanted[id].f);
+      changed = true;
+    }
+
+    if (changed) {
+      // New rows land at the end of their table until it is ordered again,
+      // and take the identity gate's current state like every other row.
+      appliedOrder = null;
+      gateOpen = null;
+      applyGate();
+      var wrap = document.getElementById("sec-unassigned");
+      if (wrap) {
+        wrap.hidden = !(sectionRows[UNASSIGNED] || []).length;
+      }
+    }
+  }
+
+  /* The same ordering as By studio, applied to the rows inside each trade.
+     The rows are moved rather than redrawn, so their ids, notes and ticks
+     all stay attached to the job they belong to. */
+  var appliedOrder = null;
+
+  function dateBlockOpen(key, dk) {
+    var k = key + "|" + dk;
+    if (Object.prototype.hasOwnProperty.call(dateOpen, k)) { return dateOpen[k] === true; }
+    // Dated groups open, the undated pile shut, the same as By studio.
+    return dk !== "none";
+  }
+
+  function applyRowOrder() {
+    if (appliedOrder === studioSort) { return; }
+    appliedOrder = studioSort;
+    var byDate = studioSort === "movein";
+
+    var keys = [];
+    for (var si = 0; si < sections.length; si++) { keys.push(sections[si].key); }
+    keys.push(UNASSIGNED);
+
+    for (si = 0; si < keys.length; si++) {
+      var key = keys[si];
+      var ids = sectionRows[key] || [];
+      var home = document.getElementById("tbody-" + key);
+      if (!home) { continue; }
+      var table = home.parentNode;
+
+      var order = [];
+      for (var k = 0; k < ids.length; k++) {
+        var job = index[ids[k]] || {};
+        var domId = (sectionDom[key] || {})[ids[k]];
+        if (!domId) { continue; }
+        order.push({
+          domId: domId,
+          room: job.room || "",
+          date: moveinSortFor(job.room || "")
+        });
+      }
+
+      order.sort(function (a, b) {
+        if (studioSort === "movein" && a.date !== b.date) {
+          // A room with no arrival booked goes last, not first.
+          if (!a.date) { return 1; }
+          if (!b.date) { return -1; }
+          return a.date < b.date ? -1 : 1;
+        }
+        if (a.room !== b.room) { return a.room < b.room ? -1 : 1; }
+        return 0;
+      });
+
+      // Everything back into the one tbody first, in order, and the old
+      // date blocks go. Rows are moved, never redrawn, so their ids, notes
+      // and ticks stay attached to the job they belong to.
+      var r;
+      for (r = 0; r < order.length; r++) {
+        var el = document.getElementById("row-" + order[r].domId);
+        if (el) { home.appendChild(el); }
+      }
+      var old = table.querySelectorAll("tbody.date-block");
+      for (var o = 0; o < old.length; o++) { table.removeChild(old[o]); }
+      if (!byDate) { continue; }
+
+      // Then, in date order, a block per date: a header row the rows sit
+      // under, collapsible, the same shape as the By studio groups.
+      var block = null;
+      var blockDate = null;
+      for (r = 0; r < order.length; r++) {
+        var rowEl = document.getElementById("row-" + order[r].domId);
+        if (!rowEl) { continue; }
+        var dk = order[r].date || "none";
+        if (dk !== blockDate) {
+          blockDate = dk;
+          block = document.createElement("tbody");
+          block.className = "date-block" + (dateBlockOpen(key, dk) ? "" : " shut");
+          block.setAttribute("data-date", dk);
+          block.setAttribute("data-key", key);
+          block.innerHTML = '<tr class="date-row"><td colspan="6">' +
+            '<button type="button" class="date-toggle" aria-expanded="' +
+            (dateBlockOpen(key, dk) ? "true" : "false") + '">' +
+            '<span class="group-when">' +
+            esc(dk === "none" ? "No move-in date set" : moveinFor(order[r].room)) +
+            '</span><span class="group-count"></span></button></td></tr>';
+          table.appendChild(block);
+        }
+        block.appendChild(rowEl);
+      }
+    }
+  }
+
+  // The header on each date block says how many jobs are under it and how
+  // many are still to do, and goes when every job under it is hidden.
+  function renderDateRows() {
+    var blocks = sectionsEl.querySelectorAll("tbody.date-block");
+    for (var i = 0; i < blocks.length; i++) {
+      var rows = blocks[i].querySelectorAll("tr:not(.date-row)");
+      var showing = 0;
+      var open = 0;
+      for (var j = 0; j < rows.length; j++) {
+        if (rows[j].hidden) { continue; }
+        showing++;
+        if (!rows[j].classList.contains("ticked")) { open++; }
+      }
+      var head = blocks[i].querySelector(".date-row");
+      if (head) { head.hidden = showing === 0; }
+      var count = blocks[i].querySelector(".group-count");
+      if (count) {
+        count.textContent = showing + (showing === 1 ? " job" : " jobs") +
+          (open ? " \u00b7 " + open + " outstanding" : "");
+      }
+    }
+  }
+
+  function render() {
+    var doneCount = 0;
+    var id;
+
+    // Audit failures are rows on the trade lists, so they have to exist
+    // before anything counts or draws them.
+    syncAuditRows();
+    var grouped = groupNotes();
+    var confirmed = grouped.__confirmed;
+
+    for (id in index) {
+      if (!Object.prototype.hasOwnProperty.call(index, id)) { continue; }
+
+      var rec = effective(id);
+      var isDone = rec.done === true;
+      var note = typeof rec.note === "string" ? rec.note : "";
+      var isPending = Object.prototype.hasOwnProperty.call(queued, id);
+      var thread = notesHtml(grouped[id] || [], confirmed, rec);
+
+      if (isDone) { doneCount++; }
+
+      var stamp = "";
+      var by = rec.updated_by || "";
+      if (by && (isDone || note)) {
+        stamp = (isDone ? "Ticked by " : "Updated by ") + by;
+        var when = shortDate(rec.updated_at);
+        if (when) { stamp += " · " + when; }
+        if (isPending && live) { stamp += " · saving…"; }
+      }
+
+      // A job listed under both a walk-round and its trade shows on two
+      // lines; both have to move together.
+      var where = occurrences[id] || [];
+      for (var w = 0; w < where.length; w++) {
+        var domId = where[w];
+        var rowEl = document.getElementById("row-" + domId);
+        var tickEl = document.getElementById("tick-" + domId);
+        var notesEl = document.getElementById("notes-" + domId);
+        var byEl = document.getElementById("by-" + domId);
+
+        if (tickEl && tickEl.checked !== isDone) { tickEl.checked = isDone; }
+        if (rowEl) {
+          rowEl.classList.toggle("ticked", isDone);
+          rowEl.classList.toggle("unsaved", isPending && live);
+          var hide = (hideDone && isDone) ||
+            (hideGround && (index[id].room || "").charAt(2) === "0") ||
+            srcHidden(index[id].src);
+          if (rowEl.hidden !== hide) { rowEl.hidden = hide; }
+        }
+        if (notesEl && notesEl.innerHTML !== thread) { notesEl.innerHTML = thread; }
+        if (byEl) { byEl.textContent = stamp; }
+      }
+    }
+
+    var anyVisible = false;
+
+    for (var sk in sectionRows) {
+      if (!Object.prototype.hasOwnProperty.call(sectionRows, sk)) { continue; }
+      var ids = sectionRows[sk];
+      var secDone = 0;
+      for (var q = 0; q < ids.length; q++) {
+        if (effective(ids[q]).done === true) { secDone++; }
+      }
+      var el = document.getElementById("count-" + sk);
+      if (el) {
+        el.textContent = "— " + secDone + " of " + ids.length + " ticked";
+      }
+
+      // Worked out from the rows, so an audit failure joining the list
+      // cannot leave the heading behind.
+      var headEl = document.getElementById("head-" + sk);
+      if (headEl) {
+        var seenRoom = {};
+        var roomCount = 0;
+        for (var hq = 0; hq < ids.length; hq++) {
+          var hr = (index[ids[hq]] || {}).room;
+          if (hr && !seenRoom[hr]) { seenRoom[hr] = true; roomCount++; }
+        }
+        var headText = "(" + ids.length +
+          (ids.length === 1 ? " issue, " : " issues, ") + roomCount +
+          (roomCount === 1 ? " room)" : " rooms)");
+        if (headEl.textContent !== headText) { headEl.textContent = headText; }
+      }
+
+      // all / some / none, on both copies of the control
+      var boxes = sectionsEl.querySelectorAll('.all-box[data-section="' + sk + '"]');
+      for (var ab = 0; ab < boxes.length; ab++) {
+        boxes[ab].checked = ids.length > 0 && secDone === ids.length;
+        boxes[ab].indeterminate = secDone > 0 && secDone < ids.length;
+      }
+
+      // A trade with nothing left showing in it is a heading over an empty
+      // table, so the whole section goes rather than just its rows.
+      var secEl = document.getElementById("sec-" + sk);
+      if (secEl) {
+        var secShowing = 0;
+        for (var vq = 0; vq < ids.length; vq++) {
+          var vrec = effective(ids[vq]);
+          if (hideDone && vrec.done === true) { continue; }
+          if (hideGround && (index[ids[vq]].room || "").charAt(2) === "0") { continue; }
+          if (srcHidden(index[ids[vq]].src)) { continue; }
+          secShowing++;
+        }
+        var hideSec = tradeHidden(sk) || (ids.length > 0 && secShowing === 0);
+        if (secEl.hidden !== hideSec) { secEl.hidden = hideSec; }
+        if (!hideSec) { anyVisible = true; }
+      }
+    }
+
+    var unWrap = document.getElementById("sec-unassigned");
+    if (unWrap && !(sectionRows[UNASSIGNED] || []).length) { unWrap.hidden = true; }
+
+    allClearEl.hidden = !((hideDone || hideGround) && !anyVisible);
+
+    applyRowOrder();
+    renderDateRows();
+    if (srcBoxesEl) { fillSrcBoxes(); }
+    renderFiltered();
+    renderStudios();
+    renderSummary();
+    progressEl.textContent = doneCount + " of " + total + " items ticked";
+    renderUnsaved();
+  }
+
+  // Cross a room off a trade's summary line once every job that trade has
+  // in that room is ticked, and strike the trade itself once every one of
+  // its rooms is clear.
+  var summaryRoomEls = null;
+  var summaryTotalEls = null;
+  var summaryRowEls = null;
+
+  var summaryRoomsShown = {};   // trade key -> the room list its chips show
+
+  function renderSummary() {
+    if (!summaryRowEls) {
+      summaryRowEls = document.querySelectorAll("#summary-table tbody tr[data-key]");
+    }
+
+    // The room chips were drawn once at load. An audit failure brings a
+    // room onto a trade that was not there then, so the list is checked
+    // against the rows each time and redrawn when it differs, otherwise
+    // the count says four rooms while the chips name two.
+    var chipsChanged = false;
+    for (var c = 0; c < summaryRowEls.length; c++) {
+      var cKey = summaryRowEls[c].getAttribute("data-key");
+      var byRoom = roomIndex[cKey] || {};
+      var rooms = [];
+      for (var rm in byRoom) {
+        if (Object.prototype.hasOwnProperty.call(byRoom, rm) && byRoom[rm].length) {
+          rooms.push(rm);
+        }
+      }
+      rooms.sort();
+      var joined = rooms.join(",");
+      if (summaryRoomsShown[cKey] === joined) { continue; }
+      summaryRoomsShown[cKey] = joined;
+      var numsEl = summaryRowEls[c].querySelector(".t-nums");
+      if (numsEl) {
+        numsEl.innerHTML = roomCells(sectionTitles[cKey] || "", rooms);
+        chipsChanged = true;
+      }
+    }
+    if (chipsChanged || !summaryRoomEls) {
+      summaryRoomEls = document.querySelectorAll("#summary-table .sum-room");
+    }
+
+    var clearByTrade = {};
+
+    for (var n = 0; n < summaryRoomEls.length; n++) {
+      var el = summaryRoomEls[n];
+      var key = el.getAttribute("data-key");
+      var room = el.getAttribute("data-room");
+      var ids = (roomIndex[key] || {})[room] || [];
+
+      var clear = ids.length > 0;
+      for (var q = 0; q < ids.length; q++) {
+        if (effective(ids[q]).done !== true) { clear = false; break; }
+      }
+
+      el.classList.toggle("done", clear);
+      if (!(key in clearByTrade)) { clearByTrade[key] = true; }
+      if (!clear) { clearByTrade[key] = false; }
+    }
+
+    var grand = 0;
+    var grandRooms = {};
+    var grandRoomCount = 0;
+
+    for (var m = 0; m < summaryRowEls.length; m++) {
+      var rowEl = summaryRowEls[m];
+      var rowKeyAttr = rowEl.getAttribute("data-key");
+      rowEl.classList.toggle("trade-done", clearByTrade[rowKeyAttr] === true);
+
+      // Counted from the rows, so an audit failure joining a trade shows
+      // in its count rather than leaving the summary behind.
+      var rowIds = sectionRows[rowKeyAttr] || [];
+      var rSeen = {};
+      var rRooms = 0;
+      for (var rq = 0; rq < rowIds.length; rq++) {
+        var rRoom = (index[rowIds[rq]] || {}).room;
+        if (!rRoom || rSeen[rRoom]) { continue; }
+        rSeen[rRoom] = true;
+        rRooms++;
+        if (!grandRooms[rRoom]) { grandRooms[rRoom] = true; grandRoomCount++; }
+      }
+      grand += rowIds.length;
+
+      var issuesEl = rowEl.querySelector(".t-issues");
+      var roomsEl = rowEl.querySelector(".t-rooms");
+      if (issuesEl) { issuesEl.textContent = rowIds.length; }
+      if (roomsEl) { roomsEl.textContent = rRooms; }
+    }
+
+    if (!summaryTotalEls) {
+      summaryTotalEls = document.querySelectorAll("#summary-table tr.total .num");
+    }
+    if (summaryTotalEls.length === 2) {
+      summaryTotalEls[0].textContent = grand;
+      summaryTotalEls[1].textContent = grandRoomCount;
+    }
+  }
+
+  /* ---- Comments ---- */
+
+  var listEl = document.getElementById("comment-list");
+  var emptyEl = document.getElementById("comment-empty");
+
+  function generalOnly(list) {
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && !list[i].snag_id) { out.push(list[i]); }
+    }
+    return out;
+  }
+
+  function renderComments() {
+    var confirmed = generalOnly(comments);
+    var all = confirmed.concat(generalOnly(queuedComments));
+    if (!all.length) {
+      listEl.innerHTML = "";
+      emptyEl.hidden = false;
+      return;
+    }
+    emptyEl.hidden = true;
+    var html = "";
+    for (var c = 0; c < all.length; c++) {
+      var item = all[c];
+      var unsent = c >= confirmed.length && live;
+      var meta = esc(item.author || "Someone");
+      var when = shortDate(item.created_at);
+      if (when) { meta += " · " + esc(when); }
+      if (unsent) { meta += " · sending…"; }
+      html +=
+        "<li" + (unsent ? ' class="unsent"' : "") + ">" +
+        '<span class="c-meta">' + meta + "</span>" +
+        '<span class="c-text">' + esc(item.body || "") + "</span></li>";
+    }
+    listEl.innerHTML = html;
+  }
+
+  /* ---- Status ---- */
+
+  function setStatus(text, cls) {
+    statusEl.textContent = text;
+    statusEl.className = cls || "";
+  }
+
+  function configured() {
+    return SUPABASE_URL.indexOf("PASTE_") !== 0 &&
+      SUPABASE_ANON_KEY.indexOf("PASTE_") !== 0 &&
+      !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
+  }
+
+  // The library comes from a CDN, and a phone on hotel wifi or a blocked
+  // network can fail to fetch it. Try a second source before giving up,
+  // so a CDN hiccup degrades to device-only rather than looking broken.
+  function withSupabase(done) {
+    if (window.supabase && window.supabase.createClient) { done(true); return; }
+
+    var el = document.createElement("script");
+    el.src = "https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js";
+    el.onload = function () {
+      done(!!(window.supabase && window.supabase.createClient));
+    };
+    el.onerror = function () { done(false); };
+    document.head.appendChild(el);
+  }
+
+  function goLocal(reason) {
+    live = false;
+    setStatus(reason || "Saved on this device only — not shared", "is-local");
+    document.getElementById("setup-notice").hidden = configured();
+    renderUnsaved();
+  }
+
+  /* ---- The write queue ---- */
+
+  function scheduleFlush() {
+    if (retryTimer || !live) { return; }
+    retryTimer = window.setTimeout(function () {
+      retryTimer = null;
+      flush();
+    }, retryDelay);
+    retryDelay = Math.min(retryDelay * 2, 30000);
+  }
+
+  // A missing column or table is not a bad signal and will never come
+  // good on its own — retrying quietly forever just looks like a hang.
+  // The entry stays queued so it lands once the database is updated.
+  function schemaError(err) {
+    if (!err) { return false; }
+    var code = String(err.code || "");
+    if (code === "PGRST204" || code === "PGRST205" || code === "42703" || code === "42P01") {
+      return true;
+    }
+    return /schema cache/i.test(String(err.message || ""));
+  }
+
+  function reportWriteError(err, what) {
+    if (schemaError(err)) {
+      setStatus("The database needs updating before " + what + " can save", "is-local");
+    } else {
+      setStatus("Can't reach the list — changes are held here and will send", "is-local");
+    }
+  }
+
+  function settled() {
+    retryDelay = 4000;
+    if (pendingCount() === 0) {
+      setStatus("Live", "is-live");
+    }
+  }
+
+  function flush() {
+    if (!live || !client) { return; }
+
+    Object.keys(queued).forEach(function (id) {
+      var rec = queued[id];
+      if (rec.inflight) { return; }
+      rec.inflight = true;
+
+      client.from(SNAGS_TABLE).upsert({
+        id: id,
+        done: rec.done === true,
+        note: rec.note || "",
+        updated_by: rec.updated_by || "",
+        updated_at: rec.updated_at
+      }).then(function (res) {
+        rec.inflight = false;
+        if (res.error) {
+          reportWriteError(res.error, "ticks");
+          scheduleFlush();
+          return;
+        }
+        // Only clear if no newer edit replaced this record meanwhile.
+        if (queued[id] === rec) {
+          items[id] = {
+            done: rec.done === true,
+            note: rec.note || "",
+            updated_by: rec.updated_by || "",
+            updated_at: rec.updated_at
+          };
+          delete queued[id];
+          saveQueue();
+        }
+        settled();
+        render();
+      }, function () {
+        rec.inflight = false;
+        scheduleFlush();
+      });
+    });
+
+    queuedComments.slice().forEach(function (entry) {
+      if (entry.inflight) { return; }
+      entry.inflight = true;
+
+      function landed() {
+        entry.inflight = false;
+        var at = queuedComments.indexOf(entry);
+        if (at !== -1) {
+          queuedComments.splice(at, 1);
+          saveQueue();
+        }
+        settled();
+        render();
+        renderComments();
+        renderUnsaved();
+      }
+
+      function failed(err) {
+        entry.inflight = false;
+        if (err) { reportWriteError(err, "notes"); }
+        scheduleFlush();
+      }
+
+      // The id is the same on every attempt, so a retry after a reply we
+      // never saw comes back as 23505 rather than posting the note twice.
+      function attempt(useColumn) {
+        client.from(COMMENTS_TABLE).insert(commentPayload(entry, useColumn))
+          .then(function (res) {
+            if (res.error && res.error.code === "23505") { landed(); return; }
+
+            if (res.error) {
+              // This project has no snag_id column. Fold the job into the
+              // body instead and carry on: the note saves either way.
+              if (useColumn && entry.snag_id && schemaError(res.error)) {
+                snagColumn = false;
+                attempt(false);
+                return;
+              }
+              failed(res.error);
+              return;
+            }
+
+            landed();
+          }, function () { failed(null); });
+      }
+
+      attempt(snagColumn);
+    });
+
+    renderUnsaved();
+  }
+
+  /* ---- Edits ---- */
+
+  function recordFor(id, change) {
+    var base = effective(id);
+    var rec = {
+      done: base.done === true,
+      note: typeof base.note === "string" ? base.note : "",
+      updated_by: who(),
+      updated_at: new Date().toISOString()
+    };
+    if (Object.prototype.hasOwnProperty.call(change, "done")) { rec.done = change.done; }
+    if (Object.prototype.hasOwnProperty.call(change, "note")) { rec.note = change.note; }
+    return rec;
+  }
+
+  // A whole trade is one write pass, not one render and flush per line.
+  function enqueueMany(ids, change) {
+    if (!ids.length) { return; }
+
+    for (var i = 0; i < ids.length; i++) {
+      var rec = recordFor(ids[i], change);
+      if (live) {
+        queued[ids[i]] = rec;
+      } else {
+        // Not connected: this device's copy is the only copy.
+        items[ids[i]] = rec;
+      }
+    }
+
+    if (live) {
+      saveQueue();
+      render();
+      flush();
+    } else {
+      saveLocal();
+      render();
+    }
+  }
+
+  function enqueue(id, change) {
+    enqueueMany([id], change);
+  }
+
+  // Ticking a whole trade off is one action. Unticking one throws away who
+  // did what and when, so that direction asks first.
+  function toggleSection(key, want, box) {
+    var ids = sectionRows[key] || [];
+    var changing = [];
+
+    for (var i = 0; i < ids.length; i++) {
+      if (effective(ids[i]).done !== want) { changing.push(ids[i]); }
+    }
+
+    if (!changing.length) { render(); return; }
+
+    if (!want && changing.length > 1) {
+      // window.confirm() is swallowed by in-app browsers (Teams, WhatsApp,
+      // Outlook previews, some Android webviews): it returns false without
+      // ever showing, so the untick silently never happened. The question
+      // is asked in the page instead, where every browser can answer it.
+      if (box) { box.checked = true; }
+      askUntick(key, changing);
+      render();
+      return;
+    }
+
+    enqueueMany(changing, { done: want });
+  }
+
+  var pendingUntick = null;
+
+  function askUntick(key, ids) {
+    clearUntick();
+    var secEl = document.getElementById("sec-" + key);
+    var head = secEl ? secEl.querySelector("h2") : null;
+    if (!head) { return; }
+    var title = sectionTitles[key] || "this trade";
+    var bar = document.createElement("div");
+    bar.className = "untick-ask";
+    bar.id = "untick-ask";
+    bar.innerHTML = "<span>Untick all " + ids.length + " ticked items under " +
+      esc(title) + "? Who ticked them, and when, will be lost.</span>" +
+      '<button type="button" class="untick-yes">Untick all ' + ids.length + "</button>" +
+      '<button type="button" class="secondary untick-no">Keep them</button>';
+    head.parentNode.insertBefore(bar, head.nextSibling);
+    pendingUntick = { key: key, ids: ids };
+    bar.querySelector(".untick-yes").focus();
+  }
+
+  function clearUntick() {
+    var old = document.getElementById("untick-ask");
+    if (old && old.parentNode) { old.parentNode.removeChild(old); }
+    pendingUntick = null;
+  }
+
+  sectionsEl.addEventListener("change", function (ev) {
+    var box = ev.target;
+    if (!box || box.type !== "checkbox") { return; }
+
+    if (box.classList.contains("all-box")) {
+      toggleSection(box.getAttribute("data-section"), box.checked, box);
+      return;
+    }
+
+    enqueue(box.getAttribute("data-id"), { done: box.checked });
+  });
+
+  // A note is submitted deliberately and joins the line's thread, so one
+  // person can leave several and nobody overwrites anyone.
+  function submitNote(id, field) {
+    var body = field.value.trim();
+    if (!body) { field.focus(); return; }
+
+    var entry = {
+      id: uuid(),
+      snag_id: id,
+      body: body,
+      author: who(),
+      created_at: new Date().toISOString()
+    };
+
+    field.value = "";
+
+    if (live) {
+      queuedComments.push(entry);
+      saveQueue();
+      render();
+      flush();
+    } else {
+      comments.push(entry);
+      saveLocal();
+      render();
+    }
+
+    field.focus();
+  }
+
+  sectionsEl.addEventListener("click", function (ev) {
+    var tog = ev.target && ev.target.closest ? ev.target.closest(".date-toggle") : null;
+    if (tog) {
+      var blk = tog.closest("tbody.date-block");
+      if (!blk) { return; }
+      var nowOpen = blk.classList.contains("shut");
+      blk.classList.toggle("shut", !nowOpen);
+      tog.setAttribute("aria-expanded", nowOpen ? "true" : "false");
+      dateOpen[blk.getAttribute("data-key") + "|" + blk.getAttribute("data-date")] = nowOpen;
+      store(DATE_OPEN_KEY, dateOpen);
+      return;
+    }
+
+    var btn = ev.target;
+    if (btn && btn.classList && btn.classList.contains("untick-yes") && pendingUntick) {
+      var go = pendingUntick.ids;
+      clearUntick();
+      enqueueMany(go, { done: false });
+      return;
+    }
+    if (btn && btn.classList && btn.classList.contains("untick-no")) {
+      clearUntick();
+      render();
+      return;
+    }
+    if (!btn || !btn.classList || !btn.classList.contains("note-btn")) { return; }
+    var id = btn.getAttribute("data-id");
+    var field = btn.parentNode.querySelector(".note-field");
+    if (field) { submitNote(id, field); }
+  });
+
+  sectionsEl.addEventListener("keydown", function (ev) {
+    var field = ev.target;
+    if (!field || !field.classList || !field.classList.contains("note-field")) { return; }
+    if (ev.key !== "Enter") { return; }
+    ev.preventDefault();
+    submitNote(field.getAttribute("data-id"), field);
+  });
+
+  var commentBtn = document.getElementById("comment-btn");
+  var commentText = document.getElementById("comment-text");
+
+  commentBtn.addEventListener("click", function () {
+    var body = commentText.value.trim();
+    if (!body) { commentText.focus(); return; }
+
+    var entry = {
+      id: uuid(),
+      snag_id: null,
+      body: body,
+      author: who(),
+      created_at: new Date().toISOString()
+    };
+    commentText.value = "";
+
+    if (live) {
+      queuedComments.push(entry);
+      saveQueue();
+      renderComments();
+      flush();
+    } else {
+      comments.push(entry);
+      saveLocal();
+      renderComments();
+    }
+  });
+
+  /* ---- Copy summary ---- */
+
+  var copyBtn = document.getElementById("copy-btn");
+  var copyStatus = document.getElementById("copy-status");
+  var copyOut = document.getElementById("copy-out");
+
+  function buildReport() {
+    var lines = ["Castle Way Tower 1 — snagging progress", new Date().toLocaleString("en-GB"), ""];
+    var doneIds = [];
+    var id;
+
+    for (id in index) {
+      if (!Object.prototype.hasOwnProperty.call(index, id)) { continue; }
+      var rec = effective(id);
+      if (rec.done) { doneIds.push(id); }
+    }
+
+    lines.push("TICKED (" + doneIds.length + " of " + total + ")");
+    if (doneIds.length) {
+      for (var a = 0; a < doneIds.length; a++) {
+        var d = index[doneIds[a]];
+        var dr = effective(doneIds[a]);
+        lines.push("- " + d.room + " (" + d.floor + ") — " + d.action +
+          (dr.updated_by ? "  [" + dr.updated_by + "]" : ""));
+      }
+    } else {
+      lines.push("- none yet");
+    }
+
+    var grouped = groupNotes();
+    var withNotes = [];
+    for (id in index) {
+      if (!Object.prototype.hasOwnProperty.call(index, id)) { continue; }
+      if ((grouped[id] && grouped[id].length) || effective(id).note) { withNotes.push(id); }
+    }
+
+    lines.push("");
+    lines.push("NOTES (" + withNotes.length + " item" + (withNotes.length === 1 ? "" : "s") + ")");
+    if (withNotes.length) {
+      for (var b = 0; b < withNotes.length; b++) {
+        var n = index[withNotes[b]];
+        var legacy = effective(withNotes[b]);
+        lines.push("- " + n.room + " — " + n.action);
+        if (legacy.note) {
+          lines.push("    " + legacy.note +
+            (legacy.updated_by ? "  [" + legacy.updated_by + "]" : ""));
+        }
+        var thread = grouped[withNotes[b]] || [];
+        for (var tn = 0; tn < thread.length; tn++) {
+          lines.push("    " + thread[tn].body +
+            "  [" + (thread[tn].author || "Someone") + "]");
+        }
+      }
+    } else {
+      lines.push("- none yet");
+    }
+
+    var allComments = generalOnly(comments).concat(generalOnly(queuedComments));
+    if (allComments.length) {
+      lines.push("");
+      lines.push("GENERAL COMMENTS (" + allComments.length + ")");
+      for (var c = 0; c < allComments.length; c++) {
+        lines.push("- " + (allComments[c].author || "Someone") + ": " + allComments[c].body);
+      }
+    }
+
+    return lines.join("\n");
+  }
+
+  copyBtn.addEventListener("click", function () {
+    var text = buildReport();
+
+    function fallback() {
+      copyOut.value = text;
+      copyOut.hidden = false;
+      copyOut.style.minHeight = "180px";
+      copyOut.focus();
+      copyOut.select();
+      copyStatus.textContent = "Select the text below and copy it.";
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        copyOut.hidden = true;
+        copyStatus.textContent = "Copied.";
+      }, fallback);
+    } else {
+      fallback();
+    }
+  });
+
+
+  /* ==================================================================
+     AUDIT LOG
+
+     Eighteen checks per studio, in priority order: life safety first,
+     then what makes a studio habitable, then what makes it work, then
+     handover. A failed check names the trade it belongs to and appears
+     on that trade's list.
+
+     Results are kept as append-only entries rather than one editable
+     row per check, so re-auditing a studio adds to the record instead
+     of overwriting it. The latest entry for a check is its status.
+
+     The sign-in is a gate on the view, not on the data: this page is
+     public and its source carries the credentials. It keeps the audit
+     out of the way of people who should not be in it; it is not a lock.
+     ================================================================== */
+
+  var AUDIT_USER = "JBA";
+  var AUDIT_PASS = "2004";
+  var AUDIT_SEEN = "cw-tower1-audit-in";
+  var AUDIT_STUDIO_KEY = "cw-tower1-audit-studio";
+
+  /* Tower 1 rooms Stelling still have to audit, from the Control
+     Spreadsheet, kept in the priority order that sheet gives them. That
+     order runs on move-in date, so working down the list is working
+     towards the nearest deadline first. Checked on import: 37 rooms, no
+     repeats, priorities 1-37 unbroken, and every stated floor agrees with
+     both the room number and the floor plans. */
+  var AUDIT_CHECKS = [
+    { id: "fire-detect", trade: "electrical",
+      label: "Fire detection operational, protective covers removed" },
+    { id: "fire-doors", trade: "joinery",
+      label: "Fire doors close and latch properly" },
+    { id: "fob", trade: "access",
+      label: "Room key fob tested on door (not master) \u2014 lock works" },
+    { id: "restrictors", trade: "restrictors",
+      label: "Window restrictors fitted" },
+    { id: "furniture", trade: "joinery",
+      label: "Bed and furniture secure and safe" },
+    { id: "sockets", trade: "electrical",
+      label: "All sockets working" },
+    { id: "leaks", trade: "plumbing",
+      label: "No leaks" },
+    { id: "hw-duration", trade: "plumbing",
+      label: "Hot water runs long enough \u2014 hot, consistent, safe temp" },
+    { id: "hw-pressure", trade: "plumbing",
+      label: "Hot water pressure \u2014 sink, shower, kitchen" },
+    { id: "cw-pressure", trade: "plumbing",
+      label: "Cold water pressure \u2014 sink, shower, kitchen" },
+    { id: "toilets", trade: "plumbing",
+      label: "Toilets flushing and refilling properly" },
+    { id: "lights", trade: "electrical",
+      label: "All lights working" },
+    { id: "switches", trade: "electrical",
+      label: "All switches working" },
+    { id: "heating", trade: "electrical",
+      label: "Heating and thermostats working" },
+    { id: "extraction", trade: "ventilation",
+      label: "Bathroom and kitchen extraction working" },
+    { id: "appliances", trade: "appliances",
+      label: "Hob, microwave/oven, fridge working" },
+    { id: "windows-blinds", trade: "blinds",
+      label: "Windows close/lock, blinds working" },
+    { id: "clean", trade: "cleaning",
+      label: "Full clean completed \u2014 room clean, packaging/stickers removed" }
+  ];
+
+  var CHECK_BY_ID = {};
+  for (var ci = 0; ci < AUDIT_CHECKS.length; ci++) {
+    CHECK_BY_ID[AUDIT_CHECKS[ci].id] = AUDIT_CHECKS[ci];
+  }
+
+  var auditIn = false;
+  var auditStudio = "";
+
+  /* A check that has been tapped Fail but not yet recorded exists only in
+     the panel: nothing about it is saved yet. Redrawing from the record
+     would take the open box, the half-typed reason and the chosen trade
+     with it, and the panel is redrawn whenever anyone's entry arrives. So
+     the in-progress state is held here and put back. */
+  var whyOpen = {};    // check id -> the reason box has been opened
+  var whyDraft = {};   // check id -> what has been typed into it
+  var tradeDraft = {}; // check id -> the trade picked for it
+  var lastChecksHtml = null;
+
+  /* Held on the device as well, so a refresh mid-sentence — including the
+     one a new build asks for — hands the half-typed reason back rather
+     than losing it. Keyed to the studio it was typed against. */
+  var AUDIT_DRAFT_KEY = "cw-tower1-audit-draft";
+
+  function saveDrafts() {
+    store(AUDIT_DRAFT_KEY, {
+      studio: auditStudio, whyOpen: whyOpen, whyDraft: whyDraft, tradeDraft: tradeDraft
+    });
+  }
+
+  function loadDrafts() {
+    var d = load(AUDIT_DRAFT_KEY, null);
+    if (!d || typeof d !== "object" || d.studio !== auditStudio) { return; }
+    whyOpen = d.whyOpen && typeof d.whyOpen === "object" ? d.whyOpen : {};
+    whyDraft = d.whyDraft && typeof d.whyDraft === "object" ? d.whyDraft : {};
+    tradeDraft = d.tradeDraft && typeof d.tradeDraft === "object" ? d.tradeDraft : {};
+  }
+
+  function clearDraft(checkId) {
+    delete whyOpen[checkId];
+    delete whyDraft[checkId];
+    delete tradeDraft[checkId];
+    saveDrafts();
+  }
+
+  // "FAIL(electrical): reason", or plain "FAIL: reason" from before trades
+  // could be reassigned. Both read the same way.
+  var FAIL_RE = /^FAIL(?:\(([a-z0-9-]{1,30})\))?:?\s*/;
+
+  // A fail can be parked with no trade against it rather than forced onto
+  // the wrong one. It still shows, under Unassigned, so it is not lost.
+  var UNASSIGNED = "unassigned";
+
+  function knownTrade(key) {
+    return !!key && (key === UNASSIGNED || !!sectionTitles[key]);
+  }
+
+  function tradeName(key) {
+    if (key === UNASSIGNED) { return "Unassigned"; }
+    return sectionTitles[key] || key;
+  }
+
+  /* ---- Reading the record ---- */
+
+  // The newest entry per studio and check wins, so an audit that is run
+  // again supersedes the last one without losing it.
+  function auditState() {
+    var all = comments.concat(queuedComments);
+    var out = {};
+
+    for (var i = 0; i < all.length; i++) {
+      var c = all[i];
+      if (!c || !c.snag_id || c.snag_id.indexOf("audit:") !== 0) { continue; }
+      var bits = c.snag_id.split(":");
+      if (bits.length < 3) { continue; }
+
+      var room = bits[1];
+      var checkId = bits[2];
+      var body = String(c.body || "");
+      var m = FAIL_RE.exec(body);
+
+      if (!out[room]) { out[room] = {}; }
+      var prior = out[room][checkId];
+      if (prior && String(prior.at || "") > String(c.created_at || "")) { continue; }
+
+      // A fail carries the trade the auditor sent it to. Records written
+      // before that was possible carry none, so the check's own trade stands.
+      var ck = CHECK_BY_ID[checkId];
+      var to = m && knownTrade(m[1]) ? m[1] : (ck ? ck.trade : "");
+
+      out[room][checkId] = {
+        status: m ? "fail" : "pass",
+        comment: m ? body.slice(m[0].length) : "",
+        trade: to,
+        by: c.author || "",
+        at: c.created_at || ""
+      };
+    }
+
+    return out;
+  }
+
+  // Marking an issue done is its own entry rather than an edit, so the
+  // record still shows it was raised and who cleared it.
+  function issueResolutions() {
+    var all = comments.concat(queuedComments);
+    var latest = {};
+    for (var i = 0; i < all.length; i++) {
+      var c = all[i];
+      if (!c || !c.snag_id) { continue; }
+      var done = c.snag_id.indexOf("issue-done:") === 0;
+      var open = c.snag_id.indexOf("issue-open:") === 0;
+      if (!done && !open) { continue; }
+      var id = c.snag_id.slice(11);
+      var at = String(c.created_at || "");
+      if (latest[id] && String(latest[id].at) > at) { continue; }
+      latest[id] = { done: done, by: c.author || "", at: c.created_at || "" };
+    }
+    var out = {};
+    for (var k in latest) {
+      if (Object.prototype.hasOwnProperty.call(latest, k) && latest[k].done) {
+        out[k] = { by: latest[k].by, at: latest[k].at };
+      }
+    }
+    return out;
+  }
+
+  /* An audit round is a day on which anything was audited, named by that
+     day: "15 Sep audit", "16 Sep audit". A failed check is filed under the
+     round of its latest entry, so a check that is still failing when it is
+     looked at again moves into that day's audit by itself, and one nobody
+     has been back to stays where it was. */
+  function dayKey(iso) {
+    if (!iso) { return ""; }
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) { return ""; }
+    return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate());
+  }
+
+  var MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  function auditRoundName(at) {
+    var k = dayKey(at);
+    if (!k) { return "Audit"; }
+    return parseInt(k.slice(6, 8), 10) + " " +
+      MONTH_NAMES[parseInt(k.slice(4, 6), 10) - 1] + " audit";
+  }
+
+  function studioIssues() {
+    var all = comments.concat(queuedComments);
+    var res = issueResolutions();
+    var out = {};
+    for (var i = 0; i < all.length; i++) {
+      var c = all[i];
+      if (!c || !c.snag_id || c.snag_id.indexOf("issue:") !== 0) { continue; }
+      var room = c.snag_id.split(":")[1];
+      if (!out[room]) { out[room] = []; }
+      out[room].push({
+        id: c.id,
+        body: c.body,
+        author: c.author,
+        created_at: c.created_at,
+        done: res[c.id] || null
+      });
+    }
+    for (var k in out) {
+      if (!Object.prototype.hasOwnProperty.call(out, k)) { continue; }
+      out[k].sort(function (x, y) {
+        return String(x.created_at || "").localeCompare(String(y.created_at || ""));
+      });
+    }
+    return out;
+  }
+
+  // Every job against the room that the filters allow, done or not.
+  function roomJobList(room, filtered) {
+    var ids = roomJobs[room] || [];
+    var out = [];
+    for (var i = 0; i < ids.length; i++) {
+      if (filtered && !jobVisible(index[ids[i]])) { continue; }
+      out.push(ids[i]);
+    }
+    return out;
+  }
+
+  function roomTickets(room, filtered) {
+    var all = roomJobList(room, filtered);
+    var out = [];
+    for (var i = 0; i < all.length; i++) {
+      var rec = effective(all[i]);
+      if (rec && rec.done === true) { continue; }
+      out.push(all[i]);
+    }
+    return out;
+  }
+
+  // Everything the two views need to know about one studio: what is still
+  // open against it on the trade lists, what the audit found, and whether
+  // there is anything left to do at all.
+  //
+  // Only the rooms on Stelling's list are waiting for an audit. The rest of
+  // the building has been audited already, so what is outstanding there is
+  // whatever is still ticked off on the trade lists.
+  // filtered: apply the by-studio trade filter. The audit's own picker
+  // passes false, because whether a studio is finished is a fact about the
+  // studio, not about what someone has chosen to look at.
+  function studioSummary(room, state, issues, filtered) {
+    var checks = (state || auditState())[room] || {};
+    var fails = [];
+    var checked = 0;
+    var i;
+
+    for (i = 0; i < AUDIT_CHECKS.length; i++) {
+      var st = checks[AUDIT_CHECKS[i].id];
+      if (!st) { continue; }
+      checked++;
+      if (st.status !== "fail") { continue; }
+      fails.push({ check: AUDIT_CHECKS[i], st: st });
+    }
+
+    var logged = (issues || studioIssues())[room] || [];
+    var open = [];
+    for (i = 0; i < logged.length; i++) {
+      if (!logged[i].done) { open.push(logged[i]); }
+    }
+
+    var tickets = roomTickets(room, filtered);
+    var jobs = roomJobList(room, filtered);
+    var sm = STUDIO_BY_ROOM[room];
+    var listed = !!(sm && sm.listed);
+    // A failed check is a row on its trade's list, so it is already in
+    // tickets; counting it here as well would count it twice.
+    var outstanding = open.length + tickets.length;
+    var awaiting = listed && checked === 0;
+
+    return {
+      listed: listed,
+      checked: checked,
+      fails: fails,
+      open: open,
+      issues: logged,
+      jobs: jobs,
+      tickets: tickets,
+      outstanding: outstanding,
+      // Stelling's rooms are finished once all eighteen checks have been
+      // recorded and nothing is left against them; the rest are finished
+      // when nothing is left against them. A failed check whose fix the
+      // trade has ticked off is done: it is the tick that clears it, not a
+      // second visit from the auditor.
+      awaiting: awaiting,
+      complete: !awaiting && !outstanding &&
+        (!listed || checked === AUDIT_CHECKS.length)
+    };
+  }
+
+  /* ---- Writing ---- */
+
+  function postEntry(tag, body) {
+    var entry = {
+      id: uuid(),
+      snag_id: tag,
+      body: body,
+      author: who(),
+      created_at: new Date().toISOString()
+    };
+
+    if (live) {
+      queuedComments.push(entry);
+      saveQueue();
+      flush();
+    } else {
+      comments.push(entry);
+      saveLocal();
+    }
+
+    if (auditIn) { fillStudios(); }
+    renderAudit();
+    renderStudios();
+    render();
+  }
+
+  function setCheck(room, checkId, pass, comment, trade) {
+    var ck = CHECK_BY_ID[checkId];
+    var to = knownTrade(trade) ? trade : (ck ? ck.trade : "");
+    postEntry("audit:" + room + ":" + checkId,
+      pass ? "PASS" : "FAIL(" + to + "): " + (comment || "no reason given"));
+  }
+
+  function setIssueDone(issueId) {
+    postEntry("issue-done:" + issueId, "DONE");
+  }
+
+  // Reopening is its own entry too, so the record shows it was closed and
+  // then found not to be.
+  function setIssueOpen(issueId) {
+    postEntry("issue-open:" + issueId, "REOPENED");
+  }
+
+  /* ---- The audit view ---- */
+
+  var viewsEl = document.getElementById("views");
+  var auditLoginEl = document.getElementById("audit-login");
+  var auditBodyEl = document.getElementById("audit-body");
+  var auditStudioEl = document.getElementById("audit-studio");
+  var auditChecksEl = document.getElementById("audit-checks");
+  var auditMsgEl = document.getElementById("audit-msg");
+  var auditProgressEl = document.getElementById("audit-progress");
+  var auditStateEl = document.getElementById("audit-studio-state");
+  var issueListEl = document.getElementById("issue-list");
+  var issueEmptyEl = document.getElementById("issue-empty");
+
+  // Stelling's rooms lead with their priority; the rest of the building is
+  // named by its floor, because a priority number it was never given would
+  // be an invention.
+  function studioLabel(st) {
+    if (st.listed) {
+      return st.priority + ". " + st.room + (st.type ? " \u2014 " + st.type : "") +
+        (st.movein ? ", in " + st.movein : "");
+    }
+    return st.room + (st.floor ? " \u2014 " + st.floor : "");
+  }
+
+  function fillStudios() {
+    if (!STELLING_LIST.length) {
+      auditStudioEl.innerHTML = '<option value="">No studios set up yet</option>';
+      auditStudioEl.disabled = true;
+      return;
+    }
+    // Only the rooms Stelling are auditing. The rest of the building has
+    // been audited already, so putting it here would be two hundred rooms
+    // to scroll past on the way to the one they are standing in.
+    var state = auditState();
+    var issues = studioIssues();
+    var todo = "";
+    var done = "";
+
+    for (var i = 0; i < STELLING_LIST.length; i++) {
+      var st = STELLING_LIST[i];
+      var sum = studioSummary(st.room, state, issues, false);
+      var opt = '<option value="' + esc(st.room) + '">' +
+        esc(studioLabel(st)) + "</option>";
+      if (sum.complete) { done += opt; } else { todo += opt; }
+    }
+
+    // Finished studios drop out of the working list into their own group,
+    // still reachable so a studio can be re-audited.
+    var html = "";
+    if (todo) {
+      html += '<optgroup label="Still to audit">' + todo + "</optgroup>";
+    }
+    if (done) {
+      html += '<optgroup label="Completed">' + done + "</optgroup>";
+    }
+    auditStudioEl.innerHTML = html;
+    auditStudioEl.disabled = false;
+    var chosen = STUDIO_BY_ROOM[auditStudio];
+    if (!chosen || !chosen.listed) { auditStudio = STELLING_LIST[0].room; }
+    auditStudioEl.value = auditStudio;
+  }
+
+  function tradeOptions(sel) {
+    var html = "";
+    for (var i = 0; i < sections.length; i++) {
+      var k = sections[i].key;
+      html += '<option value="' + esc(k) + '"' + (k === sel ? " selected" : "") +
+        ">" + esc(sections[i].title) + "</option>";
+    }
+    html += '<option value="' + UNASSIGNED + '"' +
+      (sel === UNASSIGNED ? " selected" : "") + ">Unassigned</option>";
+    return html;
+  }
+
+  function renderAudit() {
+    if (!auditIn) { return; }
+    if (!AUDIT_STUDIOS.length) {
+      auditChecksEl.innerHTML = '<p class="all-clear">No studios have been set ' +
+        'up for auditing yet. Add them to <code>AUDIT_STUDIOS</code> in the page ' +
+        'source and they will appear here.</p>';
+      auditProgressEl.textContent = "";
+      auditStateEl.textContent = "";
+      return;
+    }
+
+    var state = auditState()[auditStudio] || {};
+    var html = "";
+    var passed = 0;
+    var failed = 0;
+
+    for (var i = 0; i < AUDIT_CHECKS.length; i++) {
+      var ck = AUDIT_CHECKS[i];
+      var st = state[ck.id];
+      var goesTo = st && st.trade ? st.trade : ck.trade;
+      var cls = st ? (st.status === "fail" ? " is-fail" : " is-pass") : "";
+      if (st && st.status === "pass") { passed++; }
+      if (st && st.status === "fail") { failed++; }
+
+      var stamp = "";
+      if (st) {
+        stamp = (st.status === "fail" ? "Failed" : "Passed") +
+          (st.by ? " by " + esc(st.by) : "");
+        var when = shortDate(st.at);
+        if (when) { stamp += " \u00b7 " + esc(when); }
+      }
+
+      html +=
+        '<div class="check' + cls + '" id="check-' + esc(ck.id) + '">' +
+        '<div class="check-head">' +
+        '<span class="check-rank">' + (i + 1) + "</span>" +
+        '<span class="check-label">' + esc(ck.label) +
+        '<span class="check-trade">' +
+        (goesTo === UNASSIGNED
+          ? "Not assigned to a trade yet"
+          : (st && st.status === "fail" ? "Assigned to " : "Fails into ") +
+            esc(tradeName(goesTo))) + "</span></span></div>" +
+        '<div class="check-actions">' +
+        '<button type="button" class="pf' +
+        (st && st.status === "pass" ? " on-pass" : "") +
+        '" data-check="' + esc(ck.id) + '" data-pass="1">Pass</button>' +
+        '<button type="button" class="pf' +
+        (st && st.status === "fail" ? " on-fail" : "") +
+        '" data-check="' + esc(ck.id) + '" data-pass="0">Fail</button>' +
+        "</div>" +
+        '<div class="check-why"' +
+        ((st && st.status === "fail") || whyOpen[ck.id] ? "" : " hidden") + ">" +
+        '<input type="text" id="why-' + esc(ck.id) + '" placeholder="Why did it fail?"' +
+        ' value="' + esc(st && st.comment ? st.comment : "") + '"' +
+        ' aria-label="Reason ' + esc(ck.label) + ' failed">' +
+        '<label class="check-assign" for="trade-' + esc(ck.id) + '">Send to</label>' +
+        '<select id="trade-' + esc(ck.id) + '" data-check="' + esc(ck.id) + '"' +
+        ' aria-label="Trade to send ' + esc(ck.label) + ' to">' +
+        tradeOptions(goesTo) + "</select></div>" +
+        '<span class="check-stamp">' + stamp + "</span>" +
+        "</div>";
+    }
+
+    /* The value in this string comes from the record, never from what is
+       being typed, so typing does not change it and the panel is left
+       alone. Rebuild only when the record — or which boxes are open —
+       really differs, and then put the drafts and the cursor back. */
+    if (html !== lastChecksHtml) {
+      lastChecksHtml = html;
+
+      var focusId = "";
+      var selFrom = 0;
+      var selTo = 0;
+      var live0 = document.activeElement;
+      if (live0 && live0.id && auditChecksEl.contains(live0)) {
+        focusId = live0.id;
+        try {
+          selFrom = live0.selectionStart;
+          selTo = live0.selectionEnd;
+        } catch (e) { /* a select has no caret */ }
+      }
+
+      auditChecksEl.innerHTML = html;
+
+      for (var d in whyDraft) {
+        if (!Object.prototype.hasOwnProperty.call(whyDraft, d)) { continue; }
+        var dEl = document.getElementById("why-" + d);
+        if (dEl) { dEl.value = whyDraft[d]; }
+      }
+      for (var td in tradeDraft) {
+        if (!Object.prototype.hasOwnProperty.call(tradeDraft, td)) { continue; }
+        var tEl = document.getElementById("trade-" + td);
+        if (tEl) { tEl.value = tradeDraft[td]; }
+      }
+
+      if (focusId) {
+        var back = document.getElementById(focusId);
+        if (back) {
+          back.focus();
+          try { back.setSelectionRange(selFrom, selTo); } catch (e2) { /* ignore */ }
+        }
+      }
+    }
+
+    auditProgressEl.textContent = "\u2014 " + (passed + failed) + " of " +
+      AUDIT_CHECKS.length + " checked";
+    var meta = STUDIO_BY_ROOM[auditStudio];
+    var line = "";
+    if (meta && meta.listed) {
+      line = "Priority " + meta.priority + " of " + STELLING_COUNT +
+        " on Stelling\u2019s list \u00b7 " + meta.floor +
+        (meta.type ? " \u00b7 " + meta.type : "") +
+        (meta.movein
+          ? " \u00b7 " + moveinVerb(meta).toLowerCase() + " " + meta.movein
+          : " \u00b7 no move-in date");
+    } else if (meta) {
+      line = meta.floor + " \u00b7 not on Stelling\u2019s list";
+    }
+    if (failed) {
+      line += (line ? " \u2014 " : "") + failed +
+        (failed === 1 ? " failure outstanding" : " failures outstanding");
+    } else if (passed === AUDIT_CHECKS.length) {
+      line += (line ? " \u2014 " : "") + "all checks passed";
+    }
+    auditStateEl.textContent = line;
+
+    var issues = studioIssues()[auditStudio] || [];
+    if (!issues.length) {
+      issueListEl.innerHTML = "";
+      issueEmptyEl.hidden = false;
+    } else {
+      issueEmptyEl.hidden = true;
+      var ih = "";
+      for (var q = 0; q < issues.length; q++) {
+        var meta = esc(issues[q].author || "Someone");
+        var iw = shortDate(issues[q].created_at);
+        if (iw) { meta += " \u00b7 " + esc(iw); }
+        var fin = issues[q].done;
+        var tail = fin
+          ? '<span class="note-who">Done' +
+            (fin.by ? " by " + esc(fin.by) : "") +
+            (shortDate(fin.at) ? " \u00b7 " + esc(shortDate(fin.at)) : "") + "</span>"
+          : "";
+        ih += '<li' + (fin ? ' class="is-done"' : "") + '>' +
+          '<label class="issue-row"><input type="checkbox" class="issue-tick" data-issue="' +
+          esc(issues[q].id) + '"' + (fin ? " checked" : "") +
+          ' aria-label="Done: ' + esc(issues[q].body || "") + '">' +
+          '<span><span class="note-who">' + meta + "</span>" +
+          '<span class="note-body">' + esc(issues[q].body || "") + "</span>" +
+          tail + "</span></label></li>";
+      }
+      issueListEl.innerHTML = ih;
+    }
+  }
+
+  /* ---- The public by-studio view ---- */
+
+  var studioListEl = document.getElementById("studio-list");
+  var studioEmptyEl = document.getElementById("studio-empty");
+  var studioCountsEl = document.getElementById("studio-counts");
+  var studioFilteredEl = document.getElementById("studio-filtered");
+  var groupActionsEl = document.getElementById("group-actions");
+
+  function studioCard(room, sum) {
+    var items = "";
+    var i;
+
+    // Every job on the trade lists for this room, named the same way it is
+    // named there, with the same tick box: ticking here is ticking there.
+    // Ticked ones show struck through until Hide completed takes them.
+    var gate = identified() ? "" : " disabled";
+    for (i = 0; i < sum.jobs.length; i++) {
+      var jid = sum.jobs[i];
+      var job = index[jid] || {};
+      var done = effective(jid).done === true;
+      if (done && hideDone) { continue; }
+      var names = [];
+      for (var t = 0; t < (job.trades || []).length; t++) {
+        names.push(tradeName(job.trades[t]));
+      }
+      items += '<li class="ticket' + (job.fromAudit ? " from-audit" : "") +
+        (done ? " ticked" : "") + '"><label class="studio-row">' +
+        '<input type="checkbox" class="studio-tick" data-id="' + esc(jid) + '"' +
+        (done ? " checked" : "") + gate +
+        ' aria-label="Mark ' + esc(room) + " " + esc(job.action || "") + ' as done">' +
+        "<span>" + esc(job.action || "") +
+        (job.fromAudit && job.why ? " \u2014 " + esc(job.why) : "") +
+        '<span class="note-who">' + esc(names.join(" / ")) + "</span></span></label></li>";
+    }
+
+    for (i = 0; i < sum.issues.length; i++) {
+      var iss = sum.issues[i];
+      if (iss.done && hideDone) { continue; }
+      items += '<li class="logged' + (iss.done ? " ticked" : "") +
+        '"><label class="studio-row">' +
+        '<input type="checkbox" class="issue-tick" data-issue="' + esc(iss.id) + '"' +
+        (iss.done ? " checked" : "") + gate +
+        ' aria-label="Done: ' + esc(iss.body || "") + '">' +
+        "<span>" + esc(iss.body || "") +
+        '<span class="note-who">Logged' +
+        (iss.author ? " by " + esc(iss.author) : "") +
+        (iss.done && iss.done.by ? " \u00b7 done by " + esc(iss.done.by) : "") +
+        "</span></span></label></li>";
+    }
+
+    var head;
+    var cls = "";
+    if (sum.awaiting) {
+      head = "waiting to be audited" +
+        (sum.outstanding ? ", " + sum.outstanding + " outstanding" : "");
+      cls = " is-waiting";
+    } else if (sum.complete) {
+      head = sum.listed ? "audited, nothing outstanding" : "no tickets outstanding";
+      cls = " is-clear";
+    } else if (sum.outstanding) {
+      head = sum.outstanding + " outstanding";
+    } else {
+      head = "audit in progress, nothing outstanding";
+    }
+
+    var sm = STUDIO_BY_ROOM[room];
+    var bits = [];
+    if (sm && sm.movein) {
+      bits.push(moveinVerb(sm) + " " + esc(sm.movein));
+    }
+    if (sm && sm.floor) { bits.push(esc(sm.floor)); }
+    if (sm && sm.type) { bits.push(esc(sm.type)); }
+    if (sm && sm.listed) { bits.push("priority " + sm.priority); }
+    var meta = bits.length ? bits.join(" \u00b7 ") + " \u00b7 " : "";
+
+    var progress = (sum.listed || sum.checked)
+      ? sum.checked + " of " + AUDIT_CHECKS.length + " checks done"
+      : "audited";
+
+    return '<div class="studio-card' + cls + '" data-room="' + esc(room) + '">' +
+      "<h3>" + esc(room) + " \u2014 " + esc(head) + "</h3>" +
+      '<p class="studio-meta">' + meta + progress + "</p>" +
+      (items ? "<ul>" + items + "</ul>" : "") + "</div>";
+  }
+
+  // Every studio on the audit shows here, not just the ones with something
+  // against them: a studio with nothing on it is a fact worth seeing. Once
+  // it is finished it drops out of the working list into Completed.
+  studioListEl.addEventListener("change", function (ev) {
+    var box = ev.target;
+    if (!box || box.type !== "checkbox") { return; }
+    if (box.classList.contains("studio-tick")) {
+      enqueue(box.getAttribute("data-id"), { done: box.checked });
+      return;
+    }
+    onIssueTick(ev);
+  });
+
+  function onDateToggle(ev) {
+    var box = ev.currentTarget;
+    var key = box.getAttribute("data-date");
+    if (!key) { return; }
+    dateOpen[key] = box.open;
+    store(DATE_OPEN_KEY, dateOpen);
+  }
+
+  /* A filtered view is not the whole picture and should never be mistaken
+     for one: a room can read clear only because what is left in it is
+     hidden. What the counts do about it differs by view, so the line says
+     which. */
+  function renderFiltered() {
+    var off = [];
+    var k;
+    for (k in tradeOff) {
+      if (Object.prototype.hasOwnProperty.call(tradeOff, k)) {
+        off.push(sectionTitles[k] || k);
+      }
+    }
+    off.sort();
+
+    var srcs = [];
+    for (k in srcOff) {
+      if (Object.prototype.hasOwnProperty.call(srcOff, k)) { srcs.push(k); }
+    }
+    srcs.sort();
+
+    var notes = [];
+    if (off.length) { notes.push(off.join(", ") + " hidden"); }
+    if (srcs.length) { notes.push("source " + srcs.join(", ") + " hidden"); }
+    if (hideGround) { notes.push("ground floor hidden"); }
+
+    groupActionsEl.hidden = !(studioSort === "movein" && activeView !== "audit");
+
+    if (!notes.length) {
+      studioFilteredEl.hidden = true;
+      return;
+    }
+
+    studioFilteredEl.textContent = "Showing a filtered view \u2014 " +
+      notes.join(" \u00b7 ") + ". " + (activeView === "studio"
+        ? "Counts above follow the filter."
+        : "The progress count and the summary still count everything.");
+    studioFilteredEl.hidden = false;
+  }
+
+  var activeView = "trade";
+  var controlsEl = document.getElementById("controls");
+  var studioViewOn = false;
+  var hideGround = false;
+  var studioSort = "room";
+  var dateOpen = {};   // date key -> open, where it differs from the default
+  var tradeOff = {};   // trade key -> hidden
+  var srcOff = {};     // source name -> hidden
+
+  function tradeHidden(key) {
+    return Object.prototype.hasOwnProperty.call(tradeOff, key);
+  }
+
+  function srcHidden(src) {
+    return !!src && Object.prototype.hasOwnProperty.call(srcOff, src);
+  }
+
+  // A job listed under two trades stays while either is showing; a job
+  // from a hidden source goes whatever its trade.
+  function jobVisible(job) {
+    if (!job) { return true; }
+    if (srcHidden(job.src)) { return false; }
+    var trades = job.trades || [];
+    if (!trades.length) { return true; }
+    for (var i = 0; i < trades.length; i++) {
+      if (!tradeHidden(trades[i])) { return true; }
+    }
+    return false;
+  }
+
+  // Every studio in the tower, in room order, lowest to highest. No
+  // priority ordering: on site people work from the room number, and
+  // Stelling's own order is already on their rooms and in the audit picker.
+  function renderStudios() {
+    // Two hundred and fifty-seven cards is not free, and ticking a job on
+    // the trade list changes them all. Build them when they are being
+    // looked at, not on every tick behind a hidden view.
+    if (!studioViewOn) { return; }
+
+    var state = auditState();
+    var issues = studioIssues();
+    var rooms = [];
+    var seen = {};
+    var i;
+    var k;
+
+    for (i = 0; i < AUDIT_STUDIOS.length; i++) {
+      rooms.push(AUDIT_STUDIOS[i].room);
+      seen[AUDIT_STUDIOS[i].room] = true;
+    }
+
+    // A room that was audited but is not on the list still gets shown,
+    // rather than its work disappearing.
+    var extra = {};
+    for (k in state) {
+      if (Object.prototype.hasOwnProperty.call(state, k) && !seen[k]) { extra[k] = true; }
+    }
+    for (k in issues) {
+      if (Object.prototype.hasOwnProperty.call(issues, k) && !seen[k]) { extra[k] = true; }
+    }
+    var extras = Object.keys(extra);
+    for (i = 0; i < extras.length; i++) { rooms.push(extras[i]); }
+
+    function byRoom(a, b) { return a < b ? -1 : (a > b ? 1 : 0); }
+
+    if (studioSort === "movein") {
+      // Soonest arrival first. A room with no move-in date given goes to
+      // the end rather than the front, where an empty value would land.
+      rooms.sort(function (a, b) {
+        var ka = (STUDIO_BY_ROOM[a] && STUDIO_BY_ROOM[a].moveinKey) || "";
+        var kb = (STUDIO_BY_ROOM[b] && STUDIO_BY_ROOM[b].moveinKey) || "";
+        if (ka !== kb) {
+          if (!ka) { return 1; }
+          if (!kb) { return -1; }
+          return ka < kb ? -1 : 1;
+        }
+        return byRoom(a, b);
+      });
+    } else {
+      // Room numbers are CW + three digits + an optional letter, so plain
+      // string order is room order.
+      rooms.sort(byRoom);
+    }
+
+    var html = "";
+    var waiting = 0;
+    var open = 0;
+    var clear = 0;
+    var shown = 0;
+
+    // In date order the rooms are gathered under the day they are let, so
+    // a week's arrivals can be opened or shut as one.
+    var byDate = studioSort === "movein";
+    var groups = [];
+    var groupBy = {};
+
+    function group(key, label) {
+      if (!groupBy[key]) {
+        groupBy[key] = { key: key, label: label, cards: "", rooms: 0, out: 0 };
+        groups.push(groupBy[key]);
+      }
+      return groupBy[key];
+    }
+
+    for (i = 0; i < rooms.length; i++) {
+      var room = rooms[i];
+      if (hideGround && room.charAt(2) === "0") { continue; }
+
+      var sum = studioSummary(room, state, issues, true);
+      if (sum.awaiting) { waiting++; }
+      else if (sum.complete) { clear++; }
+      else { open++; }
+
+      if (hideDone && sum.complete) { continue; }
+      shown++;
+
+      if (!byDate) {
+        html += studioCard(room, sum);
+        continue;
+      }
+
+      var sm = STUDIO_BY_ROOM[room];
+      var g = group((sm && sm.moveinKey) || "none",
+        (sm && sm.movein) || "No move-in date set");
+      g.cards += studioCard(room, sum);
+      g.rooms++;
+      if (!sum.complete) { g.out++; }
+    }
+
+    if (byDate) {
+      for (i = 0; i < groups.length; i++) {
+        var gr = groups[i];
+        // Dated groups open, the undated pile shut: it is every room with
+        // no arrival booked, which is not what this order is for.
+        var isOpen = Object.prototype.hasOwnProperty.call(dateOpen, gr.key)
+          ? dateOpen[gr.key] === true
+          : gr.key !== "none";
+        html += '<details class="date-group" data-date="' + esc(gr.key) + '"' +
+          (isOpen ? " open" : "") + "><summary>" +
+          '<span class="group-when">' + esc(gr.label) + "</span>" +
+          '<span class="group-count">' + gr.rooms +
+          (gr.rooms === 1 ? " room" : " rooms") +
+          (gr.out ? " \u00b7 " + gr.out + " outstanding" : "") +
+          "</span></summary>" +
+          '<div class="group-body">' + gr.cards + "</div></details>";
+      }
+    }
+
+
+    var counts = [];
+    if (waiting) { counts.push(waiting + " waiting to be audited"); }
+    if (open) { counts.push(open + " with something outstanding"); }
+    if (clear) { counts.push(clear + " with nothing outstanding"); }
+    studioCountsEl.textContent = counts.join(" \u00b7 ");
+
+    studioListEl.innerHTML = html;
+
+    // A details toggle does not bubble, so each group gets its own listener.
+    var boxes = studioListEl.querySelectorAll(".date-group");
+    for (i = 0; i < boxes.length; i++) {
+      boxes[i].addEventListener("toggle", onDateToggle);
+    }
+
+    if (!rooms.length) {
+      studioEmptyEl.textContent = "No studios have been set up for auditing yet.";
+      studioEmptyEl.hidden = false;
+    } else if (!shown) {
+      studioEmptyEl.textContent = "Nothing outstanding against any studio.";
+      studioEmptyEl.hidden = false;
+    } else {
+      studioEmptyEl.hidden = true;
+    }
+  }
+
+  /* ---- Wiring ---- */
+
+  function showView(name) {
+    var btns = viewsEl.querySelectorAll(".view-btn");
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle("is-on", btns[i].getAttribute("data-view") === name);
+    }
+    document.getElementById("view-trade").hidden = name !== "trade";
+    document.getElementById("view-studio").hidden = name !== "studio";
+    document.getElementById("view-audit").hidden = name !== "audit";
+
+    // The audit log is a checklist for one studio, so the list controls
+    // have nothing to say there.
+    activeView = name;
+    controlsEl.hidden = name === "audit";
+    studioViewOn = name === "studio";
+    renderFiltered();
+    if (name === "studio") { renderStudios(); }
+    if (name === "audit") {
+      if (auditIn) { fillStudios(); }
+      renderAudit();
+    }
+  }
+
+  // An audit done on someone else's phone changes both of these, so they
+  // are redrawn whenever new records land.
+  function refreshAuditViews() {
+    renderAudit();
+    renderStudios();
+  }
+
+  viewsEl.addEventListener("click", function (ev) {
+    var btn = ev.target;
+    if (!btn || !btn.classList || !btn.classList.contains("view-btn")) { return; }
+    showView(btn.getAttribute("data-view"));
+  });
+
+  function setSignedIn(on) {
+    auditIn = on;
+    auditLoginEl.hidden = on;
+    auditBodyEl.hidden = !on;
+    if (on) { lastChecksHtml = null; fillStudios(); loadDrafts(); renderAudit(); }
+  }
+
+  document.getElementById("audit-in").addEventListener("click", function () {
+    var u = document.getElementById("audit-user").value.trim();
+    var w = document.getElementById("audit-pass").value;
+    if (u.toLowerCase() === AUDIT_USER.toLowerCase() && w === AUDIT_PASS) {
+      auditMsgEl.textContent = "";
+      document.getElementById("audit-pass").value = "";
+      store(AUDIT_SEEN, true);
+      setSignedIn(true);
+    } else {
+      auditMsgEl.textContent = "That username and password did not match.";
+    }
+  });
+
+  document.getElementById("audit-pass").addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter") { document.getElementById("audit-in").click(); }
+  });
+
+  document.getElementById("audit-out").addEventListener("click", function () {
+    store(AUDIT_SEEN, false);
+    setSignedIn(false);
+  });
+
+  auditStudioEl.addEventListener("change", function () {
+    auditStudio = auditStudioEl.value;
+    store(AUDIT_STUDIO_KEY, auditStudio);
+    // Moving studio puts this tab's drafts down and picks up any kept for
+    // the new one. Nothing is written: a half-typed reason stays on the
+    // device against the studio it was typed for, so it is there again on
+    // return, and another tab mid-sentence on that studio is not wiped by
+    // this one leaving it.
+    whyOpen = {};
+    whyDraft = {};
+    tradeDraft = {};
+    lastChecksHtml = null;
+    loadDrafts();
+    renderAudit();
+  });
+
+  // Pass is one tap. Fail asks why, and the reason travels with it.
+  auditChecksEl.addEventListener("click", function (ev) {
+    var btn = ev.target;
+    if (!btn || !btn.classList || !btn.classList.contains("pf")) { return; }
+
+    var checkId = btn.getAttribute("data-check");
+    var pass = btn.getAttribute("data-pass") === "1";
+    var why = document.getElementById("why-" + checkId);
+    var box = document.getElementById("check-" + checkId);
+    var tsel = document.getElementById("trade-" + checkId);
+
+    if (!pass) {
+      var reason = why ? why.value.trim() : "";
+      if (!reason) {
+        // Show the box and let them say why, and who it is for, before it
+        // is recorded. Remembered rather than just shown, so a redraw does
+        // not shut it again.
+        var wrap = box ? box.querySelector(".check-why") : null;
+        if (wrap && wrap.hidden) {
+          whyOpen[checkId] = true;
+          saveDrafts();
+          lastChecksHtml = null;
+          wrap.hidden = false;
+          if (why) { why.focus(); }
+          return;
+        }
+      }
+      clearDraft(checkId);
+      setCheck(auditStudio, checkId, false, reason, tsel ? tsel.value : "");
+      return;
+    }
+
+    clearDraft(checkId);
+    setCheck(auditStudio, checkId, true, "");
+  });
+
+  // Hold what is being typed, so an entry landing from another phone
+  // mid-sentence cannot take it away.
+  auditChecksEl.addEventListener("input", function (ev) {
+    var field = ev.target;
+    if (!field || !field.id || field.id.indexOf("why-") !== 0) { return; }
+    whyDraft[field.id.slice(4)] = field.value;
+    saveDrafts();
+  });
+
+  auditChecksEl.addEventListener("keydown", function (ev) {
+    var field = ev.target;
+    if (!field || ev.key !== "Enter" || field.id.indexOf("why-") !== 0) { return; }
+    ev.preventDefault();
+    var cid = field.id.slice(4);
+    var sel = document.getElementById("trade-" + cid);
+    var typed = field.value.trim();
+    clearDraft(cid);
+    setCheck(auditStudio, cid, false, typed, sel ? sel.value : "");
+  });
+
+  // Changing the trade on a check that has already failed moves it there
+  // and then, rather than making them fail it again.
+  auditChecksEl.addEventListener("change", function (ev) {
+    var sel = ev.target;
+    if (!sel || !sel.id || sel.id.indexOf("trade-") !== 0) { return; }
+    var cid = sel.getAttribute("data-check");
+    var st = (auditState()[auditStudio] || {})[cid];
+    if (!st || st.status !== "fail") {
+      // Not recorded yet, so hold the choice until it is.
+      tradeDraft[cid] = sel.value;
+      saveDrafts();
+      return;
+    }
+    if (st.trade === sel.value) { return; }
+    var why = document.getElementById("why-" + cid);
+    setCheck(auditStudio, cid, false, why ? why.value.trim() : st.comment, sel.value);
+  });
+
+  function onIssueTick(ev) {
+    var box = ev.target;
+    if (!box || !box.classList || !box.classList.contains("issue-tick")) { return; }
+    var id = box.getAttribute("data-issue");
+    if (!id) { return; }
+    if (box.checked) { setIssueDone(id); } else { setIssueOpen(id); }
+  }
+
+  issueListEl.addEventListener("change", onIssueTick);
+
+  var hideGroundEl = document.getElementById("hide-ground");
+  var studioSortEl = document.getElementById("studio-sort");
+  var tradeBoxesEl = document.getElementById("trade-boxes");
+  var tradeSummaryEl = document.getElementById("trade-filter-summary");
+
+  hideGround = load(HIDE_GROUND_KEY, false) === true;
+  hideGroundEl.checked = hideGround;
+  studioSort = load(STUDIO_SORT_KEY, "room") === "movein" ? "movein" : "room";
+  studioSortEl.value = studioSort;
+
+  var savedOff = load(TRADE_OFF_KEY, []);
+  if (Object.prototype.toString.call(savedOff) === "[object Array]") {
+    for (var to = 0; to < savedOff.length; to++) {
+      if (sectionTitles[savedOff[to]]) { tradeOff[savedOff[to]] = true; }
+    }
+  }
+
+  function tradeSummaryText() {
+    var n = 0;
+    for (var k in tradeOff) {
+      if (Object.prototype.hasOwnProperty.call(tradeOff, k)) { n++; }
+    }
+    tradeSummaryEl.textContent = n
+      ? "Filter by trade \u2014 " + n + " hidden"
+      : "Filter by trade";
+    // The one button goes both ways: with everything showing it hides the
+    // lot, so a single trade can then be ticked back on; otherwise it
+    // shows the lot.
+    document.getElementById("trade-reset").textContent =
+      n ? "Show every trade" : "Hide every trade";
+  }
+
+  function fillTradeBoxes() {
+    var html = "";
+    for (var i = 0; i < sections.length; i++) {
+      var k = sections[i].key;
+      html += '<label for="tf-' + esc(k) + '">' +
+        '<input type="checkbox" id="tf-' + esc(k) + '" data-trade="' + esc(k) + '"' +
+        (tradeHidden(k) ? "" : " checked") + "> " + esc(sections[i].title) + "</label>";
+    }
+    tradeBoxesEl.innerHTML = html;
+    tradeSummaryText();
+  }
+
+  function saveTradeOff() {
+    var out = [];
+    for (var k in tradeOff) {
+      if (Object.prototype.hasOwnProperty.call(tradeOff, k)) { out.push(k); }
+    }
+    store(TRADE_OFF_KEY, out);
+    tradeSummaryText();
+  }
+
+  fillTradeBoxes();
+
+  /* The sources are read off the rows rather than typed, because the
+     audit adds one per round as the days go on. The boxes are rebuilt only
+     when that set changes. */
+  var srcBoxesEl = document.getElementById("src-boxes");
+  var srcSummaryEl = document.getElementById("src-filter-summary");
+  var lastSrcList = "";
+
+  var savedSrc = load(SRC_OFF_KEY, []);
+  if (Object.prototype.toString.call(savedSrc) === "[object Array]") {
+    for (var so = 0; so < savedSrc.length; so++) {
+      if (typeof savedSrc[so] === "string") { srcOff[savedSrc[so]] = true; }
+    }
+  }
+
+  function sourceList() {
+    var seen = {};
+    var fixed = [];
+    var rounds = [];
+    for (var id in index) {
+      if (!Object.prototype.hasOwnProperty.call(index, id)) { continue; }
+      var src = index[id].src;
+      if (!src || seen[src]) { continue; }
+      seen[src] = true;
+      if (index[id].fromAudit) {
+        rounds.push({ name: src, key: index[id].srcKey || "" });
+      } else {
+        fixed.push(src);
+      }
+    }
+    fixed.sort();
+    rounds.sort(function (a, b) { return a.key < b.key ? -1 : (a.key > b.key ? 1 : 0); });
+    for (var r = 0; r < rounds.length; r++) { fixed.push(rounds[r].name); }
+    return fixed;
+  }
+
+  function srcSummaryText() {
+    var n = 0;
+    for (var k in srcOff) {
+      if (Object.prototype.hasOwnProperty.call(srcOff, k)) { n++; }
+    }
+    srcSummaryEl.textContent = n
+      ? "Filter by source \u2014 " + n + " hidden"
+      : "Filter by source";
+    document.getElementById("src-reset").textContent =
+      n ? "Show every source" : "Hide every source";
+  }
+
+  function fillSrcBoxes() {
+    var list = sourceList();
+    var joined = list.join("|");
+    if (joined === lastSrcList) { return; }
+    lastSrcList = joined;
+
+    var html = "";
+    for (var i = 0; i < list.length; i++) {
+      var sid = "sf-" + i;
+      html += '<label for="' + sid + '">' +
+        '<input type="checkbox" id="' + sid + '" data-src="' + esc(list[i]) + '"' +
+        (srcHidden(list[i]) ? "" : " checked") + "> " + esc(list[i]) + "</label>";
+    }
+    srcBoxesEl.innerHTML = html;
+    srcSummaryText();
+  }
+
+  function saveSrcOff() {
+    var out = [];
+    for (var k in srcOff) {
+      if (Object.prototype.hasOwnProperty.call(srcOff, k)) { out.push(k); }
+    }
+    store(SRC_OFF_KEY, out);
+    srcSummaryText();
+  }
+
+  fillSrcBoxes();
+
+  srcBoxesEl.addEventListener("change", function (ev) {
+    var box = ev.target;
+    if (!box || !box.getAttribute) { return; }
+    var src = box.getAttribute("data-src");
+    if (!src) { return; }
+    if (box.checked) { delete srcOff[src]; } else { srcOff[src] = true; }
+    saveSrcOff();
+    render();
+    renderStudios();
+  });
+
+  document.getElementById("src-reset").addEventListener("click", function () {
+    var anyOff = false;
+    for (var k in srcOff) {
+      if (Object.prototype.hasOwnProperty.call(srcOff, k)) { anyOff = true; break; }
+    }
+    srcOff = {};
+    if (!anyOff) {
+      var all = sourceList();
+      for (var i = 0; i < all.length; i++) { srcOff[all[i]] = true; }
+    }
+    saveSrcOff();
+    lastSrcList = "";
+    fillSrcBoxes();
+    render();
+    renderStudios();
+  });
+
+  hideGroundEl.addEventListener("change", function () {
+    hideGround = hideGroundEl.checked;
+    store(HIDE_GROUND_KEY, hideGround);
+    render();
+    renderStudios();
+  });
+
+  studioSortEl.addEventListener("change", function () {
+    studioSort = studioSortEl.value === "movein" ? "movein" : "room";
+    store(STUDIO_SORT_KEY, studioSort);
+    render();
+    renderStudios();
+  });
+
+  tradeBoxesEl.addEventListener("change", function (ev) {
+    var box = ev.target;
+    if (!box || !box.getAttribute) { return; }
+    var key = box.getAttribute("data-trade");
+    if (!key) { return; }
+    if (box.checked) { delete tradeOff[key]; } else { tradeOff[key] = true; }
+    saveTradeOff();
+    render();
+    renderStudios();
+  });
+
+  var savedDates = load(DATE_OPEN_KEY, {});
+  if (savedDates && typeof savedDates === "object") {
+    for (var dk in savedDates) {
+      if (Object.prototype.hasOwnProperty.call(savedDates, dk)) {
+        dateOpen[dk] = savedDates[dk] === true;
+      }
+    }
+  }
+
+  function setAllDates(open) {
+    var boxes = studioListEl.querySelectorAll(".date-group");
+    for (var i = 0; i < boxes.length; i++) {
+      var key = boxes[i].getAttribute("data-date");
+      if (key) { dateOpen[key] = open; }
+      boxes[i].open = open;
+    }
+    var blocks = sectionsEl.querySelectorAll("tbody.date-block");
+    for (var b = 0; b < blocks.length; b++) {
+      blocks[b].classList.toggle("shut", !open);
+      var tg = blocks[b].querySelector(".date-toggle");
+      if (tg) { tg.setAttribute("aria-expanded", open ? "true" : "false"); }
+      dateOpen[blocks[b].getAttribute("data-key") + "|" +
+        blocks[b].getAttribute("data-date")] = open;
+    }
+    store(DATE_OPEN_KEY, dateOpen);
+  }
+
+  document.getElementById("dates-open").addEventListener("click", function () {
+    setAllDates(true);
+  });
+
+  document.getElementById("dates-shut").addEventListener("click", function () {
+    setAllDates(false);
+  });
+
+  document.getElementById("trade-reset").addEventListener("click", function () {
+    var anyOff = false;
+    for (var k in tradeOff) {
+      if (Object.prototype.hasOwnProperty.call(tradeOff, k)) { anyOff = true; break; }
+    }
+    tradeOff = {};
+    if (!anyOff) {
+      for (var i = 0; i < sections.length; i++) { tradeOff[sections[i].key] = true; }
+    }
+    saveTradeOff();
+    fillTradeBoxes();
+    render();
+    renderStudios();
+  });
+
+  document.getElementById("issue-add").addEventListener("click", function () {
+    var field = document.getElementById("issue-text");
+    var body = field.value.trim();
+    if (!body) { field.focus(); return; }
+    if (!auditStudio) { return; }
+    field.value = "";
+    postEntry("issue:" + auditStudio, body);
+  });
+
+  /* ---- Boot ---- */
+
+  var localState = load(LOCAL_KEY, null);
+  if (localState && typeof localState === "object") {
+    items = localState.items && typeof localState.items === "object" ? localState.items : {};
+    comments = Object.prototype.toString.call(localState.comments) === "[object Array]"
+      ? localState.comments : [];
+  }
+
+  // Held separately: connecting replaces `items` with the server's copy, so
+  // the migration below needs this device's own work kept aside first.
+  var bootItems = items;
+  var bootComments = comments;
+
+  var queueState = load(QUEUE_KEY, null);
+  if (queueState && typeof queueState === "object") {
+    queued = queueState.items && typeof queueState.items === "object" ? queueState.items : {};
+    queuedComments = Object.prototype.toString.call(queueState.comments) === "[object Array]"
+      ? queueState.comments : [];
+    Object.keys(queued).forEach(function (id) { delete queued[id].inflight; });
+    queuedComments.forEach(function (e) { delete e.inflight; });
+  }
+
+  auditStudio = load(AUDIT_STUDIO_KEY, "") || "";
+  setSignedIn(load(AUDIT_SEEN, false) === true);
+
+  render();
+  renderComments();
+  document.getElementById("studio-check-total").textContent = AUDIT_CHECKS.length;
+  document.getElementById("studio-total").textContent = AUDIT_STUDIOS.length;
+  document.getElementById("studio-listed-total").textContent = STELLING_COUNT;
+  renderStudios();
+  applyGate();
+
+  function applyRow(rowData) {
+    if (!rowData || !rowData.id) { return; }
+    items[rowData.id] = {
+      done: rowData.done === true,
+      note: rowData.note || "",
+      updated_by: rowData.updated_by || "",
+      updated_at: rowData.updated_at || ""
+    };
+  }
+
+  // Anything ticked on this device before it was connected is carried up
+  // once, rather than thrown away when the shared list takes over.
+  function migrateLocal() {
+    if (load(MIGRATED_KEY, false)) { return; }
+    var carried = 0;
+
+    Object.keys(bootItems).forEach(function (id) {
+      var rec = bootItems[id];
+      if (!index[id] || !rec) { return; }
+      if (rec.done === true || (rec.note && rec.note.length)) {
+        queued[id] = {
+          done: rec.done === true,
+          note: rec.note || "",
+          updated_by: rec.updated_by || who(),
+          updated_at: rec.updated_at || new Date().toISOString()
+        };
+        carried++;
+      }
+    });
+
+    bootComments.forEach(function (c) {
+      if (!c || !c.body) { return; }
+      queuedComments.push({
+        id: c.id || uuid(),
+        body: c.body,
+        author: c.author || "Someone",
+        created_at: c.created_at || new Date().toISOString()
+      });
+      carried++;
+    });
+
+    store(MIGRATED_KEY, true);
+    if (carried) { saveQueue(); }
+  }
+
+  function refetch() {
+    if (!client) { return; }
+
+    client.from(SNAGS_TABLE).select("*").then(function (res) {
+      if (res.error) {
+        goLocal("Can't reach the list — changes are held here and will send");
+        scheduleFlush();
+        return;
+      }
+
+      var wasLive = live;
+      var next = {};
+      for (var r = 0; r < res.data.length; r++) {
+        var row = res.data[r];
+        if (!row || !row.id) { continue; }
+        next[row.id] = {
+          done: row.done === true,
+          note: row.note || "",
+          updated_by: row.updated_by || "",
+          updated_at: row.updated_at || ""
+        };
+      }
+
+      // A reply can arrive older than something we already know — a write
+      // that landed while this request was in flight, or a realtime echo
+      // that beat it. Keep whichever copy is newer rather than letting a
+      // stale read undo it.
+      Object.keys(items).forEach(function (id) {
+        var mine = items[id];
+        var theirs = next[id];
+        if (!mine) { return; }
+        if (!theirs || (mine.updated_at || "") > (theirs.updated_at || "")) {
+          next[id] = mine;
+        }
+      });
+      items = next;
+      live = true;
+      document.getElementById("setup-notice").hidden = true;
+      if (!wasLive) { migrateLocal(); }
+      render();
+      renderComments();
+      flush();
+      if (pendingCount() === 0) {
+        setStatus("Live", "is-live");
+      }
+    }, function () {
+      goLocal("Can't reach the list — changes are held here and will send");
+      scheduleFlush();
+    });
+
+    client.from(COMMENTS_TABLE).select("*").order("created_at", { ascending: true })
+      .then(function (res) {
+        if (res.error) { return; }
+
+        // Merge rather than replace: a comment posted while this request
+        // was in flight is not in the reply, and must not be dropped.
+        var seen = {};
+        var merged = [];
+        readComments(res.data).concat(comments).forEach(function (c) {
+          if (!c || !c.id || seen[c.id]) { return; }
+          seen[c.id] = true;
+          merged.push(c);
+        });
+        merged.sort(function (x, y) {
+          return String(x.created_at || "").localeCompare(String(y.created_at || ""));
+        });
+        comments = merged;
+
+        // Drop any queued copy the server has now confirmed.
+        queuedComments = queuedComments.filter(function (q) {
+          return !comments.some(function (c) { return c.id === q.id; });
+        });
+        saveQueue();
+        // render() as well: the fetched rows carry the notes hanging off
+        // each line, not just the general comments, and without this they
+        // stay blank on a fresh load until something else redraws.
+        render();
+        renderComments();
+        refreshAuditViews();
+        renderUnsaved();
+      });
+  }
+
+  function subscribe() {
+    if (!client) { return; }
+
+    if (channel) {
+      try { client.removeChannel(channel); } catch (e) { /* ignore */ }
+      channel = null;
+    }
+
+    channel = client.channel("castle-way-snags")
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: SNAGS_TABLE },
+        function (payload) {
+          if (payload.eventType === "DELETE") {
+            if (payload.old && payload.old.id) { delete items[payload.old.id]; }
+          } else {
+            applyRow(payload.new);
+          }
+          render();
+        })
+      .on("postgres_changes",
+        { event: "INSERT", schema: "public", table: COMMENTS_TABLE },
+        function (payload) {
+          var row = readComment(payload.new);
+          if (!row || !row.id) { return; }
+          if (comments.some(function (c) { return c.id === row.id; })) { return; }
+          comments.push(row);
+          queuedComments = queuedComments.filter(function (q) { return q.id !== row.id; });
+          saveQueue();
+          if (row.snag_id) { render(); } else { renderComments(); }
+          refreshAuditViews();
+          renderUnsaved();
+        })
+      .subscribe(function (status) {
+        if (status === "SUBSCRIBED") {
+          live = true;
+          flush();
+          if (pendingCount() === 0) {
+            setStatus("Live", "is-live");
+          }
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          setStatus("Reconnecting… your changes are held here", "is-local");
+          window.setTimeout(function () {
+            subscribe();
+            refetch();
+          }, 5000);
+        }
+      });
+  }
+
+  if (!configured()) {
+    goLocal();
+  } else {
+    setStatus("Connecting…", "");
+    withSupabase(function (ready) {
+      if (!ready) {
+        goLocal("Offline — changes are held here and will send when you reconnect");
+        return;
+      }
+      try {
+        client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          realtime: { params: { eventsPerSecond: 5 } }
+        });
+        refetch();
+        subscribe();
+      } catch (e) {
+        goLocal("Can't reach the list — changes are held here and will send");
+      }
+    });
+  }
+
+  // Coming back into signal, or back to the tab, is the moment to retry.
+  window.addEventListener("online", function () { retryDelay = 4000; flush(); });
+
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && live) { flush(); refetch(); }
+  });
+
+  // Last line of defence: don't let someone walk away from unsent work.
+  window.addEventListener("beforeunload", function (ev) {
+    if (live && pendingCount() > 0) {
+      ev.preventDefault();
+      ev.returnValue = "";
+      return "";
+    }
+  });
+})();
+</script>
+</body>
+</html>
