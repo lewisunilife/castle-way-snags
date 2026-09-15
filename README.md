@@ -192,8 +192,14 @@ outstanding is the question being asked. The audit log's own idea of whether a
 studio is finished ignores the filters entirely.
 
 Each trade table carries a **Move-in** column. Only the rooms on Stelling's
-list have a date, so the rest are blank rather than guessed; on a phone the
-line is dropped entirely rather than leaving a gap on every card.
+list have a date so far, so the rest are blank rather than guessed; on a phone
+the line is dropped entirely rather than leaving a gap on every card.
+
+To cover the whole tower, fill `MOVE_IN_DATES` in `site/index.html` from the
+control sheet — room number to date, one line each. Anything in it fills a
+room with no date of its own; a date already against a Stelling room wins.
+The column, the date ordering and the date headers then follow for every
+room.
 
 ## Who can edit the list
 
