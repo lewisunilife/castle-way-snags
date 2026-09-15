@@ -1686,7 +1686,12 @@
     "CW502": "Mon 14 Sep 2026",
     "CW148": "Tue 15 Sep 2026",
     "CW245": "Tue 15 Sep 2026",
-    "CW529": "Tue 15 Sep 2026"
+    "CW529": "Tue 15 Sep 2026",
+    // 15 Sep: this week's arrivals, now the top of Stelling's audit.
+    "CW204": "Wed 16 Sep 2026",
+    "CW302": "Wed 16 Sep 2026",
+    "CW243": "Thu 17 Sep 2026",
+    "CW307": "Thu 17 Sep 2026"
   };
 
   var CONTRACT_START = {};
@@ -1710,10 +1715,13 @@
   /* The rooms Stelling are auditing, in the priority order they gave, with
      the floor, room type and move-in date against each. */
   var STELLING_LIST = [
+    // 15 Sep: the top of the list is the next two days' arrivals.
+    { room: "CW204", floor: "2nd Floor", type: "", movein: "Wed 16 Sep 2026" },
+    { room: "CW302", floor: "3rd Floor", type: "Luxury Plus", movein: "Wed 16 Sep 2026" },
+    { room: "CW243", floor: "2nd Floor", type: "", movein: "Thu 17 Sep 2026" },
+    { room: "CW307", floor: "3rd Floor", type: "Luxury Plus", movein: "Thu 17 Sep 2026" },
     { room: "CW244", floor: "2nd Floor", type: "Luxury", movein: "Fri 18 Sep 2026" },
-    { room: "CW302", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
     { room: "CW305", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
-    { room: "CW307", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
     { room: "CW308", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
     { room: "CW310", floor: "3rd Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
     { room: "CW344", floor: "3rd Floor", type: "Luxury", movein: "Fri 18 Sep 2026" },
@@ -3676,7 +3684,7 @@
   // be an invention.
   function studioLabel(st) {
     if (st.listed) {
-      return st.priority + ". " + st.room + " \u2014 " + st.type +
+      return st.priority + ". " + st.room + (st.type ? " \u2014 " + st.type : "") +
         (st.movein ? ", in " + st.movein : "");
     }
     return st.room + (st.floor ? " \u2014 " + st.floor : "");
@@ -3842,7 +3850,8 @@
     var line = "";
     if (meta && meta.listed) {
       line = "Priority " + meta.priority + " of " + STELLING_COUNT +
-        " on Stelling\u2019s list \u00b7 " + meta.floor + " \u00b7 " + meta.type +
+        " on Stelling\u2019s list \u00b7 " + meta.floor +
+        (meta.type ? " \u00b7 " + meta.type : "") +
         (meta.movein
           ? " \u00b7 " + moveinVerb(meta).toLowerCase() + " " + meta.movein
           : " \u00b7 no move-in date");
