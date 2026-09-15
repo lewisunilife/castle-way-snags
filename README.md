@@ -61,7 +61,18 @@ A check tapped Fail but not yet recorded exists only in the panel — nothing
 about it is saved. The panel is redrawn whenever anyone's entry arrives, so
 the open box, the half-typed reason, the chosen trade and the cursor are held
 and put back, and the panel is left alone entirely when the record behind it
-has not changed.
+has not changed. The same draft is kept on the device too, so a refresh
+mid-sentence — including the one a new build asks for — hands it back.
+
+## Deploying while people are on it
+
+Pushing a build changes the page, not the data. Ticks, notes and audit records
+live in Supabase and are append-only or key-addressed; an open page keeps
+running the old build until it is refreshed, and the offline queue survives
+the refresh under the same storage key. What *would* lose data is changing a
+job's key — its room and action wording — because ticks and notes hang off
+that key. Before pushing, compare the set of job keys the deployed build
+produces with the new one; today's build was checked at 383 keys, identical.
 
 Every check has a trade it lands on by default, but the auditor decides. The
 reason box carries a **Send to** dropdown with all thirteen trades and
@@ -182,6 +193,16 @@ that device and are per person — they change nobody else's view.
 - **Filter by trade** — hides a trade's section in By trade and its tasks in
   By studio, so the view can be read without, say, the building-wide MVHR
   sweep on top of it.
+- **Filter by source** — the same, by where a job came from: CW Issues Log,
+  Stelling, JBA, Arrivals list, Unilife, and one entry per audit round. The
+  list is read off the rows, so a new round appears in it by itself.
+
+An audit round is a day on which anything was audited: the first such day is
+**Audit 1**, the next **Audit 2**, and so on. A failed check is filed under
+the round of its latest entry, so one that is still failing when it is looked
+at again moves from Audit 1 into Audit 2 on its own, and one nobody has been
+back to stays where it was. Hide Audit 1 once it has been dealt with and the
+trade lists show only what the later rounds found.
 
 An amber line says which filters are on, because a room can read clear only
 because what is left in it is hidden. What the counts do about it differs by
@@ -195,11 +216,14 @@ Each trade table carries a **Move-in** column. Only the rooms on Stelling's
 list have a date so far, so the rest are blank rather than guessed; on a phone
 the line is dropped entirely rather than leaving a gap on every card.
 
-To cover the whole tower, fill `MOVE_IN_DATES` in `site/index.html` from the
-control sheet — room number to date, one line each. Anything in it fills a
-room with no date of its own; a date already against a Stelling room wins.
-The column, the date ordering and the date headers then follow for every
-room.
+`MOVE_IN_DATES` in `site/index.html` carries the dates from the control
+sheet — room number to date, one line each, and **nothing else from that
+sheet**: it holds tenants' names, emails, phone numbers and travel details,
+none of which belongs on a public page or in this public repository. So far
+it holds the seven rooms from the "Tuesday 15th Arrivals" tab (11–15 Sep
+2026); the master tab would cover the rest. Anything in it fills a room with
+no date of its own; a date already against a Stelling room wins. A date that
+has passed reads **Moved in** rather than **Moves in**.
 
 ## Who can edit the list
 

@@ -379,7 +379,23 @@
     min-height: 34px;
   }
 
-  #trade-boxes input { width: 18px; height: 18px; flex: none; }
+  #trade-boxes input, #src-boxes input { width: 18px; height: 18px; flex: none; }
+
+  #src-boxes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 4px 14px;
+    margin: 12px 0 10px;
+  }
+
+  #src-boxes label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    padding: 5px 0;
+    min-height: 34px;
+  }
 
   .date-group { margin-bottom: 16px; }
 
@@ -938,6 +954,7 @@
     tbody tr.audit-row td.room { box-shadow: none; padding-left: 0; }
     td.movein:empty { display: none; }
     td.movein:not(:empty)::before { content: "Moves in "; }
+    td.movein.past:not(:empty)::before { content: "Moved in "; }
     td.action { grid-area: action; margin-top: 8px; }
 
     /* Beats the base `td.done` column rules, which outrank `tbody td`. */
@@ -1125,6 +1142,11 @@
       <summary id="trade-filter-summary">Filter by trade</summary>
       <div id="trade-boxes"></div>
       <button type="button" class="secondary" id="trade-reset">Show every trade</button>
+    </details>
+    <details class="trade-filter">
+      <summary id="src-filter-summary">Filter by source</summary>
+      <div id="src-boxes"></div>
+      <button type="button" class="secondary" id="src-reset">Show every source</button>
     </details>
     <p class="studio-filtered" id="studio-filtered" hidden></p>
   </div>
@@ -1591,7 +1613,18 @@
 
      Dates already against a room below win, since those came direct from
      Stelling with their audit order. */
-  var MOVE_IN_DATES = {};
+  var MOVE_IN_DATES = {
+    // Control Spreadsheet 2026-27, "Tuesday 15th Arrivals" tab: the
+    // Fri 11 - Tue 15 Sep 2026 check-in window, Tower 1. Room and date
+    // only; nothing else from that sheet belongs on a public page.
+    "CW528": "Fri 11 Sep 2026",
+    "CW530": "Sat 12 Sep 2026",
+    "CW404": "Mon 14 Sep 2026",
+    "CW502": "Mon 14 Sep 2026",
+    "CW148": "Tue 15 Sep 2026",
+    "CW245": "Tue 15 Sep 2026",
+    "CW529": "Tue 15 Sep 2026"
+  };
 
   /* The rooms Stelling are auditing, in the priority order they gave, with
      the floor, room type and move-in date against each. */
@@ -1690,6 +1723,21 @@
     return (st && st.movein) || "";
   }
 
+  // Today as yyyymmdd, the same shape as moveinKey, so a plain string
+  // compare says whether a date has been and gone.
+  var TODAY_KEY = (function () {
+    var d = new Date();
+    return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate());
+  })();
+
+  function moveinPast(key) {
+    return !!key && key < TODAY_KEY;
+  }
+
+  function moveinVerb(key) {
+    return moveinPast(key) ? "Moved in" : "Moves in";
+  }
+
   function moveinSortFor(room) {
     var st = STUDIO_BY_ROOM[room];
     return (st && st.moveinKey) || "";
@@ -1762,6 +1810,7 @@
   var HIDE_GROUND_KEY = "cw-tower1-hide-ground";
   var STUDIO_SORT_KEY = "cw-tower1-studio-sort";
   var TRADE_OFF_KEY = "cw-tower1-trades-off";
+  var SRC_OFF_KEY = "cw-tower1-sources-off";
   var DATE_OPEN_KEY = "cw-tower1-dates-open";
   var LOCAL_KEY = "cw-tower1-snags-local-v2";
   var QUEUE_KEY = "cw-tower1-snags-queue-v2";
@@ -1992,7 +2041,7 @@
       var domId = sec.key + "-" + k;
 
       if (!index[id]) {
-        index[id] = { room: row[0], floor: floor, action: row[2], trades: [] };
+        index[id] = { room: row[0], floor: floor, action: row[2], src: row[1], trades: [] };
         total++;
         if (!roomJobs[row[0]]) { roomJobs[row[0]] = []; }
         roomJobs[row[0]].push(id);
@@ -2020,7 +2069,8 @@
         '<tr id="row-' + domId + '">' +
         '<td class="room">' + esc(row[0]) + "</td>" +
         '<td class="floor">' + esc(floor) + "</td>" +
-        '<td class="movein">' + esc(moveinFor(row[0])) + "</td>" +
+        '<td class="movein' + (moveinPast(moveinSortFor(row[0])) ? " past" : "") +
+        '">' + esc(moveinFor(row[0])) + "</td>" +
         '<td class="src">' + esc(row[1]) + "</td>" +
         '<td class="action"><span class="action-text">' + esc(row[2]) + "</span>" +
         '<ul class="notes" id="notes-' + domId + '"></ul>' +
@@ -2252,8 +2302,9 @@
     return '<tr id="row-' + domId + '" class="audit-row">' +
       '<td class="room">' + esc(f.room) + "</td>" +
       '<td class="floor">' + esc(floorOf(f.room)) + "</td>" +
-      '<td class="movein">' + esc(moveinFor(f.room)) + "</td>" +
-      '<td class="src">Audit</td>' +
+      '<td class="movein' + (moveinPast(moveinSortFor(f.room)) ? " past" : "") +
+      '">' + esc(moveinFor(f.room)) + "</td>" +
+      '<td class="src">' + esc(f.src) + "</td>" +
       '<td class="action"><span class="action-text">' + esc(f.action) + "</span>" +
       '<span class="fail-why">' + esc(f.why || "no reason given") + "</span>" +
       '<span class="note-who">' + stamp + "</span>" +
@@ -2306,6 +2357,7 @@
       room: f.room,
       floor: floorOf(f.room),
       action: f.action,
+      src: f.src,
       why: f.why,
       trades: [trade],
       fromAudit: true
@@ -2328,6 +2380,7 @@
 
   function syncAuditRows() {
     var byTrade = auditFailRows();
+    var rounds = auditRounds();
     var wanted = {};
     var changed = false;
     var t;
@@ -2337,6 +2390,7 @@
       if (!Object.prototype.hasOwnProperty.call(byTrade, t)) { continue; }
       for (var r = 0; r < byTrade[t].length; r++) {
         var f = byTrade[t][r];
+        f.src = auditRoundName(f.at, rounds);
         wanted[rowKey(f.room, f.action)] = { trade: t, f: f };
       }
     }
@@ -2360,6 +2414,13 @@
         if (whyEl && whyEl.textContent !== wantWhy) {
           whyEl.textContent = wantWhy;
           index[id].why = wanted[id].f.why;
+        }
+        // Looked at again on a later day: it moves into that round.
+        var srcEl = document.querySelector("#row-" + dom + " td.src");
+        if (srcEl && srcEl.textContent !== wanted[id].f.src) {
+          srcEl.textContent = wanted[id].f.src;
+          index[id].src = wanted[id].f.src;
+          changed = true;
         }
         continue;
       }
@@ -2471,7 +2532,8 @@
           rowEl.classList.toggle("ticked", isDone);
           rowEl.classList.toggle("unsaved", isPending && live);
           var hide = (hideDone && isDone) ||
-            (hideGround && (index[id].room || "").charAt(2) === "0");
+            (hideGround && (index[id].room || "").charAt(2) === "0") ||
+            srcHidden(index[id].src);
           if (rowEl.hidden !== hide) { rowEl.hidden = hide; }
         }
         if (notesEl && notesEl.innerHTML !== thread) { notesEl.innerHTML = thread; }
@@ -2525,6 +2587,7 @@
           var vrec = effective(ids[vq]);
           if (hideDone && vrec.done === true) { continue; }
           if (hideGround && (index[ids[vq]].room || "").charAt(2) === "0") { continue; }
+          if (srcHidden(index[ids[vq]].src)) { continue; }
           secShowing++;
         }
         var hideSec = tradeHidden(sk) || (ids.length > 0 && secShowing === 0);
@@ -2539,6 +2602,7 @@
     allClearEl.hidden = !((hideDone || hideGround) && !anyVisible);
 
     applyRowOrder();
+    if (srcBoxesEl) { fillSrcBoxes(); }
     renderFiltered();
     renderStudios();
     renderSummary();
@@ -3149,10 +3213,30 @@
   var tradeDraft = {}; // check id -> the trade picked for it
   var lastChecksHtml = null;
 
+  /* Held on the device as well, so a refresh mid-sentence — including the
+     one a new build asks for — hands the half-typed reason back rather
+     than losing it. Keyed to the studio it was typed against. */
+  var AUDIT_DRAFT_KEY = "cw-tower1-audit-draft";
+
+  function saveDrafts() {
+    store(AUDIT_DRAFT_KEY, {
+      studio: auditStudio, whyOpen: whyOpen, whyDraft: whyDraft, tradeDraft: tradeDraft
+    });
+  }
+
+  function loadDrafts() {
+    var d = load(AUDIT_DRAFT_KEY, null);
+    if (!d || typeof d !== "object" || d.studio !== auditStudio) { return; }
+    whyOpen = d.whyOpen && typeof d.whyOpen === "object" ? d.whyOpen : {};
+    whyDraft = d.whyDraft && typeof d.whyDraft === "object" ? d.whyDraft : {};
+    tradeDraft = d.tradeDraft && typeof d.tradeDraft === "object" ? d.tradeDraft : {};
+  }
+
   function clearDraft(checkId) {
     delete whyOpen[checkId];
     delete whyDraft[checkId];
     delete tradeDraft[checkId];
+    saveDrafts();
   }
 
   // "FAIL(electrical): reason", or plain "FAIL: reason" from before trades
@@ -3223,6 +3307,38 @@
       out[c.snag_id.slice(11)] = { by: c.author || "", at: c.created_at || "" };
     }
     return out;
+  }
+
+  /* An audit round is a day on which anything was audited. The first such
+     day is Audit 1, the next Audit 2, and so on. A failed check is filed
+     under the round of its latest entry, so a check that is still failing
+     when it is looked at again moves from Audit 1 into Audit 2 by itself,
+     and one nobody has been back to stays where it was. */
+  function dayKey(iso) {
+    if (!iso) { return ""; }
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) { return ""; }
+    return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate());
+  }
+
+  function auditRounds() {
+    var all = comments.concat(queuedComments);
+    var days = {};
+    for (var i = 0; i < all.length; i++) {
+      var c = all[i];
+      if (!c || !c.snag_id || c.snag_id.indexOf("audit:") !== 0) { continue; }
+      var k = dayKey(c.created_at);
+      if (k) { days[k] = true; }
+    }
+    var sorted = Object.keys(days).sort();
+    var out = {};
+    for (var r = 0; r < sorted.length; r++) { out[sorted[r]] = r + 1; }
+    return out;
+  }
+
+  function auditRoundName(at, rounds) {
+    var k = dayKey(at);
+    return rounds[k] ? "Audit " + rounds[k] : "Audit";
   }
 
   function studioIssues() {
@@ -3540,7 +3656,9 @@
     if (meta && meta.listed) {
       line = "Priority " + meta.priority + " of " + STELLING_COUNT +
         " on Stelling\u2019s list \u00b7 " + meta.floor + " \u00b7 " + meta.type +
-        (meta.movein ? " \u00b7 moves in " + meta.movein : " \u00b7 no move-in date");
+        (meta.movein
+          ? " \u00b7 " + moveinVerb(meta.moveinKey).toLowerCase() + " " + meta.movein
+          : " \u00b7 no move-in date");
     } else if (meta) {
       line = meta.floor + " \u00b7 not on Stelling\u2019s list";
     }
@@ -3630,7 +3748,9 @@
 
     var sm = STUDIO_BY_ROOM[room];
     var bits = [];
-    if (sm && sm.movein) { bits.push("Moves in " + esc(sm.movein)); }
+    if (sm && sm.movein) {
+      bits.push(moveinVerb(sm.moveinKey) + " " + esc(sm.movein));
+    }
     if (sm && sm.floor) { bits.push(esc(sm.floor)); }
     if (sm && sm.type) { bits.push(esc(sm.type)); }
     if (sm && sm.listed) { bits.push("priority " + sm.priority); }
@@ -3671,8 +3791,15 @@
     }
     off.sort();
 
+    var srcs = [];
+    for (k in srcOff) {
+      if (Object.prototype.hasOwnProperty.call(srcOff, k)) { srcs.push(k); }
+    }
+    srcs.sort();
+
     var notes = [];
     if (off.length) { notes.push(off.join(", ") + " hidden"); }
+    if (srcs.length) { notes.push("source " + srcs.join(", ") + " hidden"); }
     if (hideGround) { notes.push("ground floor hidden"); }
 
     groupActionsEl.hidden = !(studioSort === "movein" && activeView === "studio");
@@ -3695,15 +3822,23 @@
   var hideGround = false;
   var studioSort = "room";
   var dateOpen = {};   // date key -> open, where it differs from the default
-  var tradeOff = {};   // trade key -> hidden from the by-studio view
+  var tradeOff = {};   // trade key -> hidden
+  var srcOff = {};     // source name -> hidden
 
   function tradeHidden(key) {
     return Object.prototype.hasOwnProperty.call(tradeOff, key);
   }
 
-  // A job listed under two trades stays while either is showing.
+  function srcHidden(src) {
+    return !!src && Object.prototype.hasOwnProperty.call(srcOff, src);
+  }
+
+  // A job listed under two trades stays while either is showing; a job
+  // from a hidden source goes whatever its trade.
   function jobVisible(job) {
-    var trades = (job && job.trades) || [];
+    if (!job) { return true; }
+    if (srcHidden(job.src)) { return false; }
+    var trades = job.trades || [];
     if (!trades.length) { return true; }
     for (var i = 0; i < trades.length; i++) {
       if (!tradeHidden(trades[i])) { return true; }
@@ -3896,7 +4031,7 @@
     auditIn = on;
     auditLoginEl.hidden = on;
     auditBodyEl.hidden = !on;
-    if (on) { lastChecksHtml = null; fillStudios(); renderAudit(); }
+    if (on) { lastChecksHtml = null; fillStudios(); loadDrafts(); renderAudit(); }
   }
 
   document.getElementById("audit-in").addEventListener("click", function () {
@@ -3927,6 +4062,7 @@
     whyOpen = {};
     whyDraft = {};
     tradeDraft = {};
+    saveDrafts();
     lastChecksHtml = null;
     renderAudit();
   });
@@ -3951,6 +4087,7 @@
         var wrap = box ? box.querySelector(".check-why") : null;
         if (wrap && wrap.hidden) {
           whyOpen[checkId] = true;
+          saveDrafts();
           lastChecksHtml = null;
           wrap.hidden = false;
           if (why) { why.focus(); }
@@ -3972,6 +4109,7 @@
     var field = ev.target;
     if (!field || !field.id || field.id.indexOf("why-") !== 0) { return; }
     whyDraft[field.id.slice(4)] = field.value;
+    saveDrafts();
   });
 
   auditChecksEl.addEventListener("keydown", function (ev) {
@@ -3995,6 +4133,7 @@
     if (!st || st.status !== "fail") {
       // Not recorded yet, so hold the choice until it is.
       tradeDraft[cid] = sel.value;
+      saveDrafts();
       return;
     }
     if (st.trade === sel.value) { return; }
@@ -4058,6 +4197,96 @@
   }
 
   fillTradeBoxes();
+
+  /* The sources are read off the rows rather than typed, because the
+     audit adds one per round as the days go on. The boxes are rebuilt only
+     when that set changes. */
+  var srcBoxesEl = document.getElementById("src-boxes");
+  var srcSummaryEl = document.getElementById("src-filter-summary");
+  var lastSrcList = "";
+
+  var savedSrc = load(SRC_OFF_KEY, []);
+  if (Object.prototype.toString.call(savedSrc) === "[object Array]") {
+    for (var so = 0; so < savedSrc.length; so++) {
+      if (typeof savedSrc[so] === "string") { srcOff[savedSrc[so]] = true; }
+    }
+  }
+
+  function sourceList() {
+    var seen = {};
+    var fixed = [];
+    var rounds = [];
+    for (var id in index) {
+      if (!Object.prototype.hasOwnProperty.call(index, id)) { continue; }
+      var src = index[id].src;
+      if (!src || seen[src]) { continue; }
+      seen[src] = true;
+      if (src.indexOf("Audit") === 0) { rounds.push(src); } else { fixed.push(src); }
+    }
+    fixed.sort();
+    rounds.sort(function (a, b) {
+      return (parseInt(a.slice(6), 10) || 0) - (parseInt(b.slice(6), 10) || 0);
+    });
+    return fixed.concat(rounds);
+  }
+
+  function srcSummaryText() {
+    var n = 0;
+    for (var k in srcOff) {
+      if (Object.prototype.hasOwnProperty.call(srcOff, k)) { n++; }
+    }
+    srcSummaryEl.textContent = n
+      ? "Filter by source \u2014 " + n + " hidden"
+      : "Filter by source";
+  }
+
+  function fillSrcBoxes() {
+    var list = sourceList();
+    var joined = list.join("|");
+    if (joined === lastSrcList) { return; }
+    lastSrcList = joined;
+
+    var html = "";
+    for (var i = 0; i < list.length; i++) {
+      var sid = "sf-" + i;
+      html += '<label for="' + sid + '">' +
+        '<input type="checkbox" id="' + sid + '" data-src="' + esc(list[i]) + '"' +
+        (srcHidden(list[i]) ? "" : " checked") + "> " + esc(list[i]) + "</label>";
+    }
+    srcBoxesEl.innerHTML = html;
+    srcSummaryText();
+  }
+
+  function saveSrcOff() {
+    var out = [];
+    for (var k in srcOff) {
+      if (Object.prototype.hasOwnProperty.call(srcOff, k)) { out.push(k); }
+    }
+    store(SRC_OFF_KEY, out);
+    srcSummaryText();
+  }
+
+  fillSrcBoxes();
+
+  srcBoxesEl.addEventListener("change", function (ev) {
+    var box = ev.target;
+    if (!box || !box.getAttribute) { return; }
+    var src = box.getAttribute("data-src");
+    if (!src) { return; }
+    if (box.checked) { delete srcOff[src]; } else { srcOff[src] = true; }
+    saveSrcOff();
+    render();
+    renderStudios();
+  });
+
+  document.getElementById("src-reset").addEventListener("click", function () {
+    srcOff = {};
+    saveSrcOff();
+    lastSrcList = "";
+    fillSrcBoxes();
+    render();
+    renderStudios();
+  });
 
   hideGroundEl.addEventListener("change", function () {
     hideGround = hideGroundEl.checked;
