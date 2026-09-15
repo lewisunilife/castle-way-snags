@@ -3728,12 +3728,13 @@
       jobs: jobs,
       tickets: tickets,
       outstanding: outstanding,
-      // Stelling's rooms are not finished until their audit is; the rest
-      // are finished when nothing is left against them. A failed check
-      // that has been put right still counts as failed until it is
-      // audited again, which is the point of auditing it.
+      // Stelling's rooms are finished once all eighteen checks have been
+      // recorded and nothing is left against them; the rest are finished
+      // when nothing is left against them. A failed check whose fix the
+      // trade has ticked off is done: it is the tick that clears it, not a
+      // second visit from the auditor.
       awaiting: awaiting,
-      complete: !awaiting && !outstanding && !fails.length &&
+      complete: !awaiting && !outstanding &&
         (!listed || checked === AUDIT_CHECKS.length)
     };
   }
@@ -4071,8 +4072,6 @@
       cls = " is-clear";
     } else if (sum.outstanding) {
       head = sum.outstanding + " outstanding";
-    } else if (sum.fails.length) {
-      head = "put right, waiting on a re-audit";
     } else {
       head = "audit in progress, nothing outstanding";
     }

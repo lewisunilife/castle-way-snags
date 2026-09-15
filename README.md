@@ -102,9 +102,11 @@ one — open jobs from the trade lists (audit failures among them, since they
 are jobs) and logged issues, each naming its trade. Ticking a failure off in
 the trade list clears it from the studio card too.
 
-A studio whose failures have been put right but not yet re-audited reads
-**put right, waiting on a re-audit** rather than clear: a failed check stays
-failed until it is audited again, which is the point of auditing it.
+A failed check whose fix the trade has ticked off counts as done. Once all
+eighteen checks have been recorded and nothing is left against the studio —
+no open jobs, no open issues — it reads **audited, nothing outstanding** and
+moves into the picker's Completed group. It is the tick that clears a
+failure, not a second visit from the auditor.
 
 The 37 rooms on Stelling's list read **waiting to be audited** until their
 audit is started. The rest of the building has been audited already, so what
