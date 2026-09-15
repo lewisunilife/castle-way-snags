@@ -69,15 +69,31 @@ reason box carries a **Send to** dropdown with all thirteen trades and
 where the checklist guessed. Changing it on an already-failed check moves the
 line there and then, reason and all.
 
-A failed check appears on that trade's list under "From the audit", carrying
-the studio, the check and the reason. Passing the check later takes the line
-away again. A fail left **Unassigned** shows in its own section at the foot of
-the trade view, so it is waiting to be given to someone rather than lost.
+A failed check becomes a row on that trade's list like any other job —
+tickable, noteable, counted, and caught by **Tick all** and **Hide
+completed** — carrying the room, its move-in date, the check and the reason,
+marked **Audit** in the Source column with a red edge. Its identity is the
+room and the action, the same as every other job, so a tick stays with it.
+
+Passing the check later takes the row away again; re-assigning it moves the
+row to the new trade with its reason. A fail left **Unassigned** gets its own
+section at the foot of the trade view, so it is waiting to be given to someone
+rather than lost.
+
+The trade headings, the section counts, the summary table and the total are
+all worked out from the rows, so a failure joining a trade cannot leave them
+behind: the total goes from "0 of 383" to "0 of 384" and back when the check
+passes.
 
 **By studio** is public and lists all 257 studios in the tower in room order,
 lowest to highest, with a line for everything still outstanding against each
-one — open jobs from the trade lists, audit failures, and logged issues, each
-naming its trade.
+one — open jobs from the trade lists (audit failures among them, since they
+are jobs) and logged issues, each naming its trade. Ticking a failure off in
+the trade list clears it from the studio card too.
+
+A studio whose failures have been put right but not yet re-audited reads
+**put right, waiting on a re-audit** rather than clear: a failed check stays
+failed until it is audited again, which is the point of auditing it.
 
 The 37 rooms on Stelling's list read **waiting to be audited** until their
 audit is started. The rest of the building has been audited already, so what

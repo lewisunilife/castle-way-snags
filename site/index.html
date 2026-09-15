@@ -299,25 +299,20 @@
     margin-top: 8px;
   }
 
-  .fails { margin-top: 12px; }
+  .fail-why { display: block; color: var(--muted); font-size: 13px; }
 
-  .fails-head {
-    margin: 0 0 8px;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--strike);
+  /* A failed audit check is a job on the trade's list like any other, with
+     a red edge so it is clear where it came from. */
+  tbody tr.audit-row td.src { color: var(--strike); font-weight: 700; }
+
+  tbody tr.audit-row td.room {
+    box-shadow: inset 3px 0 0 var(--strike);
+    padding-left: 12px;
   }
 
-  .fail-row {
-    border-left: 3px solid var(--strike);
-    padding: 4px 0 4px 11px;
-    margin-bottom: 8px;
-    font-size: 13.5px;
-    line-height: 1.45;
-  }
+  .head-count { font-weight: 400; }
 
-  .fail-what { }
-  .fail-why { display: block; color: var(--muted); }
+  .studio-card li.from-audit { border-left-color: var(--strike); }
 
   .studio-counts {
     margin: -6px 0 12px;
@@ -938,6 +933,9 @@
     /* Most rooms have no move-in date, so the line goes rather than
        leaving a gap on every card in the building. */
     td.movein { grid-area: movein; color: var(--muted); font-size: 13px; }
+
+    tbody tr.audit-row { border-left: 3px solid var(--strike); }
+    tbody tr.audit-row td.room { box-shadow: none; padding-left: 0; }
     td.movein:empty { display: none; }
     td.movein:not(:empty)::before { content: "Moves in "; }
     td.action { grid-area: action; margin-top: 8px; }
@@ -1149,10 +1147,6 @@
   </div>
 
   <div id="sections"></div>
-  <div class="section" id="sec-unassigned" hidden>
-    <h2>Unassigned <span class="sec-count">&mdash; waiting for a trade</span></h2>
-    <div class="fails" id="fails-unassigned"></div>
-  </div>
   <p class="all-clear" id="all-clear" hidden>Everything is ticked off. Untick
     <strong>Hide completed</strong> above to see the full list.</p>
 
@@ -1771,6 +1765,7 @@
   var sectionRows = {};    // section key -> job keys it lists
   var roomIndex = {};
   var roomJobs = {};       // room -> the job keys listed against it
+  var sectionDom = {};     // section key -> job key -> the row showing it there
   var total = 0;
   var retryTimer = null;
   var retryDelay = 4000;
@@ -1950,7 +1945,8 @@
     var sec = sections[j];
     out +=
       '<div class="section" id="sec-' + sec.key + '">' +
-      "<h2>" + esc(sec.title) + " (" + sec.issues + " issues, " + sec.rooms + " rooms) " +
+      "<h2>" + esc(sec.title) + " " +
+      '<span class="head-count" id="head-' + sec.key + '"></span> ' +
       (ASSIGNED[sec.key]
         ? '<span class="assignee">' + esc(ASSIGNED[sec.key]) + "</span> "
         : "") +
@@ -1967,7 +1963,7 @@
       '<input type="checkbox" class="all-box" id="all-' + sec.key + '-head"' +
       ' data-section="' + sec.key + '"' +
       ' aria-label="Tick every item under ' + esc(sec.title) + '"> All</label></th>' +
-      "</tr></thead><tbody>";
+      '</tr></thead><tbody id="tbody-' + sec.key + '">';
 
     for (var k = 0; k < sec.rows.length; k++) {
       var row = sec.rows[k];
@@ -1995,6 +1991,8 @@
 
       if (!sectionRows[sec.key]) { sectionRows[sec.key] = []; }
       sectionRows[sec.key].push(id);
+      if (!sectionDom[sec.key]) { sectionDom[sec.key] = {}; }
+      sectionDom[sec.key][id] = domId;
 
       // Every job this trade has in this room, so the summary can cross
       // the room off once the last of them is ticked.
@@ -2025,9 +2023,19 @@
         "</tr>";
     }
 
-    out += '</tbody></table></div><div class="fails" id="fails-' + sec.key +
-      '" hidden></div></div>';
+    out += "</tbody></table></div></div>";
   }
+
+  /* Built in here rather than beside it: ticking, notes and Tick all are
+     all delegated from #sections, so a section outside it would be dead. */
+  out += '<div class="section" id="sec-unassigned" hidden>' +
+    "<h2>Unassigned " +
+    '<span class="head-count" id="head-unassigned"></span> ' +
+    '<span class="sec-count" id="count-unassigned"></span></h2>' +
+    '<div class="scroller"><table><thead><tr>' +
+    "<th>Room</th><th>Floor</th><th>Move-in</th><th>Source</th><th>Action</th>" +
+    '<th class="done-h">Done</th>' +
+    '</tr></thead><tbody id="tbody-unassigned"></tbody></table></div></div>';
 
   var sectionsEl = document.getElementById("sections");
   sectionsEl.innerHTML = out;
@@ -2210,49 +2218,145 @@
     return out;
   }
 
-  function renderAuditFails() {
+  /* A failed audit check is work for a trade, so it becomes a row on that
+     trade's list like any other: tickable, noteable, counted, and caught by
+     Tick all and Hide completed. Its identity is the room and the action,
+     the same as every other job, so a tick stays with it.
+
+     The rows come and go as checks fail and pass, so they are added to and
+     removed from the same indexes the built-in rows live in rather than
+     being drawn separately. */
+  var auditRowIds = {};   // job key -> the trade it is currently filed under
+
+  function auditRowHtml(domId, id, f) {
+    var stamp = f.by ? "Failed by " + esc(f.by) : "";
+    var when = shortDate(f.at);
+    if (when) { stamp += (stamp ? " \u00b7 " : "") + esc(when); }
+
+    return '<tr id="row-' + domId + '" class="audit-row">' +
+      '<td class="room">' + esc(f.room) + "</td>" +
+      '<td class="floor">' + esc(floorOf(f.room)) + "</td>" +
+      '<td class="movein">' + esc(moveinFor(f.room)) + "</td>" +
+      '<td class="src">Audit</td>' +
+      '<td class="action"><span class="action-text">' + esc(f.action) + "</span>" +
+      '<span class="fail-why">' + esc(f.why || "no reason given") + "</span>" +
+      '<span class="note-who">' + stamp + "</span>" +
+      '<ul class="notes" id="notes-' + domId + '"></ul>' +
+      '<div class="note-add">' +
+      '<input class="note-field" type="text" id="note-' + domId + '" data-id="' + id + '"' +
+      ' placeholder="Add a note"' +
+      ' aria-label="Note for ' + esc(f.room) + " " + esc(f.action) + '">' +
+      '<button type="button" class="note-btn" data-id="' + id + '"' +
+      ' aria-label="Submit note for ' + esc(f.room) + '">Submit</button>' +
+      "</div>" +
+      '<span class="by" id="by-' + domId + '"></span></td>' +
+      '<td class="done"><label for="tick-' + domId + '">' +
+      '<input type="checkbox" id="tick-' + domId + '" data-id="' + id + '"' +
+      ' aria-label="Mark ' + esc(f.room) + " " + esc(f.action) + ' as done">' +
+      "</label></td>" +
+      "</tr>";
+  }
+
+  function dropFromList(list, value) {
+    if (!list) { return; }
+    var at = list.indexOf(value);
+    if (at > -1) { list.splice(at, 1); }
+  }
+
+  function removeAuditRow(id) {
+    var trade = auditRowIds[id];
+    var domId = (sectionDom[trade] || {})[id];
+    var el = domId ? document.getElementById("row-" + domId) : null;
+    if (el && el.parentNode) { el.parentNode.removeChild(el); }
+
+    if (sectionDom[trade]) { delete sectionDom[trade][id]; }
+    dropFromList(sectionRows[trade], id);
+    dropFromList(roomJobs[(index[id] || {}).room], id);
+    if (roomIndex[trade]) {
+      dropFromList(roomIndex[trade][(index[id] || {}).room], id);
+    }
+    delete occurrences[id];
+    delete index[id];
+    delete auditRowIds[id];
+    total--;
+  }
+
+  function addAuditRow(id, trade, f) {
+    var body = document.getElementById("tbody-" + trade);
+    if (!body) { return; }
+    var domId = "af-" + id;
+
+    index[id] = {
+      room: f.room,
+      floor: floorOf(f.room),
+      action: f.action,
+      why: f.why,
+      trades: [trade],
+      fromAudit: true
+    };
+    occurrences[id] = [domId];
+    if (!sectionRows[trade]) { sectionRows[trade] = []; }
+    sectionRows[trade].push(id);
+    if (!sectionDom[trade]) { sectionDom[trade] = {}; }
+    sectionDom[trade][id] = domId;
+    if (!roomJobs[f.room]) { roomJobs[f.room] = []; }
+    roomJobs[f.room].push(id);
+    if (!roomIndex[trade]) { roomIndex[trade] = {}; }
+    if (!roomIndex[trade][f.room]) { roomIndex[trade][f.room] = []; }
+    roomIndex[trade][f.room].push(id);
+    total++;
+
+    body.insertAdjacentHTML("beforeend", auditRowHtml(domId, id, f));
+    auditRowIds[id] = trade;
+  }
+
+  function syncAuditRows() {
     var byTrade = auditFailRows();
-    var keys = [];
-    var si;
+    var wanted = {};
+    var changed = false;
+    var t;
+    var id;
 
-    for (si = 0; si < sections.length; si++) { keys.push(sections[si].key); }
-    keys.push(UNASSIGNED);
+    for (t in byTrade) {
+      if (!Object.prototype.hasOwnProperty.call(byTrade, t)) { continue; }
+      for (var r = 0; r < byTrade[t].length; r++) {
+        var f = byTrade[t][r];
+        wanted[rowKey(f.room, f.action)] = { trade: t, f: f };
+      }
+    }
 
-    for (si = 0; si < keys.length; si++) {
-      var key = keys[si];
-      var holder = document.getElementById("fails-" + key);
-      var wrap = key === UNASSIGNED ? document.getElementById("sec-unassigned") : null;
-      if (!holder) { continue; }
+    // Gone, or moved to another trade: take the row away.
+    for (id in auditRowIds) {
+      if (!Object.prototype.hasOwnProperty.call(auditRowIds, id)) { continue; }
+      if (!wanted[id] || wanted[id].trade !== auditRowIds[id]) {
+        removeAuditRow(id);
+        changed = true;
+      }
+    }
 
-      var rows = byTrade[key] || [];
-      if (!rows.length) {
-        if (holder.innerHTML !== "") { holder.innerHTML = ""; }
-        holder.hidden = true;
-        if (wrap) { wrap.hidden = true; }
+    for (id in wanted) {
+      if (!Object.prototype.hasOwnProperty.call(wanted, id)) { continue; }
+      if (auditRowIds[id]) {
+        // Still here; the reason or who failed it may have changed.
+        var dom = sectionDom[auditRowIds[id]][id];
+        var whyEl = document.querySelector("#row-" + dom + " .fail-why");
+        var wantWhy = wanted[id].f.why || "no reason given";
+        if (whyEl && whyEl.textContent !== wantWhy) {
+          whyEl.textContent = wantWhy;
+          index[id].why = wanted[id].f.why;
+        }
         continue;
       }
+      addAuditRow(id, wanted[id].trade, wanted[id].f);
+      changed = true;
+    }
 
-      var html = '<p class="fails-head">From the audit \u2014 ' + rows.length +
-        (rows.length === 1 ? " failed check" : " failed checks") + "</p>";
-
-      for (var r = 0; r < rows.length; r++) {
-        var f = rows[r];
-        var stamp = f.by ? "Failed by " + esc(f.by) : "";
-        var when = shortDate(f.at);
-        if (when) { stamp += (stamp ? " \u00b7 " : "") + esc(when); }
-        html += '<div class="fail-row"><span class="room">' + esc(f.room) + "</span> " +
-          '<span class="fail-what">' + esc(f.action) + "</span>" +
-          (f.why ? '<span class="fail-why">' + esc(f.why) + "</span>" : "") +
-          '<span class="note-who">' + stamp + "</span></div>";
-      }
-
-      holder.innerHTML = html;
-      holder.hidden = false;
+    if (changed) {
+      // New rows land at the end of their table until it is ordered again.
+      appliedOrder = null;
+      var wrap = document.getElementById("sec-unassigned");
       if (wrap) {
-        wrap.hidden = false;
-        // Work with no trade against it is still work outstanding, so the
-        // "everything is ticked off" line must not claim otherwise.
-        allClearEl.hidden = true;
+        wrap.hidden = !(sectionRows[UNASSIGNED] || []).length;
       }
     }
   }
@@ -2266,18 +2370,23 @@
     if (appliedOrder === studioSort) { return; }
     appliedOrder = studioSort;
 
-    for (var si = 0; si < sections.length; si++) {
-      var key = sections[si].key;
+    var keys = [];
+    for (var si = 0; si < sections.length; si++) { keys.push(sections[si].key); }
+    keys.push(UNASSIGNED);
+
+    for (si = 0; si < keys.length; si++) {
+      var key = keys[si];
       var ids = sectionRows[key] || [];
-      var secEl = document.getElementById("sec-" + key);
-      var body = secEl ? secEl.querySelector("tbody") : null;
+      var body = document.getElementById("tbody-" + key);
       if (!body || !ids.length) { continue; }
 
       var order = [];
       for (var k = 0; k < ids.length; k++) {
         var job = index[ids[k]] || {};
+        var domId = (sectionDom[key] || {})[ids[k]];
+        if (!domId) { continue; }
         order.push({
-          domId: key + "-" + k,
+          domId: domId,
           room: job.room || "",
           date: moveinSortFor(job.room || "")
         });
@@ -2304,6 +2413,10 @@
   function render() {
     var doneCount = 0;
     var id;
+
+    // Audit failures are rows on the trade lists, so they have to exist
+    // before anything counts or draws them.
+    syncAuditRows();
     var grouped = groupNotes();
     var confirmed = grouped.__confirmed;
 
@@ -2364,6 +2477,22 @@
         el.textContent = "— " + secDone + " of " + ids.length + " ticked";
       }
 
+      // Worked out from the rows, so an audit failure joining the list
+      // cannot leave the heading behind.
+      var headEl = document.getElementById("head-" + sk);
+      if (headEl) {
+        var seenRoom = {};
+        var roomCount = 0;
+        for (var hq = 0; hq < ids.length; hq++) {
+          var hr = (index[ids[hq]] || {}).room;
+          if (hr && !seenRoom[hr]) { seenRoom[hr] = true; roomCount++; }
+        }
+        var headText = "(" + ids.length +
+          (ids.length === 1 ? " issue, " : " issues, ") + roomCount +
+          (roomCount === 1 ? " room)" : " rooms)");
+        if (headEl.textContent !== headText) { headEl.textContent = headText; }
+      }
+
       // all / some / none, on both copies of the control
       var boxes = sectionsEl.querySelectorAll('.all-box[data-section="' + sk + '"]');
       for (var ab = 0; ab < boxes.length; ab++) {
@@ -2388,11 +2517,13 @@
       }
     }
 
+    var unWrap = document.getElementById("sec-unassigned");
+    if (unWrap && !(sectionRows[UNASSIGNED] || []).length) { unWrap.hidden = true; }
+
     allClearEl.hidden = !((hideDone || hideGround) && !anyVisible);
 
     applyRowOrder();
     renderFiltered();
-    renderAuditFails();
     renderStudios();
     renderSummary();
     progressEl.textContent = doneCount + " of " + total + " items ticked";
@@ -2403,6 +2534,7 @@
   // in that room is ticked, and strike the trade itself once every one of
   // its rooms is clear.
   var summaryRoomEls = null;
+  var summaryTotalEls = null;
   var summaryRowEls = null;
 
   function renderSummary() {
@@ -2429,9 +2561,41 @@
       if (!clear) { clearByTrade[key] = false; }
     }
 
+    var grand = 0;
+    var grandRooms = {};
+    var grandRoomCount = 0;
+
     for (var m = 0; m < summaryRowEls.length; m++) {
-      var rowKeyAttr = summaryRowEls[m].getAttribute("data-key");
-      summaryRowEls[m].classList.toggle("trade-done", clearByTrade[rowKeyAttr] === true);
+      var rowEl = summaryRowEls[m];
+      var rowKeyAttr = rowEl.getAttribute("data-key");
+      rowEl.classList.toggle("trade-done", clearByTrade[rowKeyAttr] === true);
+
+      // Counted from the rows, so an audit failure joining a trade shows
+      // in its count rather than leaving the summary behind.
+      var rowIds = sectionRows[rowKeyAttr] || [];
+      var rSeen = {};
+      var rRooms = 0;
+      for (var rq = 0; rq < rowIds.length; rq++) {
+        var rRoom = (index[rowIds[rq]] || {}).room;
+        if (!rRoom || rSeen[rRoom]) { continue; }
+        rSeen[rRoom] = true;
+        rRooms++;
+        if (!grandRooms[rRoom]) { grandRooms[rRoom] = true; grandRoomCount++; }
+      }
+      grand += rowIds.length;
+
+      var issuesEl = rowEl.querySelector(".t-issues");
+      var roomsEl = rowEl.querySelector(".t-rooms");
+      if (issuesEl) { issuesEl.textContent = rowIds.length; }
+      if (roomsEl) { roomsEl.textContent = rRooms; }
+    }
+
+    if (!summaryTotalEls) {
+      summaryTotalEls = document.querySelectorAll("#summary-table tr.total .num");
+    }
+    if (summaryTotalEls.length === 2) {
+      summaryTotalEls[0].textContent = grand;
+      summaryTotalEls[1].textContent = grandRoomCount;
     }
   }
 
@@ -3104,7 +3268,6 @@
       if (!st) { continue; }
       checked++;
       if (st.status !== "fail") { continue; }
-      if (filtered && tradeHidden(st.trade || AUDIT_CHECKS[i].trade)) { continue; }
       fails.push({ check: AUDIT_CHECKS[i], st: st });
     }
 
@@ -3117,7 +3280,9 @@
     var tickets = roomTickets(room, filtered);
     var sm = STUDIO_BY_ROOM[room];
     var listed = !!(sm && sm.listed);
-    var outstanding = fails.length + open.length + tickets.length;
+    // A failed check is a row on its trade's list, so it is already in
+    // tickets; counting it here as well would count it twice.
+    var outstanding = open.length + tickets.length;
     var awaiting = listed && checked === 0;
 
     return {
@@ -3127,10 +3292,12 @@
       open: open,
       tickets: tickets,
       outstanding: outstanding,
-      // Stelling's rooms are not finished until their audit is;
-      // the rest are finished when nothing is left against them.
+      // Stelling's rooms are not finished until their audit is; the rest
+      // are finished when nothing is left against them. A failed check
+      // that has been put right still counts as failed until it is
+      // audited again, which is the point of auditing it.
       awaiting: awaiting,
-      complete: !awaiting && !outstanding &&
+      complete: !awaiting && !outstanding && !fails.length &&
         (!listed || checked === AUDIT_CHECKS.length)
     };
   }
@@ -3408,24 +3575,17 @@
     var items = "";
     var i;
 
-    for (i = 0; i < sum.fails.length; i++) {
-      var f = sum.fails[i];
-      var to = f.st.trade || f.check.trade;
-      items += "<li><strong>" + esc(f.check.label) + "</strong>" +
-        (f.st.comment ? " \u2014 " + esc(f.st.comment) : "") +
-        '<span class="note-who">' + esc(tradeName(to)) +
-        (f.st.by ? " \u00b7 " + esc(f.st.by) : "") + "</span></li>";
-    }
-
     // Whatever is still open on the trade lists for this room, named the
-    // same way it is named there.
+    // same way it is named there. Audit failures are among them.
     for (i = 0; i < sum.tickets.length; i++) {
       var job = index[sum.tickets[i]] || {};
       var names = [];
       for (var t = 0; t < (job.trades || []).length; t++) {
         names.push(tradeName(job.trades[t]));
       }
-      items += '<li class="ticket">' + esc(job.action || "") +
+      items += '<li class="ticket' + (job.fromAudit ? " from-audit" : "") + '">' +
+        esc(job.action || "") +
+        (job.fromAudit && job.why ? " \u2014 " + esc(job.why) : "") +
         '<span class="note-who">' + esc(names.join(" / ")) + "</span></li>";
     }
 
@@ -3446,6 +3606,8 @@
       cls = " is-clear";
     } else if (sum.outstanding) {
       head = sum.outstanding + " outstanding";
+    } else if (sum.fails.length) {
+      head = "put right, waiting on a re-audit";
     } else {
       head = "audit in progress, nothing outstanding";
     }
