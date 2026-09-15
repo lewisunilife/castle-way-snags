@@ -57,6 +57,12 @@ Eighteen checks per studio in priority order — life safety, then what makes a
 studio habitable, then what makes it work, then handover. Pass is one tap;
 Fail asks why before it records anything, and the reason travels with it.
 
+A check tapped Fail but not yet recorded exists only in the panel — nothing
+about it is saved. The panel is redrawn whenever anyone's entry arrives, so
+the open box, the half-typed reason, the chosen trade and the cursor are held
+and put back, and the panel is left alone entirely when the record behind it
+has not changed.
+
 Every check has a trade it lands on by default, but the auditor decides. The
 reason box carries a **Send to** dropdown with all thirteen trades and
 **Unassigned**, so a fail can go where the work actually belongs rather than
@@ -143,13 +149,35 @@ shows against the section heading and in the summary; a trade with nobody
 against it shows a dash rather than a blank, so an unassigned one is visible
 rather than just quiet.
 
-## Hiding what is done
+## The list controls
 
-**Hide completed** at the top drops every ticked line out of the list, and a
-trade with nothing left in it disappears whole rather than leaving a heading
-over an empty table. The counts still count everything, so "18 of 27 ticked"
-stays true whatever is on screen. The choice is remembered on that device and
-is per person — it changes nobody else's view.
+One panel under the view switcher drives **By trade** and **By studio** alike,
+so a filter set in one holds in the other. All four choices are remembered on
+that device and are per person — they change nobody else's view.
+
+- **Order by** — room number, or move-in date soonest first. It orders the
+  rows inside every trade as well as the studio cards. Rooms with no move-in
+  date given go last rather than first. In By studio, date order also gathers
+  the rooms under a collapsible header per date.
+- **Hide completed** — drops ticked lines from the trade tables, and rooms
+  with nothing outstanding from By studio. A trade with nothing left showing
+  disappears whole rather than leaving a heading over an empty table.
+- **Hide ground floor** — drops CW0xx from both.
+- **Filter by trade** — hides a trade's section in By trade and its tasks in
+  By studio, so the view can be read without, say, the building-wide MVHR
+  sweep on top of it.
+
+An amber line says which filters are on, because a room can read clear only
+because what is left in it is hidden. What the counts do about it differs by
+view and the line says which: in By trade the progress count and the summary
+still count everything, so "18 of 27 ticked" stays true whatever is on screen;
+in By studio the counts follow the filter, since whether a room has anything
+outstanding is the question being asked. The audit log's own idea of whether a
+studio is finished ignores the filters entirely.
+
+Each trade table carries a **Move-in** column. Only the rooms on Stelling's
+list have a date, so the rest are blank rather than guessed; on a phone the
+line is dropped entirely rather than leaving a gap on every card.
 
 ## Who can edit the list
 

@@ -325,6 +325,16 @@
     font-weight: 700;
   }
 
+  #controls {
+    border: 1px solid var(--rule);
+    padding: 14px;
+    margin-bottom: 22px;
+  }
+
+  #controls > :last-child { margin-bottom: 0; }
+
+  .movein { white-space: nowrap; }
+
   .studio-controls {
     display: flex;
     flex-wrap: wrap;
@@ -899,6 +909,7 @@
       grid-template-areas:
         "room   room   done"
         "floor  src    done"
+        "movein movein done"
         "action action action";
       column-gap: 10px;
       row-gap: 2px;
@@ -923,6 +934,12 @@
     td.room { grid-area: room; font-size: 15px; }
     td.floor { grid-area: floor; color: var(--muted); font-size: 13px; }
     td.src { grid-area: src; color: var(--muted); font-size: 13px; }
+
+    /* Most rooms have no move-in date, so the line goes rather than
+       leaving a gap on every card in the building. */
+    td.movein { grid-area: movein; color: var(--muted); font-size: 13px; }
+    td.movein:empty { display: none; }
+    td.movein:not(:empty)::before { content: "Moves in "; }
     td.action { grid-area: action; margin-top: 8px; }
 
     /* Beats the base `td.done` column rules, which outrank `tbody td`. */
@@ -1071,9 +1088,6 @@
       <label for="company">Company</label>
       <input id="company" type="text" placeholder="e.g. Stelling" autocomplete="organization">
     </div>
-    <label class="filter" for="hide-done">
-      <input type="checkbox" id="hide-done"> Hide completed
-    </label>
     <div class="bar-meta">
       <span id="progress">0 of 130 items ticked</span>
       <span id="live-status">Connecting&hellip;</span>
@@ -1088,6 +1102,34 @@
     <button type="button" class="view-btn" data-view="studio">By studio</button>
     <button type="button" class="view-btn" data-view="audit">Audit log</button>
   </nav>
+
+  <div id="controls">
+    <div class="studio-controls">
+      <div class="field">
+        <label for="studio-sort">Order by</label>
+        <select id="studio-sort">
+          <option value="room">Room number</option>
+          <option value="movein">Move-in date, soonest first</option>
+        </select>
+      </div>
+      <label class="filter" for="hide-done">
+        <input type="checkbox" id="hide-done"> Hide completed
+      </label>
+      <label class="filter" for="hide-ground">
+        <input type="checkbox" id="hide-ground"> Hide ground floor
+      </label>
+    </div>
+    <div class="group-actions" id="group-actions" hidden>
+      <button type="button" class="secondary" id="dates-open">Expand all dates</button>
+      <button type="button" class="secondary" id="dates-shut">Collapse all dates</button>
+    </div>
+    <details class="trade-filter">
+      <summary id="trade-filter-summary">Filter by trade</summary>
+      <div id="trade-boxes"></div>
+      <button type="button" class="secondary" id="trade-reset">Show every trade</button>
+    </details>
+    <p class="studio-filtered" id="studio-filtered" hidden></p>
+  </div>
 
   <div id="view-trade">
   <h2>Summary by trade</h2>
@@ -1143,31 +1185,6 @@
       Stelling&rsquo;s rooms, once all <span id="studio-check-total">18</span>
       checks have passed as well.</p>
     <p class="studio-counts" id="studio-counts"></p>
-    <p class="studio-filtered" id="studio-filtered" hidden></p>
-    <div class="studio-controls">
-      <div class="field">
-        <label for="studio-sort">Order by</label>
-        <select id="studio-sort">
-          <option value="room">Room number</option>
-          <option value="movein">Move-in date, soonest first</option>
-        </select>
-      </div>
-      <label class="filter" for="hide-clear">
-        <input type="checkbox" id="hide-clear"> Hide rooms with nothing outstanding
-      </label>
-      <label class="filter" for="hide-ground">
-        <input type="checkbox" id="hide-ground"> Hide ground floor
-      </label>
-    </div>
-    <div class="group-actions" id="group-actions" hidden>
-      <button type="button" class="secondary" id="dates-open">Expand all dates</button>
-      <button type="button" class="secondary" id="dates-shut">Collapse all dates</button>
-    </div>
-    <details class="trade-filter">
-      <summary id="trade-filter-summary">Filter tasks by trade</summary>
-      <div id="trade-boxes"></div>
-      <button type="button" class="secondary" id="trade-reset">Show every trade</button>
-    </details>
     <div id="studio-list"></div>
     <p class="all-clear" id="studio-empty" hidden>No studios have been set up for
       auditing yet.</p>
@@ -1568,6 +1585,108 @@
     return FLOORS[room.charAt(2)] || "";
   }
 
+  /* The rooms Stelling are auditing, in the priority order they gave, with
+     the floor, room type and move-in date against each. */
+  var STELLING_LIST = [
+    { room: "CW244", floor: "2nd Floor", type: "Luxury", movein: "Fri 18 Sep 2026" },
+    { room: "CW302", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW305", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW307", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW308", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW310", floor: "3rd Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW344", floor: "3rd Floor", type: "Luxury", movein: "Fri 18 Sep 2026" },
+    { room: "CW403", floor: "4th Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW405", floor: "4th Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW410", floor: "4th Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW411", floor: "4th Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW412", floor: "4th Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
+    { room: "CW447", floor: "4th Floor", type: "Luxury", movein: "Fri 18 Sep 2026" },
+    { room: "CW301", floor: "3rd Floor", type: "Luxury Plus", movein: "Sat 19 Sep 2026" },
+    { room: "CW203", floor: "2nd Floor", type: "Luxury Plus", movein: "Sun 20 Sep 2026" },
+    { room: "CW210", floor: "2nd Floor", type: "Premium Plus", movein: "Sun 20 Sep 2026" },
+    { room: "CW309", floor: "3rd Floor", type: "Premium Plus", movein: "Tue 22 Sep 2026" },
+    { room: "CW112", floor: "1st Floor", type: "Premium Plus", movein: "Thu 24 Sep 2026" },
+    { room: "CW101", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW103", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW105", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW106", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW108", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW144", floor: "1st Floor", type: "Luxury", movein: "Fri 25 Sep 2026" },
+    { room: "CW147", floor: "1st Floor", type: "Luxury", movein: "Fri 25 Sep 2026" },
+    { room: "CW206", floor: "2nd Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW207", floor: "2nd Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW306", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
+    { room: "CW343", floor: "3rd Floor", type: "Luxury", movein: "Sat 26 Sep 2026" },
+    { room: "CW406", floor: "4th Floor", type: "Luxury Plus", movein: "Mon 28 Sep 2026" },
+    { room: "CW110", floor: "1st Floor", type: "Premium Plus", movein: "Thu 01 Oct 2026" },
+    { room: "CW208", floor: "2nd Floor", type: "Luxury Plus", movein: "Thu 01 Oct 2026" },
+    { room: "CW143", floor: "1st Floor", type: "Luxury", movein: "Fri 02 Oct 2026" },
+    { room: "CW102", floor: "1st Floor", type: "Luxury Plus", movein: "Wed 07 Oct 2026" },
+    { room: "CW146", floor: "1st Floor", type: "Luxury", movein: "Fri 09 Oct 2026" },
+    { room: "CW107", floor: "1st Floor", type: "Luxury Plus", movein: "" },
+    { room: "CW205", floor: "2nd Floor", type: "Luxury Plus", movein: "" }
+  ];
+
+  /* Every other room in the building follows them, so all 257 studios are on
+     the audit and a room nobody has been to is visible as exactly that.
+     EVERY_ROOM is the same building-wide list the MVHR sweep is built from,
+     so the two cannot drift apart. */
+  var AUDIT_STUDIOS = [];
+  var STUDIO_BY_ROOM = {};
+  var sx;
+
+  for (sx = 0; sx < STELLING_LIST.length; sx++) {
+    STELLING_LIST[sx].listed = true;
+    AUDIT_STUDIOS.push(STELLING_LIST[sx]);
+    STUDIO_BY_ROOM[STELLING_LIST[sx].room] = STELLING_LIST[sx];
+  }
+
+  for (sx = 0; sx < EVERY_ROOM.length; sx++) {
+    if (STUDIO_BY_ROOM[EVERY_ROOM[sx]]) { continue; }
+    var other = {
+      room: EVERY_ROOM[sx],
+      floor: floorOf(EVERY_ROOM[sx]),
+      type: "",
+      movein: "",
+      listed: false
+    };
+    AUDIT_STUDIOS.push(other);
+    STUDIO_BY_ROOM[other.room] = other;
+  }
+
+  /* "Fri 18 Sep 2026" sorts as 20260918, so the soonest arrival comes
+     first and a room with no date given sorts last rather than first. */
+  var MONTHS = { Jan: "01", Feb: "02", Mar: "03", Apr: "04", May: "05",
+    Jun: "06", Jul: "07", Aug: "08", Sep: "09", Oct: "10", Nov: "11", Dec: "12" };
+
+  function moveinKey(text) {
+    var m = /(\d{1,2})\s+([A-Z][a-z]{2})\s+(\d{4})/.exec(text || "");
+    if (!m || !MONTHS[m[2]]) { return ""; }
+    return m[3] + MONTHS[m[2]] + (m[1].length < 2 ? "0" + m[1] : m[1]);
+  }
+
+  for (sx = 0; sx < AUDIT_STUDIOS.length; sx++) {
+    AUDIT_STUDIOS[sx].moveinKey = moveinKey(AUDIT_STUDIOS[sx].movein);
+  }
+
+  var STELLING_COUNT = STELLING_LIST.length;
+
+  for (sx = 0; sx < AUDIT_STUDIOS.length; sx++) {
+    AUDIT_STUDIOS[sx].priority = sx + 1;
+  }
+
+  function moveinFor(room) {
+    var st = STUDIO_BY_ROOM[room];
+    return (st && st.movein) || "";
+  }
+
+  function moveinSortFor(room) {
+    var st = STUDIO_BY_ROOM[room];
+    return (st && st.moveinKey) || "";
+  }
+
+
+
   function esc(s) {
     return String(s)
       .replace(/&/g, "&amp;")
@@ -1630,7 +1749,6 @@
   var NAME_KEY = "cw-tower1-name";
   var COMPANY_KEY = "cw-tower1-company";
   var HIDE_DONE_KEY = "cw-tower1-hide-done";
-  var HIDE_CLEAR_KEY = "cw-tower1-hide-clear";
   var HIDE_GROUND_KEY = "cw-tower1-hide-ground";
   var STUDIO_SORT_KEY = "cw-tower1-studio-sort";
   var TRADE_OFF_KEY = "cw-tower1-trades-off";
@@ -1843,7 +1961,8 @@
       ' aria-label="Tick every item under ' + esc(sec.title) + '"> Tick all</label>' +
       "</h2>" +
       '<div class="scroller"><table><thead><tr>' +
-      "<th>Room</th><th>Floor</th><th>" + esc(sec.col3) + "</th><th>Action</th>" +
+      "<th>Room</th><th>Floor</th><th>Move-in</th><th>" + esc(sec.col3) +
+      "</th><th>Action</th>" +
       '<th class="done-h">Done<label class="sec-all" for="all-' + sec.key + '-head">' +
       '<input type="checkbox" class="all-box" id="all-' + sec.key + '-head"' +
       ' data-section="' + sec.key + '"' +
@@ -1887,6 +2006,7 @@
         '<tr id="row-' + domId + '">' +
         '<td class="room">' + esc(row[0]) + "</td>" +
         '<td class="floor">' + esc(floor) + "</td>" +
+        '<td class="movein">' + esc(moveinFor(row[0])) + "</td>" +
         '<td class="src">' + esc(row[1]) + "</td>" +
         '<td class="action"><span class="action-text">' + esc(row[2]) + "</span>" +
         '<ul class="notes" id="notes-' + domId + '"></ul>' +
@@ -1924,6 +2044,7 @@
     hideDone = hideDoneEl.checked;
     store(HIDE_DONE_KEY, hideDone);
     render();
+    renderStudios();
   });
   var unsavedEl = document.getElementById("unsaved");
 
@@ -2136,6 +2257,50 @@
     }
   }
 
+  /* The same ordering as By studio, applied to the rows inside each trade.
+     The rows are moved rather than redrawn, so their ids, notes and ticks
+     all stay attached to the job they belong to. */
+  var appliedOrder = null;
+
+  function applyRowOrder() {
+    if (appliedOrder === studioSort) { return; }
+    appliedOrder = studioSort;
+
+    for (var si = 0; si < sections.length; si++) {
+      var key = sections[si].key;
+      var ids = sectionRows[key] || [];
+      var secEl = document.getElementById("sec-" + key);
+      var body = secEl ? secEl.querySelector("tbody") : null;
+      if (!body || !ids.length) { continue; }
+
+      var order = [];
+      for (var k = 0; k < ids.length; k++) {
+        var job = index[ids[k]] || {};
+        order.push({
+          domId: key + "-" + k,
+          room: job.room || "",
+          date: moveinSortFor(job.room || "")
+        });
+      }
+
+      order.sort(function (a, b) {
+        if (studioSort === "movein" && a.date !== b.date) {
+          // A room with no arrival booked goes last, not first.
+          if (!a.date) { return 1; }
+          if (!b.date) { return -1; }
+          return a.date < b.date ? -1 : 1;
+        }
+        if (a.room !== b.room) { return a.room < b.room ? -1 : 1; }
+        return 0;
+      });
+
+      for (var r = 0; r < order.length; r++) {
+        var el = document.getElementById("row-" + order[r].domId);
+        if (el) { body.appendChild(el); }
+      }
+    }
+  }
+
   function render() {
     var doneCount = 0;
     var id;
@@ -2176,7 +2341,8 @@
         if (rowEl) {
           rowEl.classList.toggle("ticked", isDone);
           rowEl.classList.toggle("unsaved", isPending && live);
-          var hide = hideDone && isDone;
+          var hide = (hideDone && isDone) ||
+            (hideGround && (index[id].room || "").charAt(2) === "0");
           if (rowEl.hidden !== hide) { rowEl.hidden = hide; }
         }
         if (notesEl && notesEl.innerHTML !== thread) { notesEl.innerHTML = thread; }
@@ -2205,18 +2371,27 @@
         boxes[ab].indeterminate = secDone > 0 && secDone < ids.length;
       }
 
-      // A trade with nothing left in it is a heading over an empty table,
-      // so the whole section goes rather than just its rows.
+      // A trade with nothing left showing in it is a heading over an empty
+      // table, so the whole section goes rather than just its rows.
       var secEl = document.getElementById("sec-" + sk);
       if (secEl) {
-        var hideSec = hideDone && ids.length > 0 && secDone === ids.length;
+        var secShowing = 0;
+        for (var vq = 0; vq < ids.length; vq++) {
+          var vrec = effective(ids[vq]);
+          if (hideDone && vrec.done === true) { continue; }
+          if (hideGround && (index[ids[vq]].room || "").charAt(2) === "0") { continue; }
+          secShowing++;
+        }
+        var hideSec = tradeHidden(sk) || (ids.length > 0 && secShowing === 0);
         if (secEl.hidden !== hideSec) { secEl.hidden = hideSec; }
         if (!hideSec) { anyVisible = true; }
       }
     }
 
-    allClearEl.hidden = !(hideDone && !anyVisible);
+    allClearEl.hidden = !((hideDone || hideGround) && !anyVisible);
 
+    applyRowOrder();
+    renderFiltered();
     renderAuditFails();
     renderStudios();
     renderSummary();
@@ -2737,96 +2912,6 @@
      towards the nearest deadline first. Checked on import: 37 rooms, no
      repeats, priorities 1-37 unbroken, and every stated floor agrees with
      both the room number and the floor plans. */
-  /* The rooms Stelling are auditing, in the priority order they gave, with
-     the floor, room type and move-in date against each. */
-  var STELLING_LIST = [
-    { room: "CW244", floor: "2nd Floor", type: "Luxury", movein: "Fri 18 Sep 2026" },
-    { room: "CW302", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
-    { room: "CW305", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
-    { room: "CW307", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
-    { room: "CW308", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
-    { room: "CW310", floor: "3rd Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
-    { room: "CW344", floor: "3rd Floor", type: "Luxury", movein: "Fri 18 Sep 2026" },
-    { room: "CW403", floor: "4th Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
-    { room: "CW405", floor: "4th Floor", type: "Luxury Plus", movein: "Fri 18 Sep 2026" },
-    { room: "CW410", floor: "4th Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
-    { room: "CW411", floor: "4th Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
-    { room: "CW412", floor: "4th Floor", type: "Premium Plus", movein: "Fri 18 Sep 2026" },
-    { room: "CW447", floor: "4th Floor", type: "Luxury", movein: "Fri 18 Sep 2026" },
-    { room: "CW301", floor: "3rd Floor", type: "Luxury Plus", movein: "Sat 19 Sep 2026" },
-    { room: "CW203", floor: "2nd Floor", type: "Luxury Plus", movein: "Sun 20 Sep 2026" },
-    { room: "CW210", floor: "2nd Floor", type: "Premium Plus", movein: "Sun 20 Sep 2026" },
-    { room: "CW309", floor: "3rd Floor", type: "Premium Plus", movein: "Tue 22 Sep 2026" },
-    { room: "CW112", floor: "1st Floor", type: "Premium Plus", movein: "Thu 24 Sep 2026" },
-    { room: "CW101", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
-    { room: "CW103", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
-    { room: "CW105", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
-    { room: "CW106", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
-    { room: "CW108", floor: "1st Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
-    { room: "CW144", floor: "1st Floor", type: "Luxury", movein: "Fri 25 Sep 2026" },
-    { room: "CW147", floor: "1st Floor", type: "Luxury", movein: "Fri 25 Sep 2026" },
-    { room: "CW206", floor: "2nd Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
-    { room: "CW207", floor: "2nd Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
-    { room: "CW306", floor: "3rd Floor", type: "Luxury Plus", movein: "Fri 25 Sep 2026" },
-    { room: "CW343", floor: "3rd Floor", type: "Luxury", movein: "Sat 26 Sep 2026" },
-    { room: "CW406", floor: "4th Floor", type: "Luxury Plus", movein: "Mon 28 Sep 2026" },
-    { room: "CW110", floor: "1st Floor", type: "Premium Plus", movein: "Thu 01 Oct 2026" },
-    { room: "CW208", floor: "2nd Floor", type: "Luxury Plus", movein: "Thu 01 Oct 2026" },
-    { room: "CW143", floor: "1st Floor", type: "Luxury", movein: "Fri 02 Oct 2026" },
-    { room: "CW102", floor: "1st Floor", type: "Luxury Plus", movein: "Wed 07 Oct 2026" },
-    { room: "CW146", floor: "1st Floor", type: "Luxury", movein: "Fri 09 Oct 2026" },
-    { room: "CW107", floor: "1st Floor", type: "Luxury Plus", movein: "" },
-    { room: "CW205", floor: "2nd Floor", type: "Luxury Plus", movein: "" }
-  ];
-
-  /* Every other room in the building follows them, so all 257 studios are on
-     the audit and a room nobody has been to is visible as exactly that.
-     EVERY_ROOM is the same building-wide list the MVHR sweep is built from,
-     so the two cannot drift apart. */
-  var AUDIT_STUDIOS = [];
-  var STUDIO_BY_ROOM = {};
-  var sx;
-
-  for (sx = 0; sx < STELLING_LIST.length; sx++) {
-    STELLING_LIST[sx].listed = true;
-    AUDIT_STUDIOS.push(STELLING_LIST[sx]);
-    STUDIO_BY_ROOM[STELLING_LIST[sx].room] = STELLING_LIST[sx];
-  }
-
-  for (sx = 0; sx < EVERY_ROOM.length; sx++) {
-    if (STUDIO_BY_ROOM[EVERY_ROOM[sx]]) { continue; }
-    var other = {
-      room: EVERY_ROOM[sx],
-      floor: floorOf(EVERY_ROOM[sx]),
-      type: "",
-      movein: "",
-      listed: false
-    };
-    AUDIT_STUDIOS.push(other);
-    STUDIO_BY_ROOM[other.room] = other;
-  }
-
-  /* "Fri 18 Sep 2026" sorts as 20260918, so the soonest arrival comes
-     first and a room with no date given sorts last rather than first. */
-  var MONTHS = { Jan: "01", Feb: "02", Mar: "03", Apr: "04", May: "05",
-    Jun: "06", Jul: "07", Aug: "08", Sep: "09", Oct: "10", Nov: "11", Dec: "12" };
-
-  function moveinKey(text) {
-    var m = /(\d{1,2})\s+([A-Z][a-z]{2})\s+(\d{4})/.exec(text || "");
-    if (!m || !MONTHS[m[2]]) { return ""; }
-    return m[3] + MONTHS[m[2]] + (m[1].length < 2 ? "0" + m[1] : m[1]);
-  }
-
-  for (sx = 0; sx < AUDIT_STUDIOS.length; sx++) {
-    AUDIT_STUDIOS[sx].moveinKey = moveinKey(AUDIT_STUDIOS[sx].movein);
-  }
-
-  var STELLING_COUNT = STELLING_LIST.length;
-
-  for (sx = 0; sx < AUDIT_STUDIOS.length; sx++) {
-    AUDIT_STUDIOS[sx].priority = sx + 1;
-  }
-
   var AUDIT_CHECKS = [
     { id: "fire-detect", trade: "electrical",
       label: "Fire detection operational, protective covers removed" },
@@ -2873,6 +2958,22 @@
 
   var auditIn = false;
   var auditStudio = "";
+
+  /* A check that has been tapped Fail but not yet recorded exists only in
+     the panel: nothing about it is saved yet. Redrawing from the record
+     would take the open box, the half-typed reason and the chosen trade
+     with it, and the panel is redrawn whenever anyone's entry arrives. So
+     the in-progress state is held here and put back. */
+  var whyOpen = {};    // check id -> the reason box has been opened
+  var whyDraft = {};   // check id -> what has been typed into it
+  var tradeDraft = {}; // check id -> the trade picked for it
+  var lastChecksHtml = null;
+
+  function clearDraft(checkId) {
+    delete whyOpen[checkId];
+    delete whyDraft[checkId];
+    delete tradeDraft[checkId];
+  }
 
   // "FAIL(electrical): reason", or plain "FAIL: reason" from before trades
   // could be reassigned. Both read the same way.
@@ -3195,7 +3296,8 @@
         (st && st.status === "fail" ? " on-fail" : "") +
         '" data-check="' + esc(ck.id) + '" data-pass="0">Fail</button>' +
         "</div>" +
-        '<div class="check-why"' + (st && st.status === "fail" ? "" : " hidden") + ">" +
+        '<div class="check-why"' +
+        ((st && st.status === "fail") || whyOpen[ck.id] ? "" : " hidden") + ">" +
         '<input type="text" id="why-' + esc(ck.id) + '" placeholder="Why did it fail?"' +
         ' value="' + esc(st && st.comment ? st.comment : "") + '"' +
         ' aria-label="Reason ' + esc(ck.label) + ' failed">' +
@@ -3207,7 +3309,47 @@
         "</div>";
     }
 
-    auditChecksEl.innerHTML = html;
+    /* The value in this string comes from the record, never from what is
+       being typed, so typing does not change it and the panel is left
+       alone. Rebuild only when the record — or which boxes are open —
+       really differs, and then put the drafts and the cursor back. */
+    if (html !== lastChecksHtml) {
+      lastChecksHtml = html;
+
+      var focusId = "";
+      var selFrom = 0;
+      var selTo = 0;
+      var live0 = document.activeElement;
+      if (live0 && live0.id && auditChecksEl.contains(live0)) {
+        focusId = live0.id;
+        try {
+          selFrom = live0.selectionStart;
+          selTo = live0.selectionEnd;
+        } catch (e) { /* a select has no caret */ }
+      }
+
+      auditChecksEl.innerHTML = html;
+
+      for (var d in whyDraft) {
+        if (!Object.prototype.hasOwnProperty.call(whyDraft, d)) { continue; }
+        var dEl = document.getElementById("why-" + d);
+        if (dEl) { dEl.value = whyDraft[d]; }
+      }
+      for (var td in tradeDraft) {
+        if (!Object.prototype.hasOwnProperty.call(tradeDraft, td)) { continue; }
+        var tEl = document.getElementById("trade-" + td);
+        if (tEl) { tEl.value = tradeDraft[td]; }
+      }
+
+      if (focusId) {
+        var back = document.getElementById(focusId);
+        if (back) {
+          back.focus();
+          try { back.setSelectionRange(selFrom, selTo); } catch (e2) { /* ignore */ }
+        }
+      }
+    }
+
     auditProgressEl.textContent = "\u2014 " + (passed + failed) + " of " +
       AUDIT_CHECKS.length + " checked";
     var meta = STUDIO_BY_ROOM[auditStudio];
@@ -3337,8 +3479,41 @@
     store(DATE_OPEN_KEY, dateOpen);
   }
 
+  /* A filtered view is not the whole picture and should never be mistaken
+     for one: a room can read clear only because what is left in it is
+     hidden. What the counts do about it differs by view, so the line says
+     which. */
+  function renderFiltered() {
+    var off = [];
+    var k;
+    for (k in tradeOff) {
+      if (Object.prototype.hasOwnProperty.call(tradeOff, k)) {
+        off.push(sectionTitles[k] || k);
+      }
+    }
+    off.sort();
+
+    var notes = [];
+    if (off.length) { notes.push(off.join(", ") + " hidden"); }
+    if (hideGround) { notes.push("ground floor hidden"); }
+
+    groupActionsEl.hidden = !(studioSort === "movein" && activeView === "studio");
+
+    if (!notes.length) {
+      studioFilteredEl.hidden = true;
+      return;
+    }
+
+    studioFilteredEl.textContent = "Showing a filtered view \u2014 " +
+      notes.join(" \u00b7 ") + ". " + (activeView === "studio"
+        ? "Counts above follow the filter."
+        : "The progress count and the summary still count everything.");
+    studioFilteredEl.hidden = false;
+  }
+
+  var activeView = "trade";
+  var controlsEl = document.getElementById("controls");
   var studioViewOn = false;
-  var hideClear = false;
   var hideGround = false;
   var studioSort = "room";
   var dateOpen = {};   // date key -> open, where it differs from the default
@@ -3441,7 +3616,7 @@
       else if (sum.complete) { clear++; }
       else { open++; }
 
-      if (hideClear && sum.complete) { continue; }
+      if (hideDone && sum.complete) { continue; }
       shown++;
 
       if (!byDate) {
@@ -3476,34 +3651,12 @@
       }
     }
 
-    groupActionsEl.hidden = !byDate;
 
     var counts = [];
     if (waiting) { counts.push(waiting + " waiting to be audited"); }
     if (open) { counts.push(open + " with something outstanding"); }
     if (clear) { counts.push(clear + " with nothing outstanding"); }
     studioCountsEl.textContent = counts.join(" \u00b7 ");
-
-    // A filtered view is not the whole picture, and it should never be
-    // mistaken for one: a room can read clear only because what is left in
-    // it is hidden.
-    var off = [];
-    for (k in tradeOff) {
-      if (Object.prototype.hasOwnProperty.call(tradeOff, k)) {
-        off.push(sectionTitles[k] || k);
-      }
-    }
-    off.sort();
-    var notes = [];
-    if (off.length) { notes.push(off.join(", ") + " hidden"); }
-    if (hideGround) { notes.push("ground floor hidden"); }
-    if (notes.length) {
-      studioFilteredEl.textContent = "Showing a filtered view \u2014 " +
-        notes.join(" \u00b7 ") + ". Counts above follow the filter.";
-      studioFilteredEl.hidden = false;
-    } else {
-      studioFilteredEl.hidden = true;
-    }
 
     studioListEl.innerHTML = html;
 
@@ -3534,7 +3687,13 @@
     document.getElementById("view-trade").hidden = name !== "trade";
     document.getElementById("view-studio").hidden = name !== "studio";
     document.getElementById("view-audit").hidden = name !== "audit";
+
+    // The audit log is a checklist for one studio, so the list controls
+    // have nothing to say there.
+    activeView = name;
+    controlsEl.hidden = name === "audit";
     studioViewOn = name === "studio";
+    renderFiltered();
     if (name === "studio") { renderStudios(); }
     if (name === "audit") {
       if (auditIn) { fillStudios(); }
@@ -3559,7 +3718,7 @@
     auditIn = on;
     auditLoginEl.hidden = on;
     auditBodyEl.hidden = !on;
-    if (on) { fillStudios(); renderAudit(); }
+    if (on) { lastChecksHtml = null; fillStudios(); renderAudit(); }
   }
 
   document.getElementById("audit-in").addEventListener("click", function () {
@@ -3587,6 +3746,10 @@
   auditStudioEl.addEventListener("change", function () {
     auditStudio = auditStudioEl.value;
     store(AUDIT_STUDIO_KEY, auditStudio);
+    whyOpen = {};
+    whyDraft = {};
+    tradeDraft = {};
+    lastChecksHtml = null;
     renderAudit();
   });
 
@@ -3605,19 +3768,32 @@
       var reason = why ? why.value.trim() : "";
       if (!reason) {
         // Show the box and let them say why, and who it is for, before it
-        // is recorded.
+        // is recorded. Remembered rather than just shown, so a redraw does
+        // not shut it again.
         var wrap = box ? box.querySelector(".check-why") : null;
         if (wrap && wrap.hidden) {
+          whyOpen[checkId] = true;
+          lastChecksHtml = null;
           wrap.hidden = false;
           if (why) { why.focus(); }
           return;
         }
       }
+      clearDraft(checkId);
       setCheck(auditStudio, checkId, false, reason, tsel ? tsel.value : "");
       return;
     }
 
+    clearDraft(checkId);
     setCheck(auditStudio, checkId, true, "");
+  });
+
+  // Hold what is being typed, so an entry landing from another phone
+  // mid-sentence cannot take it away.
+  auditChecksEl.addEventListener("input", function (ev) {
+    var field = ev.target;
+    if (!field || !field.id || field.id.indexOf("why-") !== 0) { return; }
+    whyDraft[field.id.slice(4)] = field.value;
   });
 
   auditChecksEl.addEventListener("keydown", function (ev) {
@@ -3626,7 +3802,9 @@
     ev.preventDefault();
     var cid = field.id.slice(4);
     var sel = document.getElementById("trade-" + cid);
-    setCheck(auditStudio, cid, false, field.value.trim(), sel ? sel.value : "");
+    var typed = field.value.trim();
+    clearDraft(cid);
+    setCheck(auditStudio, cid, false, typed, sel ? sel.value : "");
   });
 
   // Changing the trade on a check that has already failed moves it there
@@ -3636,7 +3814,11 @@
     if (!sel || !sel.id || sel.id.indexOf("trade-") !== 0) { return; }
     var cid = sel.getAttribute("data-check");
     var st = (auditState()[auditStudio] || {})[cid];
-    if (!st || st.status !== "fail") { return; }
+    if (!st || st.status !== "fail") {
+      // Not recorded yet, so hold the choice until it is.
+      tradeDraft[cid] = sel.value;
+      return;
+    }
     if (st.trade === sel.value) { return; }
     var why = document.getElementById("why-" + cid);
     setCheck(auditStudio, cid, false, why ? why.value.trim() : st.comment, sel.value);
@@ -3649,14 +3831,11 @@
     if (id) { setIssueDone(id); }
   });
 
-  var hideClearEl = document.getElementById("hide-clear");
   var hideGroundEl = document.getElementById("hide-ground");
   var studioSortEl = document.getElementById("studio-sort");
   var tradeBoxesEl = document.getElementById("trade-boxes");
   var tradeSummaryEl = document.getElementById("trade-filter-summary");
 
-  hideClear = load(HIDE_CLEAR_KEY, false) === true;
-  hideClearEl.checked = hideClear;
   hideGround = load(HIDE_GROUND_KEY, false) === true;
   hideGroundEl.checked = hideGround;
   studioSort = load(STUDIO_SORT_KEY, "room") === "movein" ? "movein" : "room";
@@ -3675,8 +3854,8 @@
       if (Object.prototype.hasOwnProperty.call(tradeOff, k)) { n++; }
     }
     tradeSummaryEl.textContent = n
-      ? "Filter tasks by trade \u2014 " + n + (n === 1 ? " hidden" : " hidden")
-      : "Filter tasks by trade";
+      ? "Filter by trade \u2014 " + n + " hidden"
+      : "Filter by trade";
   }
 
   function fillTradeBoxes() {
@@ -3702,21 +3881,17 @@
 
   fillTradeBoxes();
 
-  hideClearEl.addEventListener("change", function () {
-    hideClear = hideClearEl.checked;
-    store(HIDE_CLEAR_KEY, hideClear);
-    renderStudios();
-  });
-
   hideGroundEl.addEventListener("change", function () {
     hideGround = hideGroundEl.checked;
     store(HIDE_GROUND_KEY, hideGround);
+    render();
     renderStudios();
   });
 
   studioSortEl.addEventListener("change", function () {
     studioSort = studioSortEl.value === "movein" ? "movein" : "room";
     store(STUDIO_SORT_KEY, studioSort);
+    render();
     renderStudios();
   });
 
@@ -3727,6 +3902,7 @@
     if (!key) { return; }
     if (box.checked) { delete tradeOff[key]; } else { tradeOff[key] = true; }
     saveTradeOff();
+    render();
     renderStudios();
   });
 
@@ -3761,6 +3937,7 @@
     tradeOff = {};
     saveTradeOff();
     fillTradeBoxes();
+    render();
     renderStudios();
   });
 
