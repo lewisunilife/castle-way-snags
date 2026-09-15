@@ -278,6 +278,14 @@ Rewording an action changes its key, which orphans that job's ticks and notes.
 That is deliberate: the job has changed, so it is no longer the thing that was
 ticked. If you reword something and want to keep the history, re-tick it.
 
+Adding a batch of snags: append rows to the trade's array with a source of
+their own (`U15 = "Unilife 15 Sep"` was the 15 Sep walk-round), so the batch
+can be filtered as one. Check each against what the room already carries
+first — the same room and action already on the list is the same job, and
+adding it again would double it. The summary table's room chips follow the
+rows, so a room that joins a trade — by a batch or by an audit failure —
+shows there without a rebuild.
+
 Two rows with the same room and the same action wording are treated as one
 job. That is what lets the same item be listed under more than one heading
 without being counted or ticked twice.

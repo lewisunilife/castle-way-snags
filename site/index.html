@@ -1318,6 +1318,7 @@
   var S = "Stelling";
   var U = "Unilife";
   var A = "Arrivals list";
+  var U15 = "Unilife 15 Sep";   // Lewis's walk-round, 15 Sep 2026
   var JBA = "JBA";
 
   var ACCESS = "Access / Locks";
@@ -1340,7 +1341,16 @@
       col3: "Source",
       rows: [
         ["CW528", A, "Deep clean (priority: Red)."],
-        ["CW530", A, "Deep clean (priority: Red)."]
+        ["CW530", A, "Deep clean (priority: Red)."],
+        ["CW529", U15, "Deep clean."],
+        ["CW504", U15, "Deep clean."],
+        ["CW505", U15, "Deep clean."],
+        ["CW404", U15, "Deep clean."],
+        ["CW245", U15, "Clean room."],
+        ["CW213", U15, "Deep clean."],
+        ["CW113", U15, "Deep clean."],
+        ["CW148", U15, "Deep clean."],
+        ["CW302", U15, "Sparkle clean."]
       ]
     },
     {
@@ -1354,7 +1364,8 @@
         ["CW448", L, "Fix Live Neutral Reverse electrical fault."],
         ["CW502", JBA, "Fix Live Neutral Reverse fault on the sockets."],
         ["CW526", JBA, "Repair the LED switch on the sink at the foot of the bed."],
-        ["CW530", JBA, "Repair thermostat: will not go below 20."]
+        ["CW530", JBA, "Repair thermostat: will not go below 20."],
+        ["CW313", U15, "Secure cables hanging outside the window."]
       ]
     },
     {
@@ -1422,7 +1433,9 @@
         ["CW445", L, "Repair floor bubbling by bed."],
         ["CW446", L, "Repair bubbling kitchen floor."],
         ["CW448", S, "Cut in the flooring by kitchen."],
-        ["CW525", JBA, "Repair damaged flooring."]
+        ["CW525", JBA, "Repair damaged flooring."],
+        ["CW502", U15, "Fix trip hazard in the flooring."],
+        ["CW148", U15, "Remove paint damage from the vinyl floor."]
       ]
     },
     {
@@ -1448,7 +1461,8 @@
         ["CW527", JBA, "Check/repair window restrictor."],
         ["CW528", JBA, "Check/repair window restrictor."],
         ["CW529", JBA, "Check/repair window restrictor."],
-        ["CW530", JBA, "Check/repair window restrictor."]
+        ["CW530", JBA, "Check/repair window restrictor."],
+        ["CW245", U15, "Fit window restrictor."]
       ]
     },
     {
@@ -1493,7 +1507,11 @@
         ["CW501", JBA, "Secure bathroom door: loose and shakes when closed."],
         ["CW526", JBA, "Ease bathroom door: drags and will not close."],
         ["CW529", JBA, "Ease bathroom door: drags and will not close."],
-        ["CW530", JBA, "Ease bathroom door: drags and will not close."]
+        ["CW530", JBA, "Ease bathroom door: drags and will not close."],
+        ["CW444", U15, "Fix wobbly dining table."],
+        ["CW213", U15, "Refix loose toilet roll holder."],
+        ["CW213", U15, "Finish boxing-in in the bathroom."],
+        ["CW113", U15, "Refix loose doorstop."]
       ]
     },
     {
@@ -1510,7 +1528,9 @@
         ["CW402", L, "Finish cosmetic work around mirror boxing."],
         ["CW408", L, "Minor sealant/cosmetic touch-ups."],
         ["CW448", L, "Add bathroom sealant."],
-        ["CW530", JBA, "Make good holes in the wall outside the room."]
+        ["CW530", JBA, "Make good holes in the wall outside the room."],
+        ["CW502", U15, "Repair wall damage behind the door."],
+        ["CW113", U15, "Touch up scuffs on the wall."]
       ]
     },
     {
@@ -1541,7 +1561,8 @@
         ["CW409", L, "Remove spare parts."],
         ["CW445", L, "Remove show-room items and spare controllers."],
         ["CW446", L, "Remove spare parts."],
-        ["CW448", L, "Remove TV controllers/items and manuals."]
+        ["CW448", L, "Remove TV controllers/items and manuals."],
+        ["CW529", U15, "Replace missing chair."]
       ]
     }
   ];
@@ -2751,10 +2772,39 @@
   var summaryTotalEls = null;
   var summaryRowEls = null;
 
+  var summaryRoomsShown = {};   // trade key -> the room list its chips show
+
   function renderSummary() {
-    if (!summaryRoomEls) {
-      summaryRoomEls = document.querySelectorAll("#summary-table .sum-room");
+    if (!summaryRowEls) {
       summaryRowEls = document.querySelectorAll("#summary-table tbody tr[data-key]");
+    }
+
+    // The room chips were drawn once at load. An audit failure brings a
+    // room onto a trade that was not there then, so the list is checked
+    // against the rows each time and redrawn when it differs, otherwise
+    // the count says four rooms while the chips name two.
+    var chipsChanged = false;
+    for (var c = 0; c < summaryRowEls.length; c++) {
+      var cKey = summaryRowEls[c].getAttribute("data-key");
+      var byRoom = roomIndex[cKey] || {};
+      var rooms = [];
+      for (var rm in byRoom) {
+        if (Object.prototype.hasOwnProperty.call(byRoom, rm) && byRoom[rm].length) {
+          rooms.push(rm);
+        }
+      }
+      rooms.sort();
+      var joined = rooms.join(",");
+      if (summaryRoomsShown[cKey] === joined) { continue; }
+      summaryRoomsShown[cKey] = joined;
+      var numsEl = summaryRowEls[c].querySelector(".t-nums");
+      if (numsEl) {
+        numsEl.innerHTML = roomCells(sectionTitles[cKey] || "", rooms);
+        chipsChanged = true;
+      }
+    }
+    if (chipsChanged || !summaryRoomEls) {
+      summaryRoomEls = document.querySelectorAll("#summary-table .sum-room");
     }
 
     var clearByTrade = {};
