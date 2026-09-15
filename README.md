@@ -202,6 +202,11 @@ that device and are per person — they change nobody else's view.
   Stelling, JBA, Arrivals list, Unilife, and one entry per audit round. The
   list is read off the rows, so a new round appears in it by itself.
 
+The button under each filter goes both ways. With everything showing it reads
+**Hide every trade** (or source) and unticks the lot, so a single one can be
+ticked back on alone; with anything hidden it reads **Show every trade** and
+brings them all back.
+
 An audit round is a day on which anything was audited, named by the day —
 **15 Sep audit**, **16 Sep audit**. A failed check is filed under the round
 of its latest entry, so one that is still failing when it is looked at again

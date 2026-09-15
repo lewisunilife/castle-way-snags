@@ -1222,12 +1222,12 @@
     <details class="trade-filter">
       <summary id="trade-filter-summary">Filter by trade</summary>
       <div id="trade-boxes"></div>
-      <button type="button" class="secondary" id="trade-reset">Show every trade</button>
+      <button type="button" class="secondary" id="trade-reset">Hide every trade</button>
     </details>
     <details class="trade-filter">
       <summary id="src-filter-summary">Filter by source</summary>
       <div id="src-boxes"></div>
-      <button type="button" class="secondary" id="src-reset">Show every source</button>
+      <button type="button" class="secondary" id="src-reset">Hide every source</button>
     </details>
     <p class="studio-filtered" id="studio-filtered" hidden></p>
   </div>
@@ -4522,6 +4522,11 @@
     tradeSummaryEl.textContent = n
       ? "Filter by trade \u2014 " + n + " hidden"
       : "Filter by trade";
+    // The one button goes both ways: with everything showing it hides the
+    // lot, so a single trade can then be ticked back on; otherwise it
+    // shows the lot.
+    document.getElementById("trade-reset").textContent =
+      n ? "Show every trade" : "Hide every trade";
   }
 
   function fillTradeBoxes() {
@@ -4590,6 +4595,8 @@
     srcSummaryEl.textContent = n
       ? "Filter by source \u2014 " + n + " hidden"
       : "Filter by source";
+    document.getElementById("src-reset").textContent =
+      n ? "Show every source" : "Hide every source";
   }
 
   function fillSrcBoxes() {
@@ -4632,7 +4639,15 @@
   });
 
   document.getElementById("src-reset").addEventListener("click", function () {
+    var anyOff = false;
+    for (var k in srcOff) {
+      if (Object.prototype.hasOwnProperty.call(srcOff, k)) { anyOff = true; break; }
+    }
     srcOff = {};
+    if (!anyOff) {
+      var all = sourceList();
+      for (var i = 0; i < all.length; i++) { srcOff[all[i]] = true; }
+    }
     saveSrcOff();
     lastSrcList = "";
     fillSrcBoxes();
@@ -4701,7 +4716,14 @@
   });
 
   document.getElementById("trade-reset").addEventListener("click", function () {
+    var anyOff = false;
+    for (var k in tradeOff) {
+      if (Object.prototype.hasOwnProperty.call(tradeOff, k)) { anyOff = true; break; }
+    }
     tradeOff = {};
+    if (!anyOff) {
+      for (var i = 0; i < sections.length; i++) { tradeOff[sections[i].key] = true; }
+    }
     saveTradeOff();
     fillTradeBoxes();
     render();
