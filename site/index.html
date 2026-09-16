@@ -163,6 +163,45 @@
     margin-top: 22px;
   }
 
+  /* One tower at a time. The buttons are links, so a Tower 2 address can be
+     sent to someone and opens on Tower 2 without a click. */
+  .towers {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 14px;
+  }
+
+  .towers-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 4px;
+  }
+
+  .tower-btn {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 9px 16px;
+    min-height: 40px;
+    box-sizing: border-box;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    text-decoration: none;
+  }
+
+  .tower-btn.is-on {
+    color: var(--on-ink);
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+
   .view-btn {
     font-size: 13px;
     font-weight: 700;
@@ -1166,7 +1205,12 @@
 <body>
 
 <div class="page">
-  <h1>Castle Way Tower 1: issues by trade</h1>
+  <h1 id="page-title">Castle Way Tower 1: issues by trade</h1>
+  <nav class="towers" id="towers" aria-label="Tower">
+    <span class="towers-label">Tower</span>
+    <a class="tower-btn" data-tower="1" href="?tower=1">Tower 1</a>
+    <a class="tower-btn" data-tower="2" href="?tower=2">Tower 2</a>
+  </nav>
   <div class="setup" id="setup-notice" hidden>
     <strong>Not connected yet</strong>
     Ticks and notes are saving to this device only. To make the list shared,
@@ -1252,6 +1296,9 @@
   <div id="sections"></div>
   <p class="all-clear" id="all-clear" hidden>Everything is ticked off. Untick
     <strong>Hide completed</strong> above to see the full list.</p>
+  <p class="all-clear" id="trade-empty" hidden>Nothing on the Tower 2 trade
+    lists yet. A check that fails in the audit log lands here, under the
+    trade it is sent to.</p>
 
   <h2>Comments</h2>
   <div class="panel">
@@ -1272,7 +1319,15 @@
 
   <div id="view-studio" hidden>
     <h2>By studio</h2>
-    <p class="note-line">All <span id="studio-total">257</span> studios in
+    <p class="note-line" id="studio-note-2" hidden>All <span id="studio-total-2">0</span>
+      studios in Castle Way Tower 2, room by room. None has been audited yet,
+      so every room reads <strong>waiting to be audited</strong> until its
+      checks are recorded. A check that fails goes straight onto the trade
+      lists as a ticket against the room and is shown here too, with anything
+      else logged against it. A room reads <strong>audited, nothing
+      outstanding</strong> once every check has passed and nothing is left
+      against it.</p>
+    <p class="note-line" id="studio-note-1">All <span id="studio-total">257</span> studios in
       Castle Way Tower 1, room by room: everything still outstanding against
       each one on the trade lists, plus anything its audit found. The
       <span id="studio-listed-total">37</span> rooms Stelling have yet to
@@ -1376,7 +1431,7 @@
   var VENT = "Ventilation / Extract";
   var WIN = "Window Restrictors";
 
-  var sections = [
+  var TOWER1_SECTIONS = [
     {
       key: "cleaning",
       title: CLEAN,
@@ -1641,7 +1696,7 @@
     return out;
   }
 
-  var EVERY_ROOM = ["CW001", "CW002", "CW003", "CW004", "CW005", "CW006",
+  var TOWER1_ROOMS = ["CW001", "CW002", "CW003", "CW004", "CW005", "CW006",
     "CW007A", "CW007B", "CW008A", "CW008B", "CW009A", "CW009B"]
     .concat(standardFloor(1), ["CW601", "CW602", "CW603", "CW604"])
     .concat(standardFloor(2), ["CW701", "CW702", "CW703", "CW704"])
@@ -1650,16 +1705,69 @@
     .concat(fifthFloor());
 
   var mvhrRows = [];
-  for (var mr = 0; mr < EVERY_ROOM.length; mr++) {
-    mvhrRows.push([EVERY_ROOM[mr], U, "Secure the MVHR cupboard."]);
+  for (var mr = 0; mr < TOWER1_ROOMS.length; mr++) {
+    mvhrRows.push([TOWER1_ROOMS[mr], U, "Secure the MVHR cupboard."]);
   }
 
-  sections.push({
+  TOWER1_SECTIONS.push({
     key: "mvhr",
     title: "MVHR Cupboards",
     col3: "Source",
     rows: mvhrRows
   });
+
+  /* ====================================================================
+     TOWER 2
+
+     The page shows one tower at a time: ?tower=2 on the address is Tower 2,
+     anything else is Tower 1, and the Tower buttons under the heading go
+     between them. The trades are the same in both. Tower 2 starts with
+     nothing on them: every check that fails in its audit log becomes a row
+     under the trade it is sent to, and that is how its snagging list is
+     built.
+
+     TOWER2_ROOMS is Tower 2's room numbers, in room order. It is empty
+     until that list arrives. With it filled in, every room goes on the
+     audit picker as still to audit and on By studio as waiting to be
+     audited, and nothing else has to change. A Tower 2 number must never
+     repeat a Tower 1 number: jobs and audit records are keyed by room, so
+     the same number in both towers would be one room to the record.
+     ==================================================================== */
+  var TOWER2_ROOMS = [];
+
+  var TOWER2_SECTIONS = [];
+  for (var t2 = 0; t2 < TOWER1_SECTIONS.length; t2++) {
+    if (TOWER1_SECTIONS[t2].key === "mvhr") { continue; }   // a Tower 1 sweep
+    TOWER2_SECTIONS.push({
+      key: TOWER1_SECTIONS[t2].key,
+      title: TOWER1_SECTIONS[t2].title,
+      col3: TOWER1_SECTIONS[t2].col3,
+      rows: []
+    });
+  }
+
+  var TOWER_N = (function () {
+    var m = /[?&]tower=(\d+)/.exec(window.location.search || "");
+    return m && m[1] === "2" ? 2 : 1;
+  }());
+  var TOWER_NAME = "Castle Way Tower " + TOWER_N;
+
+  var sections = TOWER_N === 2 ? TOWER2_SECTIONS : TOWER1_SECTIONS;
+  var EVERY_ROOM = TOWER_N === 2 ? TOWER2_ROOMS : TOWER1_ROOMS;
+
+  // Which tower a room number belongs to, so a record made in one tower's
+  // audit log never turns up on the other's lists. A number on neither list
+  // counts as Tower 1, where every record made before there was a Tower 2
+  // belongs.
+  var ROOM_TOWER = {};
+  var rt;
+  for (rt = 0; rt < TOWER1_ROOMS.length; rt++) { ROOM_TOWER[TOWER1_ROOMS[rt]] = 1; }
+  for (rt = 0; rt < TOWER2_ROOMS.length; rt++) { ROOM_TOWER[TOWER2_ROOMS[rt]] = 2; }
+
+  function roomInTower(room) {
+    var t = ROOM_TOWER[room];
+    return t ? t === TOWER_N : TOWER_N === 1;
+  }
 
   /* The summary and the per-trade counts are worked out from the list
      itself. They used to be typed in alongside it, which meant adding a job
@@ -1756,7 +1864,7 @@
 
   /* The rooms Stelling are auditing, in the priority order they gave, with
      the floor, room type and move-in date against each. */
-  var STELLING_LIST = [
+  var TOWER1_LIST = [
     // 15 Sep: the top of the list is the next two days' arrivals.
     { room: "CW204", floor: "2nd Floor", type: "", movein: "Wed 16 Sep 2026" },
     { room: "CW302", floor: "3rd Floor", type: "Luxury Plus", movein: "Wed 16 Sep 2026" },
@@ -1798,6 +1906,21 @@
     { room: "CW107", floor: "1st Floor", type: "Luxury Plus", movein: "" },
     { room: "CW205", floor: "2nd Floor", type: "Luxury Plus", movein: "" }
   ];
+
+  /* Tower 2 has no priority order yet: every room is still to audit, in
+     room order, with its floor read off the number. */
+  var TOWER2_LIST = [];
+  for (var t2r = 0; t2r < TOWER2_ROOMS.length; t2r++) {
+    TOWER2_LIST.push({
+      room: TOWER2_ROOMS[t2r],
+      floor: floorOf(TOWER2_ROOMS[t2r]),
+      type: "",
+      movein: ""
+    });
+  }
+
+  var STELLING_LIST = TOWER_N === 2 ? TOWER2_LIST : TOWER1_LIST;
+  var LIST_RANKED = TOWER_N === 1;   // Tower 1's list is in Stelling's priority order
 
   /* Every other room in the building follows them, so all 257 studios are on
      the audit and a room nobody has been to is visible as exactly that.
@@ -2172,6 +2295,10 @@
       ' aria-label="Tick every item under ' + esc(sec.title) + '"> All</label></th>' +
       '</tr></thead><tbody id="tbody-' + sec.key + '">';
 
+    // Listed even when empty, so a trade with nothing on it yet is still
+    // counted, hidden and ready for the first audit failure sent to it.
+    if (!sectionRows[sec.key]) { sectionRows[sec.key] = []; }
+
     for (var k = 0; k < sec.rows.length; k++) {
       var row = sec.rows[k];
       var id = rowKey(row[0], row[2]);
@@ -2249,6 +2376,7 @@
 
   var progressEl = document.getElementById("progress");
   var allClearEl = document.getElementById("all-clear");
+  var tradeEmptyEl = document.getElementById("trade-empty");
   var hideDoneEl = document.getElementById("hide-done");
   var statusEl = document.getElementById("live-status");
 
@@ -2799,7 +2927,7 @@
           if (srcHidden(index[ids[vq]].src)) { continue; }
           secShowing++;
         }
-        var hideSec = tradeHidden(sk) || (ids.length > 0 && secShowing === 0);
+        var hideSec = tradeHidden(sk) || secShowing === 0;
         if (secEl.hidden !== hideSec) { secEl.hidden = hideSec; }
         if (!hideSec) { anyVisible = true; }
       }
@@ -2809,6 +2937,7 @@
     if (unWrap && !(sectionRows[UNASSIGNED] || []).length) { unWrap.hidden = true; }
 
     allClearEl.hidden = !((hideDone || hideGround) && !anyVisible);
+    tradeEmptyEl.hidden = total !== 0;
 
     applyRowOrder();
     renderDateRows();
@@ -2907,6 +3036,9 @@
       var roomsEl = rowEl.querySelector(".t-rooms");
       if (issuesEl) { issuesEl.textContent = rowIds.length; }
       if (roomsEl) { roomsEl.textContent = rRooms; }
+      // A trade with nothing on it is a line of zeros, so it waits off the
+      // summary until something is sent to it.
+      if (rowEl.hidden !== (rowIds.length === 0)) { rowEl.hidden = rowIds.length === 0; }
     }
 
     if (!summaryTotalEls) {
@@ -2923,10 +3055,16 @@
   var listEl = document.getElementById("comment-list");
   var emptyEl = document.getElementById("comment-empty");
 
+  // A comment posted on Tower 2 is tagged tower:2; one with no tag is
+  // Tower 1's, which is every comment made before there was a Tower 2.
+  var TOWER_TAG = "tower:" + TOWER_N;
+
   function generalOnly(list) {
     var out = [];
     for (var i = 0; i < list.length; i++) {
-      if (list[i] && !list[i].snag_id) { out.push(list[i]); }
+      if (!list[i]) { continue; }
+      var tag = list[i].snag_id;
+      if (tag ? tag === TOWER_TAG : TOWER_N === 1) { out.push(list[i]); }
     }
     return out;
   }
@@ -3306,7 +3444,7 @@
 
     var entry = {
       id: uuid(),
-      snag_id: null,
+      snag_id: TOWER_N === 1 ? null : TOWER_TAG,
       body: body,
       author: who(),
       created_at: new Date().toISOString()
@@ -3332,7 +3470,7 @@
   var copyOut = document.getElementById("copy-out");
 
   function buildReport() {
-    var lines = ["Castle Way Tower 1 — snagging progress", new Date().toLocaleString("en-GB"), ""];
+    var lines = [TOWER_NAME + " — snagging progress", new Date().toLocaleString("en-GB"), ""];
     var doneIds = [];
     var id;
 
@@ -3437,7 +3575,7 @@
   var AUDIT_USER = "JBA";
   var AUDIT_PASS = "2004";
   var AUDIT_SEEN = "cw-tower1-audit-in";
-  var AUDIT_STUDIO_KEY = "cw-tower1-audit-studio";
+  var AUDIT_STUDIO_KEY = "cw-tower" + TOWER_N + "-audit-studio";
 
   /* Tower 1 rooms Stelling still have to audit, from the Control
      Spreadsheet, kept in the priority order that sheet gives them. That
@@ -3505,7 +3643,7 @@
   /* Held on the device as well, so a refresh mid-sentence — including the
      one a new build asks for — hands the half-typed reason back rather
      than losing it. Keyed to the studio it was typed against. */
-  var AUDIT_DRAFT_KEY = "cw-tower1-audit-draft";
+  var AUDIT_DRAFT_KEY = "cw-tower" + TOWER_N + "-audit-draft";
 
   function saveDrafts() {
     store(AUDIT_DRAFT_KEY, {
@@ -3560,6 +3698,7 @@
       if (bits.length < 3) { continue; }
 
       var room = bits[1];
+      if (!roomInTower(room)) { continue; }
       var checkId = bits[2];
       var body = String(c.body || "");
       var m = FAIL_RE.exec(body);
@@ -3640,6 +3779,7 @@
       var c = all[i];
       if (!c || !c.snag_id || c.snag_id.indexOf("issue:") !== 0) { continue; }
       var room = c.snag_id.split(":")[1];
+      if (!roomInTower(room)) { continue; }
       if (!out[room]) { out[room] = []; }
       out[room].push({
         id: c.id,
@@ -3799,16 +3939,19 @@
   // named by its floor, because a priority number it was never given would
   // be an invention.
   function studioLabel(st) {
-    if (st.listed) {
+    if (st.listed && LIST_RANKED) {
       return st.priority + ". " + st.room + (st.type ? " \u2014 " + st.type : "") +
         (st.movein ? ", in " + st.movein : "");
     }
-    return st.room + (st.floor ? " \u2014 " + st.floor : "");
+    return st.room + (st.floor ? " \u2014 " + st.floor : "") +
+      (st.movein ? ", in " + st.movein : "");
   }
 
   function fillStudios() {
     if (!STELLING_LIST.length) {
-      auditStudioEl.innerHTML = '<option value="">No studios set up yet</option>';
+      auditStudioEl.innerHTML = '<option value="">' +
+        (TOWER_N === 2 ? "Tower 2 room numbers are not in yet" : "No studios set up yet") +
+        "</option>";
       auditStudioEl.disabled = true;
       return;
     }
@@ -3859,9 +4002,12 @@
   function renderAudit() {
     if (!auditIn) { return; }
     if (!AUDIT_STUDIOS.length) {
-      auditChecksEl.innerHTML = '<p class="all-clear">No studios have been set ' +
-        'up for auditing yet. Add them to <code>AUDIT_STUDIOS</code> in the page ' +
-        'source and they will appear here.</p>';
+      auditChecksEl.innerHTML = '<p class="all-clear">' + (TOWER_N === 2
+        ? "Tower 2 room numbers are not in yet. Once they are in " +
+          "<code>TOWER2_ROOMS</code> in the page source, every room is here to audit."
+        : "No studios have been set up for auditing yet. Add them to " +
+          "<code>AUDIT_STUDIOS</code> in the page source and they will appear here.") +
+        "</p>";
       auditProgressEl.textContent = "";
       auditStateEl.textContent = "";
       return;
@@ -3965,8 +4111,11 @@
     var meta = STUDIO_BY_ROOM[auditStudio];
     var line = "";
     if (meta && meta.listed) {
-      line = "Priority " + meta.priority + " of " + STELLING_COUNT +
-        " on Stelling\u2019s list \u00b7 " + meta.floor +
+      line = (LIST_RANKED
+        ? "Priority " + meta.priority + " of " + STELLING_COUNT +
+          " on Stelling\u2019s list \u00b7 " + meta.floor
+        : meta.floor + " \u00b7 " + meta.priority + " of " + STELLING_COUNT +
+          " on the " + TOWER_NAME + " audit") +
         (meta.type ? " \u00b7 " + meta.type : "") +
         (meta.movein
           ? " \u00b7 " + moveinVerb(meta).toLowerCase() + " " + meta.movein
@@ -4320,7 +4469,9 @@
     }
 
     if (!rooms.length) {
-      studioEmptyEl.textContent = "No studios have been set up for auditing yet.";
+      studioEmptyEl.textContent = TOWER_N === 2
+        ? "Tower 2 room numbers are not in yet. Once they are, every room is listed here."
+        : "No studios have been set up for auditing yet.";
       studioEmptyEl.hidden = false;
     } else if (!shown) {
       studioEmptyEl.textContent = "Nothing outstanding against any studio.";
@@ -4764,10 +4915,26 @@
   auditStudio = load(AUDIT_STUDIO_KEY, "") || "";
   setSignedIn(load(AUDIT_SEEN, false) === true);
 
+  // The heading, the tab title and the note over By studio say which tower
+  // this is, and the Tower buttons mark the one showing.
+  if (TOWER_N === 2) {
+    document.title = TOWER_NAME + " Snagging";
+    document.getElementById("page-title").textContent = TOWER_NAME + ": issues by trade";
+  }
+  document.getElementById("studio-note-1").hidden = TOWER_N !== 1;
+  document.getElementById("studio-note-2").hidden = TOWER_N !== 2;
+  var towerBtns = document.querySelectorAll("#towers .tower-btn");
+  for (var tb = 0; tb < towerBtns.length; tb++) {
+    var isThis = towerBtns[tb].getAttribute("data-tower") === String(TOWER_N);
+    towerBtns[tb].classList.toggle("is-on", isThis);
+    if (isThis) { towerBtns[tb].setAttribute("aria-current", "page"); }
+  }
+
   render();
   renderComments();
   document.getElementById("studio-check-total").textContent = AUDIT_CHECKS.length;
   document.getElementById("studio-total").textContent = AUDIT_STUDIOS.length;
+  document.getElementById("studio-total-2").textContent = AUDIT_STUDIOS.length;
   document.getElementById("studio-listed-total").textContent = STELLING_COUNT;
   renderStudios();
   applyGate();

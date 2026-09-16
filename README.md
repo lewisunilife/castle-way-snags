@@ -1,7 +1,9 @@
-# Castle Way Tower 1 — snagging list
+# Castle Way — snagging list
 
-Public checklist for the Castle Way Tower 1 snagging works, for contractors to
-tick off on site. Live at **https://lewisunilife.github.io/castle-way-snags/**
+Public checklist for the Castle Way snagging works, for contractors to tick
+off on site. Live at **https://lewisunilife.github.io/castle-way-snags/**
+(Tower 1) and **https://lewisunilife.github.io/castle-way-snags/?tower=2**
+(Tower 2).
 
 - `site/index.html` — the whole page, one file
 - `supabase-setup.sql` — database setup for shared ticks
@@ -288,6 +290,40 @@ but nothing verifies it.
   discarded.
 - **Ticks cannot be deleted** by anyone using the page — the access rules
   allow read, insert and update only.
+
+## Two towers
+
+The page shows one tower at a time. `?tower=2` on the address is Tower 2;
+anything else is Tower 1. The **Tower** buttons under the heading go between
+them, and because they are plain links a Tower 2 address can be sent to a
+trade and opens on Tower 2.
+
+Both towers share the same database tables and the same audit sign-in, and
+the trades are the same in both. Tower 2 starts with nothing on its trade
+lists: every check that fails in its audit log becomes a row under the trade
+it is sent to, and that is how its snagging list is built. The MVHR sweep is
+Tower 1's and is not repeated.
+
+**Tower 2's room numbers are not in yet.** They go in `TOWER2_ROOMS` in
+`site/index.html`, in room order, and nothing else has to change: every one
+then appears on the audit picker as still to audit and on By studio as
+waiting to be audited. Until then the Tower 2 view says so on every tab.
+
+Two rules for that list:
+
+- A Tower 2 number must never repeat a Tower 1 number. Jobs and audit
+  records are keyed by room, so the same number in both towers would be one
+  room to the record.
+- The floor and the ground-floor filter are read off the third character of
+  the number, as they are for Tower 1's `CWxxx` rooms. If Tower 2 numbers
+  another way, `floorOf` and the ground-floor test need to follow.
+
+Records stay in their tower. An audit entry or a logged issue only shows in
+the tower its room belongs to, so nothing from Tower 1 turns up on Tower 2's
+lists or the other way round. A comment posted on Tower 2 is tagged
+`tower:2`; one without a tag is Tower 1's, which is every comment made before
+there was a Tower 2. Move-in dates are keyed by room too, so the three
+control-sheet maps can hold both towers' rooms.
 
 ## Updating the list
 
