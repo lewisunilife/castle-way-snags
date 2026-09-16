@@ -267,6 +267,15 @@ without ever showing it, which is why untick-all used to do nothing for some
 people. The question now appears under the trade's heading with **Untick
 all** and **Keep them**.
 
+## Undo
+
+With **Hide completed** on, a ticked line leaves the page the moment it is
+ticked, so a slip has nothing left to untick. A bar at the bottom of the
+screen names what was just ticked, one item or a whole trade's Tick all, with
+an **Undo** that puts it back unticked. It shows for the last tick only, for
+twenty seconds or until the next tick, and only while Hide completed is on:
+with it off the line is still there to untick by hand.
+
 ## Who can edit the list
 
 Anyone with the URL. That is the trade-off for having no logins, the same as a

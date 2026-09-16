@@ -395,6 +395,51 @@
   .untick-ask span { flex: 1 1 260px; }
   .untick-ask button { width: auto; }
 
+  /* With Hide completed on, a ticked line is gone before a slip can be
+     seen. This names what was just ticked and offers it back, pinned to
+     the bottom of the screen so it is there whatever was scrolled to. */
+  .undo-bar {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    z-index: 40;
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--on-ink);
+    background: var(--ink);
+    border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
+  }
+
+  .undo-bar[hidden] { display: none; }
+  .undo-bar span { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+
+  .undo-bar button {
+    width: auto;
+    min-height: 36px;
+    padding: 6px 14px;
+    color: var(--ink);
+    background: var(--on-ink);
+    border: 1px solid var(--on-ink);
+  }
+
+  .undo-bar button.undo-close {
+    color: var(--on-ink);
+    background: transparent;
+    border-color: transparent;
+    font-size: 18px;
+    line-height: 1;
+    padding: 6px 10px;
+  }
+
   .studio-counts {
     margin: -6px 0 12px;
     font-size: 13px;
@@ -1168,7 +1213,7 @@
   @media print {
     body { background: #fff; color: #000; }
     .page { max-width: none; padding: 0; }
-    .bar, .setup, .panel-actions, #copy-out, #comment-form { display: none; }
+    .bar, .setup, .panel-actions, #copy-out, #comment-form, .undo-bar { display: none; }
     table { display: table; }
     thead { display: table-header-group; }
     tbody { display: table-row-group; }
@@ -1385,6 +1430,12 @@
         <p class="empty" id="issue-empty">No issues logged against this studio.</p>
       </div>
     </div>
+  </div>
+
+  <div class="undo-bar" id="undo-bar" role="status" hidden>
+    <span id="undo-text"></span>
+    <button type="button" id="undo-btn">Undo</button>
+    <button type="button" class="undo-close" id="undo-close" aria-label="Dismiss">&times;</button>
   </div>
 </div>
 
@@ -3388,6 +3439,12 @@
       return;
     }
 
+    if (want) {
+      var ticked = changing.slice();
+      offerUndo("Ticked " + ticked.length + (ticked.length === 1 ? " item" : " items") +
+        " under " + (sectionTitles[key] || "this trade"),
+        function () { enqueueMany(ticked, { done: false }); });
+    }
     enqueueMany(changing, { done: want });
   }
 
@@ -3417,6 +3474,49 @@
     pendingUntick = null;
   }
 
+  /* ---- Undo ----
+     With Hide completed on, a ticked line leaves the page at once, so a
+     slip cannot be found to untick. The bar names what was just ticked and
+     puts it back on request. The last tick only: a new one replaces it. */
+  var undoBar = document.getElementById("undo-bar");
+  var undoText = document.getElementById("undo-text");
+  var undoTimer = null;
+  var undoLast = null;
+
+  function offerUndo(text, undo) {
+    if (!hideDone) { return; }
+    if (undoTimer) { clearTimeout(undoTimer); }
+    undoLast = undo;
+    undoText.textContent = text;
+    undoBar.hidden = false;
+    undoTimer = setTimeout(clearUndo, 20000);
+  }
+
+  function clearUndo() {
+    if (undoTimer) { clearTimeout(undoTimer); undoTimer = null; }
+    undoLast = null;
+    undoBar.hidden = true;
+  }
+
+  function jobLabel(id) {
+    var job = index[id];
+    return job ? job.room + " \u00b7 " + job.action : "that item";
+  }
+
+  function tickWithUndo(id, done) {
+    if (done) {
+      offerUndo("Ticked " + jobLabel(id), function () { enqueue(id, { done: false }); });
+    }
+    enqueue(id, { done: done });
+  }
+
+  document.getElementById("undo-btn").addEventListener("click", function () {
+    var go = undoLast;
+    clearUndo();
+    if (go) { go(); }
+  });
+  document.getElementById("undo-close").addEventListener("click", clearUndo);
+
   sectionsEl.addEventListener("change", function (ev) {
     var box = ev.target;
     if (!box || box.type !== "checkbox") { return; }
@@ -3426,7 +3526,7 @@
       return;
     }
 
-    enqueue(box.getAttribute("data-id"), { done: box.checked });
+    tickWithUndo(box.getAttribute("data-id"), box.checked);
   });
 
   // A note is submitted deliberately and joins the line's thread, so one
@@ -4326,7 +4426,7 @@
     var box = ev.target;
     if (!box || box.type !== "checkbox") { return; }
     if (box.classList.contains("studio-tick")) {
-      enqueue(box.getAttribute("data-id"), { done: box.checked });
+      tickWithUndo(box.getAttribute("data-id"), box.checked);
       return;
     }
     onIssueTick(ev);
@@ -4714,7 +4814,14 @@
     if (!box || !box.classList || !box.classList.contains("issue-tick")) { return; }
     var id = box.getAttribute("data-issue");
     if (!id) { return; }
-    if (box.checked) { setIssueDone(id); } else { setIssueOpen(id); }
+    if (box.checked) {
+      var lbl = box.parentNode ? box.parentNode.textContent : "";
+      var issueBody = (lbl || "").replace(/\s*Logged by .*$/, "").replace(/\s+/g, " ").trim();
+      offerUndo("Marked done: " + (issueBody || "that issue"), function () { setIssueOpen(id); });
+      setIssueDone(id);
+    } else {
+      setIssueOpen(id);
+    }
   }
 
   issueListEl.addEventListener("change", onIssueTick);
