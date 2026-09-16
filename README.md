@@ -108,7 +108,7 @@ are jobs) and logged issues, each naming its trade. Ticking a failure off in
 the trade list clears it from the studio card too.
 
 A failed check whose fix the trade has ticked off counts as done. Once all
-eighteen checks have been recorded and nothing is left against the studio —
+nineteen checks have been recorded and nothing is left against the studio —
 no open jobs, no open issues — it reads **audited, nothing outstanding** and
 moves into the picker's Completed group. It is the tick that clears a
 failure, not a second visit from the auditor.
@@ -158,7 +158,7 @@ the rooms with nothing recorded against them, counted in the heading; the
 room in hand stays on the list whatever its state, so recording its first
 check does not pull it out from under the auditor. Remembered on the device.
 
-One of Stelling's rooms is clear once all eighteen checks have passed, every
+One of Stelling's rooms is clear once all nineteen checks have passed, every
 logged issue is marked done, **and** nothing is left against it on the trade
 lists. A room in the rest of the building is clear once its trade list is
 clear.
@@ -333,13 +333,22 @@ but nothing verifies it.
 Each tower's audit log also carries one corridor per floor the tower has
 rooms on ("Floor 1 corridor" and so on) and a single "Stair core", under
 **Corridors and stairs** in the studio picker. They take the checks that
-apply to a common area, eleven of the eighteen: fire detection, fire doors,
+apply to a common area, eleven of the nineteen: fire detection, fire doors,
 window restrictors, sockets, leaks, lights, switches, heating, extraction,
 windows and blinds, and cleaning; no door fob, bed, taps, toilet or
 appliances. A failed check becomes a row under its trade named by the
 corridor, and By studio lists them after the rooms under their own heading,
 counted apart from the rooms. Their records are keyed `T1-CORRIDOR-1`,
 `T1-STAIRS` and so on, so each tower's stay its own.
+
+## Two checks that ask more
+
+**Window restrictors fitted** passes with a count: the Pass button is two,
+"Pass · 1 restrictor" and "Pass · 2 restrictors", so the number is recorded
+with the pass (`PASS [2]`) and cannot be skipped. A pass from before the
+count existed reads as a plain pass. **MVHR door secured** is the nineteenth
+check; a fail becomes a ticket under MVHR Cupboards beside the room's sweep
+row. Corridors and the stair core do not carry it.
 
 ## Habitable or not
 

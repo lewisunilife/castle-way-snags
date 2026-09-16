@@ -283,6 +283,7 @@
 
   .check-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-top: 10px;
   }
@@ -4047,7 +4048,9 @@
     { id: "fob", trade: "access",
       label: "Room key fob tested on door (not master) \u2014 lock works" },
     { id: "restrictors", trade: "restrictors",
-      label: "Window restrictors fitted" },
+      label: "Window restrictors fitted",
+      // A pass says how many: one button per answer, so it cannot be skipped.
+      options: [{ v: "1", label: "1 restrictor" }, { v: "2", label: "2 restrictors" }] },
     { id: "furniture", trade: "joinery",
       label: "Bed and furniture secure and safe" },
     { id: "sockets", trade: "electrical",
@@ -4070,6 +4073,8 @@
       label: "Heating and thermostats working" },
     { id: "extraction", trade: "ventilation",
       label: "Bathroom and kitchen extraction working" },
+    { id: "mvhr-door", trade: "mvhr",
+      label: "MVHR door secured" },
     { id: "appliances", trade: "appliances",
       label: "Hob, microwave/oven, fridge working" },
     { id: "windows-blinds", trade: "blinds",
@@ -4149,6 +4154,17 @@
   // neither and reads as habitable.
   var HAB_RE = /\s*\[(h|nh)\]\s*$/;
 
+  // A pass may carry an answer, "PASS [2]" for two restrictors. A copy of
+  // the page from before reads it as a plain pass.
+  var PASS_RE = /^PASS(?:\s*\[([a-z0-9]{1,12})\])?/i;
+
+  function optionLabel(ck, v) {
+    for (var i = 0; ck && ck.options && i < ck.options.length; i++) {
+      if (ck.options[i].v === v) { return ck.options[i].label; }
+    }
+    return "";
+  }
+
   // A fail can be parked with no trade against it rather than forced onto
   // the wrong one. It still shows, under Unassigned, so it is not lost.
   var UNASSIGNED = "unassigned";
@@ -4194,12 +4210,14 @@
       var comment = m ? body.slice(m[0].length) : "";
       var hm = m ? HAB_RE.exec(comment) : null;
       if (hm) { comment = comment.slice(0, hm.index); }
+      var pm = m ? null : PASS_RE.exec(body);
 
       out[room][checkId] = {
         status: m ? "fail" : "pass",
         comment: comment,
         trade: to,
         hab: hm ? hm[1] : "",
+        opt: pm && pm[1] ? pm[1] : "",
         by: c.author || "",
         at: c.created_at || ""
       };
@@ -4393,12 +4411,13 @@
     render();
   }
 
-  function setCheck(room, checkId, pass, comment, trade, hab) {
+  function setCheck(room, checkId, pass, comment, trade, hab, opt) {
     var ck = CHECK_BY_ID[checkId];
     var to = knownTrade(trade) ? trade : (ck ? ck.trade : "");
     var mark = hab === "h" || hab === "nh" ? " [" + hab + "]" : "";
+    var answer = pass && opt && optionLabel(ck, opt) ? " [" + opt + "]" : "";
     postEntry("audit:" + room + ":" + checkId,
-      pass ? "PASS" : "FAIL(" + to + "): " + (comment || "no reason given") + mark);
+      pass ? "PASS" + answer : "FAIL(" + to + "): " + (comment || "no reason given") + mark);
   }
 
   // The rooms a failed check has left not habitable, from a read of the
@@ -4543,6 +4562,24 @@
     auditStudioEl.value = auditStudio;
   }
 
+  // Pass is one button, or one per answer on a check that asks for one.
+  function passButtons(ck, st) {
+    var passed = st && st.status === "pass";
+    if (!ck.options) {
+      return '<button type="button" class="pf' + (passed ? " on-pass" : "") +
+        '" data-check="' + esc(ck.id) + '" data-pass="1">Pass</button>';
+    }
+    var html = "";
+    for (var i = 0; i < ck.options.length; i++) {
+      var op = ck.options[i];
+      html += '<button type="button" class="pf' +
+        (passed && st.opt === op.v ? " on-pass" : "") +
+        '" data-check="' + esc(ck.id) + '" data-pass="1" data-opt="' + esc(op.v) + '">' +
+        "Pass \u00b7 " + esc(op.label) + "</button>";
+    }
+    return html;
+  }
+
   function tradeOptions(sel) {
     var html = "";
     for (var i = 0; i < sections.length; i++) {
@@ -4583,7 +4620,8 @@
 
       var stamp = "";
       if (st) {
-        stamp = (st.status === "fail" ? "Failed" : "Passed") +
+        stamp = (st.status === "fail" ? "Failed" : "Passed" +
+          (st.opt && optionLabel(ck, st.opt) ? " \u00b7 " + esc(optionLabel(ck, st.opt)) : "")) +
           (st.by ? " by " + esc(st.by) : "");
         var when = shortDate(st.at);
         if (when) { stamp += " \u00b7 " + esc(when); }
@@ -4600,9 +4638,7 @@
           : (st && st.status === "fail" ? "Assigned to " : "Fails into ") +
             esc(tradeName(goesTo))) + "</span></span></div>" +
         '<div class="check-actions">' +
-        '<button type="button" class="pf' +
-        (st && st.status === "pass" ? " on-pass" : "") +
-        '" data-check="' + esc(ck.id) + '" data-pass="1">Pass</button>' +
+        passButtons(ck, st) +
         '<button type="button" class="pf' +
         (st && st.status === "fail" ? " on-fail" : "") +
         '" data-check="' + esc(ck.id) + '" data-pass="0">Fail</button>' +
@@ -5215,7 +5251,7 @@
     }
 
     clearDraft(checkId);
-    setCheck(auditStudio, checkId, true, "");
+    setCheck(auditStudio, checkId, true, "", "", "", btn.getAttribute("data-opt") || "");
   });
 
   // Hold what is being typed, so an entry landing from another phone
