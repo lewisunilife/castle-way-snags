@@ -456,6 +456,24 @@
 
   .movein { white-space: nowrap; }
 
+  /* A 15M fire regulation room is marked wherever its move-in shows. */
+  .tag-15m {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.4;
+    padding: 1px 6px;
+    margin-left: 6px;
+    color: var(--warn);
+    background: var(--warn-bg);
+    border: 1px solid var(--warn);
+    border-radius: 4px;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  .movein-date:empty + .tag-15m, .studio-meta .tag-15m { margin-left: 0; }
+
   .studio-controls {
     display: flex;
     flex-wrap: wrap;
@@ -1142,12 +1160,12 @@
     tbody.date-block.shut tr:not(.date-row) { display: none; }
     tbody tr.audit-row td.room { box-shadow: none; padding-left: 0; }
     td.movein:empty { display: none; }
-    td.movein:not(:empty)::before { content: "Moves in "; }
-    td.movein.past:not(:empty)::before { content: "Moved in "; }
-    td.movein.checkin:not(:empty)::before { content: "Checks in "; }
-    td.movein.checkin.past:not(:empty)::before { content: "Checked in "; }
-    td.movein.deferred:not(:empty)::before { content: "Deferred to "; }
-    td.movein.contract:not(:empty)::before { content: "Contract from "; }
+    td.movein .movein-date:not(:empty)::before { content: "Moves in "; }
+    td.movein.past .movein-date:not(:empty)::before { content: "Moved in "; }
+    td.movein.checkin .movein-date:not(:empty)::before { content: "Checks in "; }
+    td.movein.checkin.past .movein-date:not(:empty)::before { content: "Checked in "; }
+    td.movein.deferred .movein-date:not(:empty)::before { content: "Deferred to "; }
+    td.movein.contract .movein-date:not(:empty)::before { content: "Contract from "; }
     td.action { grid-area: action; margin-top: 8px; }
 
     /* Beats the base `td.done` column rules, which outrank `tbody td`. */
@@ -1333,6 +1351,14 @@
       <label class="filter" for="hide-ground">
         <input type="checkbox" id="hide-ground"> Hide ground floor
       </label>
+      <div class="field">
+        <label for="fire-filter">15M fire reg rooms</label>
+        <select id="fire-filter">
+          <option value="all">Show every room</option>
+          <option value="only">Only 15M rooms</option>
+          <option value="hide">Hide 15M rooms</option>
+        </select>
+      </div>
     </div>
     <div class="group-actions" id="group-actions" hidden>
       <button type="button" class="secondary" id="dates-open">Expand all dates</button>
@@ -2030,16 +2056,28 @@
     { room: "CW205", floor: "2nd Floor", type: "Luxury Plus", movein: "" }
   ];
 
-  /* Tower 1 has Stelling's list. The other towers have no priority order
-     yet, so every room is still to audit, in room order. */
+  /* Tower 1 has Stelling's list. The other towers have no list from
+     Stelling, so every room is still to audit, in room order, except that
+     the ground floor and the twodios (the A/B rooms) go last: Lewis, 16
+     Sep, for Tower 2. Tower 3 and 4 have neither, so they are room order. */
   var STELLING_LIST = [];
   if (TOWER_N === 1) {
     STELLING_LIST = TOWER1_LIST;
   } else {
-    for (var er = 0; er < EVERY_ROOM.length; er++) {
+    var ordered = EVERY_ROOM.slice();
+    ordered.sort(function (a, b) {
+      var ga = a.charAt(2) === "0" ? 1 : 0;
+      var gb = b.charAt(2) === "0" ? 1 : 0;
+      if (ga !== gb) { return ga - gb; }
+      var ta = /[AB]$/.test(a) ? 1 : 0;
+      var tb = /[AB]$/.test(b) ? 1 : 0;
+      if (ta !== tb) { return ta - tb; }
+      return a < b ? -1 : (a > b ? 1 : 0);
+    });
+    for (var er = 0; er < ordered.length; er++) {
       STELLING_LIST.push({
-        room: EVERY_ROOM[er],
-        floor: floorOf(EVERY_ROOM[er]),
+        room: ordered[er],
+        floor: floorOf(ordered[er]),
         type: "",
         movein: ""
       });
@@ -2145,6 +2183,33 @@
     return " " + (st.moveinKind || "listed") + (moveinPast(st.moveinKey) ? " past" : "");
   }
 
+  /* The 15M fire regulation rooms (Lewis, 16 Sep). Marked beside the
+     move-in wherever a room shows, and a filter of their own. */
+  var FIRE_15M = {};
+  var FIRE_15M_LIST = ["CW112", "CW113", "CW143", "CW144", "CW212", "CW213",
+    "CW243", "CW244", "CW312", "CW313", "CW343", "CW344", "CW412", "CW413",
+    "CW443", "CW444", "CW503", "CW505", "CW525", "CW526"];
+  for (var fr = 0; fr < FIRE_15M_LIST.length; fr++) { FIRE_15M[FIRE_15M_LIST[fr]] = true; }
+
+  function is15M(room) { return FIRE_15M[room] === true; }
+
+  var TAG_15M = '<span class="tag-15m" title="15M fire regulation room">15M</span>';
+
+  // The move-in cell: the date, then the 15M mark when the room carries it.
+  function moveinCell(room) {
+    var date = moveinFor(room);
+    if (!date && !is15M(room)) { return ""; }
+    return '<span class="movein-date">' + esc(date) + "</span>" + (is15M(room) ? TAG_15M : "");
+  }
+
+  var fireMode = "all";   // all | only | hide
+
+  function fireHidden(room) {
+    if (fireMode === "only") { return !is15M(room); }
+    if (fireMode === "hide") { return is15M(room); }
+    return false;
+  }
+
   function moveinSortFor(room) {
     var st = STUDIO_BY_ROOM[room];
     return (st && st.moveinKey) || "";
@@ -2215,6 +2280,7 @@
   var COMPANY_KEY = "cw-tower1-company";
   var HIDE_DONE_KEY = "cw-tower1-hide-done";
   var HIDE_GROUND_KEY = "cw-tower1-hide-ground";
+  var FIRE_MODE_KEY = "cw-tower1-fire-mode";
   var STUDIO_SORT_KEY = "cw-tower1-studio-sort";
   var TRADE_OFF_KEY = "cw-tower1-trades-off";
   var SRC_OFF_KEY = "cw-tower1-sources-off";
@@ -2484,7 +2550,7 @@
         '<tr id="row-' + domId + '">' +
         '<td class="room">' + esc(shownRoom) + "</td>" +
         '<td class="floor">' + esc(floor) + "</td>" +
-        '<td class="movein' + moveinClass(shownRoom) + '">' + esc(moveinFor(shownRoom)) + "</td>" +
+        '<td class="movein' + moveinClass(shownRoom) + '">' + moveinCell(shownRoom) + "</td>" +
         '<td class="src">' + esc(row[1]) + "</td>" +
         '<td class="action"><span class="action-text">' + esc(row[2]) + "</span>" +
         '<ul class="notes" id="notes-' + domId + '"></ul>' +
@@ -2717,7 +2783,7 @@
     return '<tr id="row-' + domId + '" class="audit-row">' +
       '<td class="room">' + esc(f.room) + "</td>" +
       '<td class="floor">' + esc(floorOf(f.room)) + "</td>" +
-      '<td class="movein' + moveinClass(f.room) + '">' + esc(moveinFor(f.room)) + "</td>" +
+      '<td class="movein' + moveinClass(f.room) + '">' + moveinCell(f.room) + "</td>" +
       '<td class="src">' + esc(f.src) + "</td>" +
       '<td class="action"><span class="action-text">' + esc(f.action) + "</span>" +
       '<span class="fail-why">' + esc(f.why || "no reason given") + "</span>" +
@@ -3016,6 +3082,7 @@
           rowEl.classList.toggle("unsaved", isPending && live);
           var hide = (hideDone && isDone) ||
             (hideGround && (index[id].room || "").charAt(2) === "0") ||
+            fireHidden(index[id].room) ||
             srcHidden(index[id].src);
           if (rowEl.hidden !== hide) { rowEl.hidden = hide; }
         }
@@ -3070,6 +3137,7 @@
           var vrec = effective(ids[vq]);
           if (hideDone && vrec.done === true) { continue; }
           if (hideGround && (index[ids[vq]].room || "").charAt(2) === "0") { continue; }
+          if (fireHidden(index[ids[vq]].room)) { continue; }
           if (srcHidden(index[ids[vq]].src)) { continue; }
           secShowing++;
         }
@@ -3082,7 +3150,7 @@
     var unWrap = document.getElementById("sec-unassigned");
     if (unWrap && !(sectionRows[UNASSIGNED] || []).length) { unWrap.hidden = true; }
 
-    allClearEl.hidden = !((hideDone || hideGround) && !anyVisible);
+    allClearEl.hidden = !((hideDone || hideGround || fireMode !== "all") && !anyVisible);
     tradeEmptyEl.hidden = total !== 0;
 
     applyRowOrder();
@@ -4340,6 +4408,7 @@
           ? " \u00b7 " + moveinVerb(meta).toLowerCase() + " " + meta.movein
           : "");
     }
+    if (meta && is15M(meta.room)) { line += " \u00b7 15M fire reg"; }
     if (failed) {
       line += (line ? " \u2014 " : "") + failed +
         (failed === 1 ? " failure outstanding" : " failures outstanding");
@@ -4447,6 +4516,7 @@
     if (sm && sm.movein) {
       bits.push(moveinVerb(sm) + " " + esc(sm.movein));
     }
+    if (is15M(room)) { bits.push('<span class="tag-15m">15M fire reg</span>'); }
     if (sm && sm.floor) { bits.push(esc(sm.floor)); }
     if (sm && sm.type) { bits.push(esc(sm.type)); }
     if (sm && sm.listed) { bits.push("priority " + sm.priority); }
@@ -4507,6 +4577,8 @@
     if (off.length) { notes.push(off.join(", ") + " hidden"); }
     if (srcs.length) { notes.push("source " + srcs.join(", ") + " hidden"); }
     if (hideGround) { notes.push("ground floor hidden"); }
+    if (fireMode === "only") { notes.push("only 15M fire reg rooms"); }
+    if (fireMode === "hide") { notes.push("15M fire reg rooms hidden"); }
 
     groupActionsEl.hidden = !(studioSort === "movein" && activeView !== "audit");
 
@@ -4629,6 +4701,7 @@
     for (i = 0; i < rooms.length; i++) {
       var room = rooms[i];
       if (hideGround && room.charAt(2) === "0") { continue; }
+      if (fireHidden(room)) { continue; }
 
       var sum = studioSummary(room, state, issues, true);
       if (sum.awaiting) { waiting++; }
@@ -4876,6 +4949,10 @@
 
   hideGround = load(HIDE_GROUND_KEY, false) === true;
   hideGroundEl.checked = hideGround;
+  var fireFilterEl = document.getElementById("fire-filter");
+  var savedFire = load(FIRE_MODE_KEY, "all");
+  fireMode = savedFire === "only" || savedFire === "hide" ? savedFire : "all";
+  fireFilterEl.value = fireMode;
   studioSort = load(STUDIO_SORT_KEY, "room") === "movein" ? "movein" : "room";
   studioSortEl.value = studioSort;
 
@@ -5030,6 +5107,14 @@
   hideGroundEl.addEventListener("change", function () {
     hideGround = hideGroundEl.checked;
     store(HIDE_GROUND_KEY, hideGround);
+    render();
+    renderStudios();
+  });
+
+  fireFilterEl.addEventListener("change", function () {
+    var v = fireFilterEl.value;
+    fireMode = v === "only" || v === "hide" ? v : "all";
+    store(FIRE_MODE_KEY, fireMode);
     render();
     renderStudios();
   });

@@ -267,6 +267,17 @@ without ever showing it, which is why untick-all used to do nothing for some
 people. The question now appears under the trade's heading with **Untick
 all** and **Keep them**.
 
+## 15M fire regulation rooms
+
+Twenty Tower 1 rooms are 15M fire regulation rooms (CW112, 113, 143, 144,
+212, 213, 243, 244, 312, 313, 343, 344, 412, 413, 443, 444, 503, 505, 525
+and 526; `FIRE_15M_LIST` in `site/index.html`). Each carries a **15M** mark
+beside its move-in on the trade lists and on its By studio card, and the
+audit log says so under the studio picker. The **15M fire reg rooms** control
+shows every room, only those rooms, or everything but them, on By trade and
+By studio alike; it is remembered on the device and named on the amber
+filtered line like the other filters.
+
 ## The summary table
 
 **Summary by trade** at the top of the trade view folds away under its
@@ -345,9 +356,11 @@ studio, and its rooms on the audit picker. A row keeps its key whichever
 tower shows it, so the split touches nothing that is ticked.
 
 Tower 1 has Stelling's priority list, so its other rooms count as audited
-already. The other towers have no list yet, so every room is still to audit,
-in room order, and a check that fails in the audit log becomes a row under
-the trade it is sent to: that is how their snagging lists are built. To put
+already. The other towers have no list from Stelling, so every room is still
+to audit, in room order with the ground floor and the twodios (the A/B rooms)
+last, as asked for Tower 2; a check that fails in the audit log becomes a
+row under the trade it is sent to, and that is how their snagging lists are
+built. To put
 a tower's rooms in Stelling's order, give Tower 1's `TOWER1_LIST` a
 counterpart for that tower.
 
