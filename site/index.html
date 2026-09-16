@@ -523,6 +523,34 @@
     min-height: 34px;
   }
 
+  /* The summary table folds away under its heading, so the trade lists
+     are a scroll nearer on a phone. Open or shut is remembered per device. */
+  .fold { margin-top: 44px; }
+
+  .fold > summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    min-height: 44px;
+    padding: 4px 0;
+  }
+
+  .fold > summary::-webkit-details-marker { display: none; }
+  .fold > summary::before { content: "\25B8"; font-size: 13px; }
+  .fold[open] > summary::before { content: "\25BE"; }
+  .fold > summary h2 { margin: 0; }
+
+  .fold-hint {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--muted);
+  }
+
+  .fold > .scroller { margin-top: 12px; }
+
   .date-group { margin-bottom: 16px; }
 
   .date-group > summary {
@@ -1324,7 +1352,9 @@
   </div>
 
   <div id="view-trade">
-  <h2>Summary by trade</h2>
+  <details class="fold" id="summary-fold" open>
+  <summary><h2>Summary by trade</h2>
+    <span class="fold-hint" id="summary-hint"></span></summary>
   <div class="scroller">
     <table id="summary-table">
       <thead>
@@ -1339,6 +1369,7 @@
       <tbody id="summary-body"></tbody>
     </table>
   </div>
+  </details>
 
   <div id="sections"></div>
   <p class="all-clear" id="all-clear" hidden>Everything is ticked off. Untick
@@ -2188,6 +2219,7 @@
   var TRADE_OFF_KEY = "cw-tower1-trades-off";
   var SRC_OFF_KEY = "cw-tower1-sources-off";
   var DATE_OPEN_KEY = "cw-tower1-dates-open";
+  var SUMMARY_OPEN_KEY = "cw-tower1-summary-open";
   var LOCAL_KEY = "cw-tower1-snags-local-v2";
   var QUEUE_KEY = "cw-tower1-snags-queue-v2";
   var MIGRATED_KEY = "cw-tower1-snags-migrated-v2";
@@ -3162,7 +3194,18 @@
       summaryTotalEls[0].textContent = grand;
       summaryTotalEls[1].textContent = grandRoomCount;
     }
+    // Said on the fold's heading too, so the totals are there when it is shut.
+    var hint = grand + (grand === 1 ? " issue in " : " issues in ") +
+      grandRoomCount + (grandRoomCount === 1 ? " room" : " rooms");
+    if (summaryHintEl.textContent !== hint) { summaryHintEl.textContent = hint; }
   }
+
+  var summaryHintEl = document.getElementById("summary-hint");
+  var summaryFoldEl = document.getElementById("summary-fold");
+  summaryFoldEl.open = load(SUMMARY_OPEN_KEY, true) !== false;
+  summaryFoldEl.addEventListener("toggle", function () {
+    store(SUMMARY_OPEN_KEY, summaryFoldEl.open);
+  });
 
   /* ---- Comments ---- */
 

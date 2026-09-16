@@ -267,6 +267,13 @@ without ever showing it, which is why untick-all used to do nothing for some
 people. The question now appears under the trade's heading with **Untick
 all** and **Keep them**.
 
+## The summary table
+
+**Summary by trade** at the top of the trade view folds away under its
+heading: tap the heading to shut or open it. The totals stay on the heading
+("236 issues in 89 rooms") so the table can be left shut. Open or shut is
+remembered on that device.
+
 ## Undo
 
 With **Hide completed** on, a ticked line leaves the page the moment it is
