@@ -46,7 +46,10 @@ Then open the page on two devices — the bar at the top should read
 
 Three views, one URL: **By trade** (the snagging list), **By studio**, and
 **Audit log**. The first two are public; the audit log asks for a username
-and password.
+and password. The sign-ins are in `AUDIT_USERS` in `site/index.html` (JBA,
+JCA, Steve and Bal at the time of writing; the username is not
+case-sensitive). That is a guard on the view, not a lock on the data: the
+page and its source are public, and so is that list.
 
 **That sign-in guards the view, not the data.** This is a public page and its
 source carries the credentials, so anyone who opens developer tools or reads
@@ -150,7 +153,10 @@ On Tower 1 the audit log's studio picker offers Stelling's rooms and any
 reopened for amendment, since the rest of the tower does not need auditing;
 on the other towers it offers every room. Finished ones move into a
 **Completed** group rather than leaving the list, so a room can be
-re-audited.
+re-audited. **Only rooms not audited yet**, above the picker, narrows it to
+the rooms with nothing recorded against them, counted in the heading; the
+room in hand stays on the list whatever its state, so recording its first
+check does not pull it out from under the auditor. Remembered on the device.
 
 One of Stelling's rooms is clear once all eighteen checks have passed, every
 logged issue is marked done, **and** nothing is left against it on the trade

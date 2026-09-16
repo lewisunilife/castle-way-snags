@@ -218,6 +218,8 @@
     border-color: var(--ink);
   }
 
+  .audit-new { margin-bottom: 12px; }
+
   .login label { margin-top: 12px; }
   .login label:first-child { margin-top: 0; }
 
@@ -1466,6 +1468,9 @@
       <h2>Audit log <span class="sec-count" id="audit-progress"></span></h2>
 
       <div class="panel">
+        <label class="filter audit-new" for="audit-new">
+          <input type="checkbox" id="audit-new"> Only rooms not audited yet
+        </label>
         <label for="audit-studio">Studio</label>
         <select id="audit-studio"></select>
         <div class="panel-actions">
@@ -3867,10 +3872,28 @@
      out of the way of people who should not be in it; it is not a lock.
      ================================================================== */
 
-  var AUDIT_USER = "JBA";
-  var AUDIT_PASS = "2004";
+  /* Who can open the audit log. This is a guard on the view, not a lock
+     on the data: the page is public and so is this list. The username is
+     matched without regard to case; the password exactly. */
+  var AUDIT_USERS = [
+    { user: "JBA", pass: "2004" },
+    { user: "JCA", pass: "2576" },
+    { user: "Steve", pass: "9911" },
+    { user: "Bal", pass: "5342" }
+  ];
+
+  function auditLoginOk(u, w) {
+    for (var i = 0; i < AUDIT_USERS.length; i++) {
+      if (u.toLowerCase() === AUDIT_USERS[i].user.toLowerCase() && w === AUDIT_USERS[i].pass) {
+        return true;
+      }
+    }
+    return false;
+  }
   var AUDIT_SEEN = "cw-tower1-audit-in";
   var AUDIT_STUDIO_KEY = "cw-tower" + TOWER_N + "-audit-studio";
+  var AUDIT_NEW_KEY = "cw-tower1-audit-new";
+  var auditOnlyNew = false;   // the picker narrowed to rooms with no checks recorded
 
   /* Tower 1 rooms Stelling still have to audit, from the Control
      Spreadsheet, kept in the priority order that sheet gives them. That
@@ -4256,13 +4279,39 @@
     var issues = studioIssues();
     var todo = "";
     var done = "";
+    var fresh = "";
+    var freshCount = 0;
 
     for (var i = 0; i < STELLING_LIST.length; i++) {
       var st = STELLING_LIST[i];
       var sum = studioSummary(st.room, state, issues, false);
       var opt = '<option value="' + esc(st.room) + '">' +
         esc(studioLabel(st)) + "</option>";
+      // Not audited yet: nothing recorded against it. The room in hand
+      // stays on the list whatever its state, so recording its first check
+      // does not pull it out from under the auditor.
+      if (sum.checked === 0 && !sum.complete) { fresh += opt; freshCount++; }
+      else if (st.room === auditStudio) { fresh += opt; }
       if (sum.complete) { done += opt; } else { todo += opt; }
+    }
+
+    if (auditOnlyNew) {
+      // A reopened room in hand stays too; it is not on Stelling's list.
+      var held = STUDIO_BY_ROOM[auditStudio];
+      if (held && held.reopened) {
+        fresh = '<option value="' + esc(held.room) + '">' + esc(studioLabel(held)) +
+          "</option>" + fresh;
+      }
+      auditStudioEl.innerHTML = fresh
+        ? '<optgroup label="Not audited yet \u00b7 ' + freshCount +
+          (freshCount === 1 ? " room" : " rooms") + '">' + fresh + "</optgroup>"
+        : '<option value="">Every room has been started</option>';
+      auditStudioEl.disabled = !fresh;
+      if (fresh && !auditStudioEl.querySelector('option[value="' + auditStudio + '"]')) {
+        auditStudio = auditStudioEl.querySelector("option").value;
+      }
+      auditStudioEl.value = auditStudio;
+      return;
     }
 
     // Rooms reopened for amendment sit in their own group, whatever their
@@ -4838,7 +4887,7 @@
   document.getElementById("audit-in").addEventListener("click", function () {
     var u = document.getElementById("audit-user").value.trim();
     var w = document.getElementById("audit-pass").value;
-    if (u.toLowerCase() === AUDIT_USER.toLowerCase() && w === AUDIT_PASS) {
+    if (auditLoginOk(u, w)) {
       auditMsgEl.textContent = "";
       document.getElementById("audit-pass").value = "";
       store(AUDIT_SEEN, true);
@@ -4857,7 +4906,7 @@
     setSignedIn(false);
   });
 
-  auditStudioEl.addEventListener("change", function () {
+  function studioChanged() {
     auditStudio = auditStudioEl.value;
     store(AUDIT_STUDIO_KEY, auditStudio);
     // Moving studio puts this tab's drafts down and picks up any kept for
@@ -4871,6 +4920,24 @@
     lastChecksHtml = null;
     loadDrafts();
     renderAudit();
+  }
+
+  auditStudioEl.addEventListener("change", studioChanged);
+
+  // Narrowing the picker to rooms not audited yet. If the room in hand is
+  // not on the narrowed list the first one that is takes its place, with
+  // the same care over drafts as choosing it by hand.
+  var auditNewEl = document.getElementById("audit-new");
+  auditOnlyNew = load(AUDIT_NEW_KEY, false) === true;
+  auditNewEl.checked = auditOnlyNew;
+
+  auditNewEl.addEventListener("change", function () {
+    auditOnlyNew = auditNewEl.checked;
+    store(AUDIT_NEW_KEY, auditOnlyNew);
+    if (!auditIn) { return; }
+    var before = auditStudio;
+    fillStudios();
+    if (auditStudio !== before && auditStudio) { studioChanged(); }
   });
 
   // Pass is one tap. Fail asks why, and the reason travels with it.
