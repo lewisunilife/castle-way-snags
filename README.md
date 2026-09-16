@@ -47,7 +47,7 @@ Then open the page on two devices — the bar at the top should read
 Three views, one URL: **By trade** (the snagging list), **By studio**, and
 **Audit log**. The first two are public; the audit log asks for a username
 and password. The sign-ins are in `AUDIT_USERS` in `site/index.html` (JBA,
-JCA, Steve and Bal at the time of writing; the username is not
+JCA, Steve, Bal and Nycole at the time of writing; the username is not
 case-sensitive). That is a guard on the view, not a lock on the data: the
 page and its source are public, and so is that list.
 
@@ -327,6 +327,33 @@ but nothing verifies it.
   discarded.
 - **Ticks cannot be deleted** by anyone using the page — the access rules
   allow read, insert and update only.
+
+## Corridors and the stair core
+
+Each tower's audit log also carries one corridor per floor the tower has
+rooms on ("Floor 1 corridor" and so on) and a single "Stair core", under
+**Corridors and stairs** in the studio picker. They take the checks that
+apply to a common area, eleven of the eighteen: fire detection, fire doors,
+window restrictors, sockets, leaks, lights, switches, heating, extraction,
+windows and blinds, and cleaning; no door fob, bed, taps, toilet or
+appliances. A failed check becomes a row under its trade named by the
+corridor, and By studio lists them after the rooms under their own heading,
+counted apart from the rooms. Their records are keyed `T1-CORRIDOR-1`,
+`T1-STAIRS` and so on, so each tower's stay its own.
+
+## Habitable or not
+
+Every fail has to say whether the room is still habitable before it is
+recorded: the reason box asks **Still habitable?** with two choices, and
+Fail is refused until one is picked. The answer rides on the end of the
+record as `[h]` or `[nh]`, where a copy of the page from before it existed
+still reads the fail and its trade correctly; a fail from before carries
+neither and reads as habitable. A room with any current fail marked not
+habitable is flagged **Not habitable** on its trade rows and its By studio
+card, and the **Habitable** control shows every room, habitable rooms only,
+or not habitable rooms only, on By trade and By studio alike, remembered on
+the device. Changing the answer on a recorded fail records it again;
+passing the check clears it.
 
 ## Reopening an audit
 

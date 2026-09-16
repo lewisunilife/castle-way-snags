@@ -322,6 +322,43 @@
     margin: 10px 0 4px;
   }
 
+  /* The habitable choice a fail has to make. */
+  .check-hab {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin-top: 4px;
+  }
+
+  .check-hab label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13.5px;
+    font-weight: 700;
+    min-height: 36px;
+    cursor: pointer;
+  }
+
+  .check-why .check-hab input {
+    width: 18px;
+    height: 18px;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    flex: none;
+  }
+
+  .check-need {
+    display: block;
+    margin-top: 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--strike);
+  }
+
+  .check-need:empty { display: none; }
+
   .check-why select {
     width: 100%;
     font: inherit;
@@ -475,6 +512,30 @@
   }
 
   .movein-date:empty + .tag-15m, .studio-meta .tag-15m { margin-left: 0; }
+
+  /* A room a failed check has left not habitable. */
+  .tag-nh {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.4;
+    padding: 1px 6px;
+    margin-left: 6px;
+    color: var(--strike);
+    border: 1px solid var(--strike);
+    border-radius: 4px;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  .hab-flag:empty { display: none; }
+  .hab-flag { margin-left: 0; margin-top: 4px; }
+
+  .area-head {
+    margin: 26px 0 10px;
+    font-size: 15px;
+    font-weight: 700;
+  }
 
   .studio-controls {
     display: flex;
@@ -1354,6 +1415,14 @@
         <input type="checkbox" id="hide-ground"> Hide ground floor
       </label>
       <div class="field">
+        <label for="hab-filter">Habitable</label>
+        <select id="hab-filter">
+          <option value="all">Show every room</option>
+          <option value="h">Habitable only</option>
+          <option value="nh">Not habitable only</option>
+        </select>
+      </div>
+      <div class="field">
         <label for="fire-filter">15M fire reg rooms</label>
         <select id="fire-filter">
           <option value="all">Show every room</option>
@@ -1906,6 +1975,9 @@
   // A number on no tower's list counts as Tower 1, where every record
   // made before the split belongs.
   function roomInTower(room) {
+    // A corridor or stair core carries its tower in its id: T2-CORRIDOR-3.
+    var cm = /^T([1-4])-/.exec(room || "");
+    if (cm) { return parseInt(cm[1], 10) === TOWER_N; }
     var t = ROOM_TOWER[room];
     return t ? t === TOWER_N : TOWER_N === 1;
   }
@@ -1963,6 +2035,7 @@
   };
 
   function floorOf(room) {
+    if (COMMON_BY_ID && COMMON_BY_ID[room]) { return COMMON_BY_ID[room].floor; }
     return FLOORS[room.charAt(2)] || "";
   }
 
@@ -2094,6 +2167,43 @@
      the audit and a room nobody has been to is visible as exactly that.
      EVERY_ROOM is this tower's share of the same list the MVHR sweep is
      built from, so the two cannot drift apart. */
+  /* Corridors and the stair core are audited like a studio: one corridor
+     per floor the tower has rooms on, and one stair core, each per tower
+     so the towers' records never meet. The id is what the record is keyed
+     on; the label is what the page shows. */
+  var COMMON_AREAS = [];
+  var COMMON_BY_ID = {};
+  (function () {
+    var floors = {};
+    for (var i = 0; i < EVERY_ROOM.length; i++) {
+      var d = EVERY_ROOM[i].charAt(2);
+      if (d !== "0") { floors[d] = true; }
+    }
+    for (var f = 1; f <= 5; f++) {
+      if (!floors[String(f)]) { continue; }
+      COMMON_AREAS.push({
+        room: "T" + TOWER_N + "-CORRIDOR-" + f,
+        floor: FLOORS[String(f)],
+        label: "Floor " + f + " corridor",
+        type: "", movein: "", listed: true, common: true
+      });
+    }
+    COMMON_AREAS.push({
+      room: "T" + TOWER_N + "-STAIRS",
+      floor: "",
+      label: "Stair core",
+      type: "", movein: "", listed: true, common: true
+    });
+    for (var c = 0; c < COMMON_AREAS.length; c++) { COMMON_BY_ID[COMMON_AREAS[c].room] = COMMON_AREAS[c]; }
+  }());
+
+  function isCommon(room) { return !!COMMON_BY_ID[room]; }
+
+  // The name a room goes by on the page: its number, or a corridor's label.
+  function roomLabel(room) {
+    return COMMON_BY_ID[room] ? COMMON_BY_ID[room].label : room;
+  }
+
   var AUDIT_STUDIOS = [];
   var STUDIO_BY_ROOM = {};
   var sx;
@@ -2115,6 +2225,11 @@
     };
     AUDIT_STUDIOS.push(other);
     STUDIO_BY_ROOM[other.room] = other;
+  }
+
+  for (sx = 0; sx < COMMON_AREAS.length; sx++) {
+    AUDIT_STUDIOS.push(COMMON_AREAS[sx]);
+    STUDIO_BY_ROOM[COMMON_AREAS[sx].room] = COMMON_AREAS[sx];
   }
 
   /* "Fri 18 Sep 2026" sorts as 20260918, so the soonest arrival comes
@@ -2227,6 +2342,13 @@
   }
 
   var fireMode = "all";   // all | only | hide
+  var habMode = "all";    // all | h | nh
+
+  function habHidden(room, nh) {
+    if (habMode === "all") { return false; }
+    var not = (nh || nhRooms)[room] === true;
+    return habMode === "nh" ? !not : not;
+  }
 
   function fireHidden(room) {
     if (fireMode === "only") { return !is15M(room); }
@@ -2305,6 +2427,7 @@
   var HIDE_DONE_KEY = "cw-tower1-hide-done";
   var HIDE_GROUND_KEY = "cw-tower1-hide-ground";
   var FIRE_MODE_KEY = "cw-tower1-fire-mode";
+  var HAB_MODE_KEY = "cw-tower1-hab-mode";
   var STUDIO_SORT_KEY = "cw-tower1-studio-sort";
   var TRADE_OFF_KEY = "cw-tower1-trades-off";
   var SRC_OFF_KEY = "cw-tower1-sources-off";
@@ -2464,7 +2587,7 @@
     for (var r = 0; r < rooms.length; r++) {
       cells.push(
         '<span class="sum-room" data-key="' + esc(key) +
-        '" data-room="' + esc(rooms[r]) + '">' + esc(rooms[r]) + "</span>"
+        '" data-room="' + esc(rooms[r]) + '">' + esc(roomLabel(rooms[r])) + "</span>"
       );
     }
     return cells.join(", ");
@@ -2776,6 +2899,7 @@
           room: room,
           action: "Audit fail: " + ck.label,
           why: st.comment,
+          hab: st.hab,
           by: st.by,
           at: st.at
         });
@@ -2805,12 +2929,13 @@
     if (when) { stamp += (stamp ? " \u00b7 " : "") + esc(when); }
 
     return '<tr id="row-' + domId + '" class="audit-row">' +
-      '<td class="room">' + esc(f.room) + "</td>" +
+      '<td class="room">' + esc(roomLabel(f.room)) + "</td>" +
       '<td class="floor">' + esc(floorOf(f.room)) + "</td>" +
       '<td class="movein' + moveinClass(f.room) + '">' + moveinCell(f.room) + "</td>" +
       '<td class="src">' + esc(f.src) + "</td>" +
       '<td class="action"><span class="action-text">' + esc(f.action) + "</span>" +
       '<span class="fail-why">' + esc(f.why || "no reason given") + "</span>" +
+      '<span class="tag-nh hab-flag">' + (f.hab === "nh" ? "Not habitable" : "") + "</span>" +
       '<span class="note-who">' + stamp + "</span>" +
       '<ul class="notes" id="notes-' + domId + '"></ul>' +
       '<div class="note-add">' +
@@ -2883,6 +3008,8 @@
     auditRowIds[id] = trade;
   }
 
+  var nhRooms = {};   // rooms a current fail has marked not habitable
+
   function syncAuditRows() {
     var byTrade = auditFailRows();
     var wanted = {};
@@ -2890,12 +3017,14 @@
     var t;
     var id;
 
+    nhRooms = {};
     for (t in byTrade) {
       if (!Object.prototype.hasOwnProperty.call(byTrade, t)) { continue; }
       for (var r = 0; r < byTrade[t].length; r++) {
         var f = byTrade[t][r];
         f.src = auditRoundName(f.at);
         f.srcKey = dayKey(f.at);
+        if (f.hab === "nh") { nhRooms[f.room] = true; }
         wanted[rowKey(f.room, f.action)] = { trade: t, f: f };
       }
     }
@@ -2919,6 +3048,12 @@
         if (whyEl && whyEl.textContent !== wantWhy) {
           whyEl.textContent = wantWhy;
           index[id].why = wanted[id].f.why;
+        }
+        var habEl = document.querySelector("#row-" + dom + " .hab-flag");
+        var wantHab = wanted[id].f.hab === "nh" ? "Not habitable" : "";
+        if (habEl && habEl.textContent !== wantHab) {
+          habEl.textContent = wantHab;
+          index[id].hab = wanted[id].f.hab;
         }
         // Looked at again on a later day: it moves into that round.
         var srcEl = document.querySelector("#row-" + dom + " td.src");
@@ -3109,6 +3244,7 @@
           var hide = (hideDone && isDone) ||
             (hideGround && (index[id].room || "").charAt(2) === "0") ||
             fireHidden(index[id].room) ||
+            habHidden(index[id].room) ||
             srcHidden(index[id].src);
           if (rowEl.hidden !== hide) { rowEl.hidden = hide; }
         }
@@ -3164,6 +3300,7 @@
           if (hideDone && vrec.done === true) { continue; }
           if (hideGround && (index[ids[vq]].room || "").charAt(2) === "0") { continue; }
           if (fireHidden(index[ids[vq]].room)) { continue; }
+          if (habHidden(index[ids[vq]].room)) { continue; }
           if (srcHidden(index[ids[vq]].src)) { continue; }
           secShowing++;
         }
@@ -3176,7 +3313,7 @@
     var unWrap = document.getElementById("sec-unassigned");
     if (unWrap && !(sectionRows[UNASSIGNED] || []).length) { unWrap.hidden = true; }
 
-    allClearEl.hidden = !((hideDone || hideGround || fireMode !== "all") && !anyVisible);
+    allClearEl.hidden = !((hideDone || hideGround || fireMode !== "all" || habMode !== "all") && !anyVisible);
     tradeEmptyEl.hidden = total !== 0;
 
     applyRowOrder();
@@ -3637,7 +3774,7 @@
 
   function jobLabel(id) {
     var job = index[id];
-    return job ? job.room + " \u00b7 " + job.action : "that item";
+    return job ? roomLabel(job.room) + " \u00b7 " + job.action : "that item";
   }
 
   function tickWithUndo(id, done) {
@@ -3879,7 +4016,8 @@
     { user: "JBA", pass: "2004" },
     { user: "JCA", pass: "2576" },
     { user: "Steve", pass: "9911" },
-    { user: "Bal", pass: "5342" }
+    { user: "Bal", pass: "5342" },
+    { user: "Nycole", pass: "8745" }
   ];
 
   function auditLoginOk(u, w) {
@@ -3945,6 +4083,19 @@
     CHECK_BY_ID[AUDIT_CHECKS[ci].id] = AUDIT_CHECKS[ci];
   }
 
+  /* A corridor or stair core has no door fob, bed, taps, toilet or
+     appliances, so it takes the checks that apply to a common area. */
+  var COMMON_CHECK_IDS = ["fire-detect", "fire-doors", "restrictors", "sockets",
+    "leaks", "lights", "switches", "heating", "extraction", "windows-blinds", "clean"];
+  var COMMON_CHECKS = [];
+  for (var cc = 0; cc < COMMON_CHECK_IDS.length; cc++) {
+    COMMON_CHECKS.push(CHECK_BY_ID[COMMON_CHECK_IDS[cc]]);
+  }
+
+  function checksFor(room) {
+    return isCommon(room) ? COMMON_CHECKS : AUDIT_CHECKS;
+  }
+
   var auditIn = false;
   var auditStudio = "";
 
@@ -3956,6 +4107,7 @@
   var whyOpen = {};    // check id -> the reason box has been opened
   var whyDraft = {};   // check id -> what has been typed into it
   var tradeDraft = {}; // check id -> the trade picked for it
+  var habDraft = {};   // check id -> "h" or "nh" picked before the fail is recorded
   var lastChecksHtml = null;
 
   /* Held on the device as well, so a refresh mid-sentence — including the
@@ -3965,7 +4117,8 @@
 
   function saveDrafts() {
     store(AUDIT_DRAFT_KEY, {
-      studio: auditStudio, whyOpen: whyOpen, whyDraft: whyDraft, tradeDraft: tradeDraft
+      studio: auditStudio, whyOpen: whyOpen, whyDraft: whyDraft, tradeDraft: tradeDraft,
+      habDraft: habDraft
     });
   }
 
@@ -3975,18 +4128,26 @@
     whyOpen = d.whyOpen && typeof d.whyOpen === "object" ? d.whyOpen : {};
     whyDraft = d.whyDraft && typeof d.whyDraft === "object" ? d.whyDraft : {};
     tradeDraft = d.tradeDraft && typeof d.tradeDraft === "object" ? d.tradeDraft : {};
+    habDraft = d.habDraft && typeof d.habDraft === "object" ? d.habDraft : {};
   }
 
   function clearDraft(checkId) {
     delete whyOpen[checkId];
     delete whyDraft[checkId];
     delete tradeDraft[checkId];
+    delete habDraft[checkId];
     saveDrafts();
   }
 
   // "FAIL(electrical): reason", or plain "FAIL: reason" from before trades
   // could be reassigned. Both read the same way.
   var FAIL_RE = /^FAIL(?:\(([a-z0-9-]{1,30})\))?:?\s*/;
+
+  // Whether the room is still habitable rides on the end of the reason as
+  // "[h]" or "[nh]", where a copy of the page from before it existed still
+  // reads the fail and its trade correctly. A fail from before carries
+  // neither and reads as habitable.
+  var HAB_RE = /\s*\[(h|nh)\]\s*$/;
 
   // A fail can be parked with no trade against it rather than forced onto
   // the wrong one. It still shows, under Unassigned, so it is not lost.
@@ -4030,10 +4191,15 @@
       var ck = CHECK_BY_ID[checkId];
       var to = m && knownTrade(m[1]) ? m[1] : (ck ? ck.trade : "");
 
+      var comment = m ? body.slice(m[0].length) : "";
+      var hm = m ? HAB_RE.exec(comment) : null;
+      if (hm) { comment = comment.slice(0, hm.index); }
+
       out[room][checkId] = {
         status: m ? "fail" : "pass",
-        comment: m ? body.slice(m[0].length) : "",
+        comment: comment,
         trade: to,
+        hab: hm ? hm[1] : "",
         by: c.author || "",
         at: c.created_at || ""
       };
@@ -4154,12 +4320,13 @@
     var checked = 0;
     var i;
 
-    for (i = 0; i < AUDIT_CHECKS.length; i++) {
-      var st = checks[AUDIT_CHECKS[i].id];
+    var list = checksFor(room);
+    for (i = 0; i < list.length; i++) {
+      var st = checks[list[i].id];
       if (!st) { continue; }
       checked++;
       if (st.status !== "fail") { continue; }
-      fails.push({ check: AUDIT_CHECKS[i], st: st });
+      fails.push({ check: list[i], st: st });
     }
 
     var logged = (issues || studioIssues())[room] || [];
@@ -4172,6 +4339,8 @@
     var jobs = roomJobList(room, filtered);
     var sm = STUDIO_BY_ROOM[room];
     var listed = !!(sm && sm.listed);
+    var notHab = false;
+    for (i = 0; i < fails.length; i++) { if (fails[i].st.hab === "nh") { notHab = true; } }
     // A failed check is a row on its trade's list, so it is already in
     // tickets; counting it here as well would count it twice.
     var outstanding = open.length + tickets.length;
@@ -4180,6 +4349,7 @@
     return {
       listed: listed,
       checked: checked,
+      notHabitable: notHab,
       fails: fails,
       open: open,
       issues: logged,
@@ -4193,7 +4363,7 @@
       // second visit from the auditor.
       awaiting: awaiting,
       complete: !awaiting && !outstanding &&
-        (!listed || checked === AUDIT_CHECKS.length)
+        (!listed || checked === checksFor(room).length)
     };
   }
 
@@ -4223,11 +4393,27 @@
     render();
   }
 
-  function setCheck(room, checkId, pass, comment, trade) {
+  function setCheck(room, checkId, pass, comment, trade, hab) {
     var ck = CHECK_BY_ID[checkId];
     var to = knownTrade(trade) ? trade : (ck ? ck.trade : "");
+    var mark = hab === "h" || hab === "nh" ? " [" + hab + "]" : "";
     postEntry("audit:" + room + ":" + checkId,
-      pass ? "PASS" : "FAIL(" + to + "): " + (comment || "no reason given"));
+      pass ? "PASS" : "FAIL(" + to + "): " + (comment || "no reason given") + mark);
+  }
+
+  // The rooms a failed check has left not habitable, from a read of the
+  // record: any current fail marked so.
+  function notHabitableFrom(state) {
+    var out = {};
+    for (var room in state) {
+      if (!Object.prototype.hasOwnProperty.call(state, room)) { continue; }
+      for (var cid in state[room]) {
+        if (!Object.prototype.hasOwnProperty.call(state[room], cid)) { continue; }
+        var st = state[room][cid];
+        if (st.status === "fail" && st.hab === "nh") { out[room] = true; break; }
+      }
+    }
+    return out;
   }
 
   function setIssueDone(issueId) {
@@ -4257,6 +4443,7 @@
   // named by its floor, because a priority number it was never given would
   // be an invention.
   function studioLabel(st) {
+    if (st.common) { return st.label + (st.floor ? " \u2014 " + st.floor : ""); }
     var mark = is15M(st.room) ? " \u00b7 15M" : "";
     if (st.listed && LIST_RANKED) {
       return st.priority + ". " + st.room + (st.type ? " \u2014 " + st.type : "") +
@@ -4295,6 +4482,18 @@
       if (sum.complete) { done += opt; } else { todo += opt; }
     }
 
+    // Corridors and the stair core, their own group, and on the narrowed
+    // list while nothing is recorded against them.
+    var common = "";
+    for (var ca = 0; ca < COMMON_AREAS.length; ca++) {
+      var area = COMMON_AREAS[ca];
+      var aSum = studioSummary(area.room, state, issues, false);
+      var aOpt = '<option value="' + esc(area.room) + '">' + esc(studioLabel(area)) + "</option>";
+      common += aOpt;
+      if (aSum.checked === 0 && !aSum.complete) { fresh += aOpt; freshCount++; }
+      else if (area.room === auditStudio) { fresh += aOpt; }
+    }
+
     if (auditOnlyNew) {
       // A reopened room in hand stays too; it is not on Stelling's list.
       var held = STUDIO_BY_ROOM[auditStudio];
@@ -4304,7 +4503,7 @@
       }
       auditStudioEl.innerHTML = fresh
         ? '<optgroup label="Not audited yet \u00b7 ' + freshCount +
-          (freshCount === 1 ? " room" : " rooms") + '">' + fresh + "</optgroup>"
+          " left" + '">' + fresh + "</optgroup>"
         : '<option value="">Every room has been started</option>';
       auditStudioEl.disabled = !fresh;
       if (fresh && !auditStudioEl.querySelector('option[value="' + auditStudio + '"]')) {
@@ -4330,6 +4529,9 @@
     }
     if (reopened) {
       html += '<optgroup label="' + esc(REOPENED.label) + '">' + reopened + "</optgroup>";
+    }
+    if (common) {
+      html += '<optgroup label="Corridors and stairs">' + common + "</optgroup>";
     }
     if (done) {
       html += '<optgroup label="Completed">' + done + "</optgroup>";
@@ -4369,10 +4571,12 @@
     var passed = 0;
     var failed = 0;
 
-    for (var i = 0; i < AUDIT_CHECKS.length; i++) {
-      var ck = AUDIT_CHECKS[i];
+    var checks = checksFor(auditStudio);
+    for (var i = 0; i < checks.length; i++) {
+      var ck = checks[i];
       var st = state[ck.id];
       var goesTo = st && st.trade ? st.trade : ck.trade;
+      var hab = st && st.status === "fail" ? st.hab : "";
       var cls = st ? (st.status === "fail" ? " is-fail" : " is-pass") : "";
       if (st && st.status === "pass") { passed++; }
       if (st && st.status === "fail") { failed++; }
@@ -4411,7 +4615,16 @@
         '<label class="check-assign" for="trade-' + esc(ck.id) + '">Send to</label>' +
         '<select id="trade-' + esc(ck.id) + '" data-check="' + esc(ck.id) + '"' +
         ' aria-label="Trade to send ' + esc(ck.label) + ' to">' +
-        tradeOptions(goesTo) + "</select></div>" +
+        tradeOptions(goesTo) + "</select>" +
+        '<span class="check-assign">Still habitable?</span>' +
+        '<div class="check-hab">' +
+        '<label><input type="radio" name="hab-' + esc(ck.id) + '" value="h"' +
+        (hab === "h" ? " checked" : "") + "> Habitable</label>" +
+        '<label><input type="radio" name="hab-' + esc(ck.id) + '" value="nh"' +
+        (hab === "nh" ? " checked" : "") + "> Not habitable</label>" +
+        "</div>" +
+        '<span class="check-need" id="need-' + esc(ck.id) + '"></span>' +
+        "</div>" +
         '<span class="check-stamp">' + stamp + "</span>" +
         "</div>";
     }
@@ -4447,6 +4660,11 @@
         var tEl = document.getElementById("trade-" + td);
         if (tEl) { tEl.value = tradeDraft[td]; }
       }
+      for (var hd in habDraft) {
+        if (!Object.prototype.hasOwnProperty.call(habDraft, hd)) { continue; }
+        var hEl = auditChecksEl.querySelector('input[name="hab-' + hd + '"][value="' + habDraft[hd] + '"]');
+        if (hEl) { hEl.checked = true; }
+      }
 
       if (focusId) {
         var back = document.getElementById(focusId);
@@ -4458,10 +4676,12 @@
     }
 
     auditProgressEl.textContent = "\u2014 " + (passed + failed) + " of " +
-      AUDIT_CHECKS.length + " checked";
+      checks.length + " checked";
     var meta = STUDIO_BY_ROOM[auditStudio];
     var line = "";
-    if (meta && meta.listed) {
+    if (meta && meta.common) {
+      line = (meta.floor ? meta.floor + " \u00b7 " : "") + "common area, " + TOWER_NAME;
+    } else if (meta && meta.listed) {
       line = (LIST_RANKED
         ? "Priority " + meta.priority + " of " + STELLING_COUNT +
           " on Stelling\u2019s list \u00b7 " + meta.floor
@@ -4483,7 +4703,7 @@
     if (failed) {
       line += (line ? " \u2014 " : "") + failed +
         (failed === 1 ? " failure outstanding" : " failures outstanding");
-    } else if (passed === AUDIT_CHECKS.length) {
+    } else if (passed === checks.length) {
       line += (line ? " \u2014 " : "") + "all checks passed";
     }
     auditStateEl.textContent = line;
@@ -4590,15 +4810,17 @@
     if (is15M(room)) { bits.push('<span class="tag-15m">15M fire reg</span>'); }
     if (sm && sm.floor) { bits.push(esc(sm.floor)); }
     if (sm && sm.type) { bits.push(esc(sm.type)); }
-    if (sm && sm.listed) { bits.push("priority " + sm.priority); }
+    if (sm && sm.listed && !sm.common) { bits.push("priority " + sm.priority); }
     var meta = bits.length ? bits.join(" \u00b7 ") + " \u00b7 " : "";
 
     var progress = (sum.listed || sum.checked)
-      ? sum.checked + " of " + AUDIT_CHECKS.length + " checks done"
+      ? sum.checked + " of " + checksFor(room).length + " checks done"
       : "audited";
 
-    return '<div class="studio-card' + cls + '" data-room="' + esc(room) + '">' +
-      "<h3>" + esc(room) + " \u2014 " + esc(head) + "</h3>" +
+    return '<div class="studio-card' + cls + (sm && sm.common ? " area-card" : "") +
+      '" data-room="' + esc(room) + '">' +
+      "<h3>" + esc(roomLabel(room)) + " \u2014 " + esc(head) +
+      (sum.notHabitable ? ' <span class="tag-nh">Not habitable</span>' : "") + "</h3>" +
       '<p class="studio-meta">' + meta + progress + "</p>" +
       (items ? "<ul>" + items + "</ul>" : "") + "</div>";
   }
@@ -4650,6 +4872,8 @@
     if (hideGround) { notes.push("ground floor hidden"); }
     if (fireMode === "only") { notes.push("only 15M fire reg rooms"); }
     if (fireMode === "hide") { notes.push("15M fire reg rooms hidden"); }
+    if (habMode === "h") { notes.push("habitable rooms only"); }
+    if (habMode === "nh") { notes.push("not habitable rooms only"); }
 
     groupActionsEl.hidden = !(studioSort === "movein" && activeView !== "audit");
 
@@ -4755,6 +4979,9 @@
     var open = 0;
     var clear = 0;
     var shown = 0;
+    var areas = { waiting: 0, open: 0, clear: 0 };
+    var areaHead = false;
+    var nh = notHabitableFrom(state);
 
     // In date order the rooms are gathered under the day they are let, so
     // a week's arrivals can be opened or shut as one.
@@ -4774,16 +5001,21 @@
       var room = rooms[i];
       if (hideGround && room.charAt(2) === "0") { continue; }
       if (fireHidden(room)) { continue; }
+      if (habHidden(room, nh)) { continue; }
 
       var sum = studioSummary(room, state, issues, true);
-      if (sum.awaiting) { waiting++; }
-      else if (sum.complete) { clear++; }
-      else { open++; }
+      var tally = isCommon(room) ? areas : null;
+      if (sum.awaiting) { if (tally) { tally.waiting++; } else { waiting++; } }
+      else if (sum.complete) { if (tally) { tally.clear++; } else { clear++; } }
+      else { if (tally) { tally.open++; } else { open++; } }
 
       if (hideDone && sum.complete) { continue; }
       shown++;
 
       if (!byDate) {
+        // Corridors and the stair core sort after every room; a heading
+        // marks where they start.
+        if (tally && !areaHead) { html += '<h3 class="area-head">Corridors and stairs</h3>'; areaHead = true; }
         html += studioCard(room, sum);
         continue;
       }
@@ -4819,6 +5051,11 @@
     if (waiting) { counts.push(waiting + " waiting to be audited"); }
     if (open) { counts.push(open + " with something outstanding"); }
     if (clear) { counts.push(clear + " with nothing outstanding"); }
+    var areaCounts = [];
+    if (areas.waiting) { areaCounts.push(areas.waiting + " waiting to be audited"); }
+    if (areas.open) { areaCounts.push(areas.open + " with something outstanding"); }
+    if (areas.clear) { areaCounts.push(areas.clear + " with nothing outstanding"); }
+    if (areaCounts.length) { counts.push("corridors and stairs: " + areaCounts.join(", ")); }
     studioCountsEl.textContent = counts.join(" \u00b7 ");
 
     studioListEl.innerHTML = html;
@@ -4917,6 +5154,7 @@
     whyOpen = {};
     whyDraft = {};
     tradeDraft = {};
+    habDraft = {};
     lastChecksHtml = null;
     loadDrafts();
     renderAudit();
@@ -4953,11 +5191,12 @@
 
     if (!pass) {
       var reason = why ? why.value.trim() : "";
-      if (!reason) {
-        // Show the box and let them say why, and who it is for, before it
-        // is recorded. Remembered rather than just shown, so a redraw does
-        // not shut it again.
-        var wrap = box ? box.querySelector(".check-why") : null;
+      var hab = habChoice(checkId);
+      var wrap = box ? box.querySelector(".check-why") : null;
+      if (!reason || !hab) {
+        // Show the box and let them say why, who it is for and whether the
+        // room is still habitable, before it is recorded. Remembered rather
+        // than just shown, so a redraw does not shut it again.
         if (wrap && wrap.hidden) {
           whyOpen[checkId] = true;
           saveDrafts();
@@ -4967,8 +5206,11 @@
           return;
         }
       }
+      // A fail is never recorded without saying whether the room is
+      // still habitable.
+      if (!hab) { needHab(checkId, true); return; }
       clearDraft(checkId);
-      setCheck(auditStudio, checkId, false, reason, tsel ? tsel.value : "");
+      setCheck(auditStudio, checkId, false, reason, tsel ? tsel.value : "", hab);
       return;
     }
 
@@ -4992,8 +5234,42 @@
     var cid = field.id.slice(4);
     var sel = document.getElementById("trade-" + cid);
     var typed = field.value.trim();
+    var hab = habChoice(cid);
+    if (!hab) { needHab(cid, true); return; }
     clearDraft(cid);
-    setCheck(auditStudio, cid, false, typed, sel ? sel.value : "");
+    setCheck(auditStudio, cid, false, typed, sel ? sel.value : "", hab);
+  });
+
+  // The habitable choice on a check: what is ticked, or the draft held
+  // for it.
+  function habChoice(cid) {
+    var on = auditChecksEl.querySelector('input[name="hab-' + cid + '"]:checked');
+    return on ? on.value : (habDraft[cid] || "");
+  }
+
+  function needHab(cid, on) {
+    var el = document.getElementById("need-" + cid);
+    if (el) { el.textContent = on ? "Say whether it is still habitable before recording the fail." : ""; }
+  }
+
+  // Changing the habitable choice on a check that has already failed
+  // records it again with the new answer; before that it is held as a draft.
+  auditChecksEl.addEventListener("change", function (ev) {
+    var r = ev.target;
+    if (!r || r.type !== "radio" || !r.name || r.name.indexOf("hab-") !== 0) { return; }
+    var cid = r.name.slice(4);
+    needHab(cid, false);
+    var st = (auditState()[auditStudio] || {})[cid];
+    if (!st || st.status !== "fail") {
+      habDraft[cid] = r.value;
+      saveDrafts();
+      return;
+    }
+    if (st.hab === r.value) { return; }
+    var why = document.getElementById("why-" + cid);
+    var sel = document.getElementById("trade-" + cid);
+    setCheck(auditStudio, cid, false, why ? why.value.trim() : st.comment,
+      sel ? sel.value : st.trade, r.value);
   });
 
   // Changing the trade on a check that has already failed moves it there
@@ -5011,7 +5287,7 @@
     }
     if (st.trade === sel.value) { return; }
     var why = document.getElementById("why-" + cid);
-    setCheck(auditStudio, cid, false, why ? why.value.trim() : st.comment, sel.value);
+    setCheck(auditStudio, cid, false, why ? why.value.trim() : st.comment, sel.value, st.hab);
   });
 
   function onIssueTick(ev) {
@@ -5042,6 +5318,10 @@
   var savedFire = load(FIRE_MODE_KEY, "all");
   fireMode = savedFire === "only" || savedFire === "hide" ? savedFire : "all";
   fireFilterEl.value = fireMode;
+  var habFilterEl = document.getElementById("hab-filter");
+  var savedHab = load(HAB_MODE_KEY, "all");
+  habMode = savedHab === "h" || savedHab === "nh" ? savedHab : "all";
+  habFilterEl.value = habMode;
   studioSort = load(STUDIO_SORT_KEY, "room") === "movein" ? "movein" : "room";
   studioSortEl.value = studioSort;
 
@@ -5204,6 +5484,14 @@
     var v = fireFilterEl.value;
     fireMode = v === "only" || v === "hide" ? v : "all";
     store(FIRE_MODE_KEY, fireMode);
+    render();
+    renderStudios();
+  });
+
+  habFilterEl.addEventListener("change", function () {
+    var v = habFilterEl.value;
+    habMode = v === "h" || v === "nh" ? v : "all";
+    store(HAB_MODE_KEY, habMode);
     render();
     renderStudios();
   });
