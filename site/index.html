@@ -2202,6 +2202,25 @@
     return '<span class="movein-date">' + esc(date) + "</span>" + (is15M(room) ? TAG_15M : "");
   }
 
+  /* In date order an undated 15M room sorts and groups under its 15M mark,
+     after every date and before the rooms with nothing at all, rather than
+     being lost among "no move-in date set". */
+  var KEY_15M = "15m";
+
+  function dateGroupKey(room) {
+    var k = moveinSortFor(room);
+    if (k) { return k; }
+    return is15M(room) ? KEY_15M : "";
+  }
+
+  function dateRank(k) { return !k ? 2 : (k === KEY_15M ? 1 : 0); }
+
+  function dateGroupLabel(k, room) {
+    if (!k) { return "No move-in date set"; }
+    if (k === KEY_15M) { return "15M fire reg \u00b7 no move-in date"; }
+    return moveinFor(room);
+  }
+
   var fireMode = "all";   // all | only | hide
 
   function fireHidden(room) {
@@ -2959,15 +2978,17 @@
         order.push({
           domId: domId,
           room: job.room || "",
-          date: moveinSortFor(job.room || "")
+          date: dateGroupKey(job.room || "")
         });
       }
 
       order.sort(function (a, b) {
         if (studioSort === "movein" && a.date !== b.date) {
-          // A room with no arrival booked goes last, not first.
-          if (!a.date) { return 1; }
-          if (!b.date) { return -1; }
+          // Dates first, then the undated 15M rooms, then rooms with no
+          // arrival booked at all.
+          var ra = dateRank(a.date);
+          var rb = dateRank(b.date);
+          if (ra !== rb) { return ra - rb; }
           return a.date < b.date ? -1 : 1;
         }
         if (a.room !== b.room) { return a.room < b.room ? -1 : 1; }
@@ -3004,7 +3025,7 @@
             '<button type="button" class="date-toggle" aria-expanded="' +
             (dateBlockOpen(key, dk) ? "true" : "false") + '">' +
             '<span class="group-when">' +
-            esc(dk === "none" ? "No move-in date set" : moveinFor(order[r].room)) +
+            esc(dateGroupLabel(dk === "none" ? "" : dk, order[r].room)) +
             '</span><span class="group-count"></span></button></td></tr>';
           table.appendChild(block);
         }
@@ -4213,12 +4234,13 @@
   // named by its floor, because a priority number it was never given would
   // be an invention.
   function studioLabel(st) {
+    var mark = is15M(st.room) ? " \u00b7 15M" : "";
     if (st.listed && LIST_RANKED) {
       return st.priority + ". " + st.room + (st.type ? " \u2014 " + st.type : "") +
-        (st.movein ? ", in " + st.movein : "");
+        (st.movein ? ", in " + st.movein : "") + mark;
     }
     return st.room + (st.floor ? " \u2014 " + st.floor : "") +
-      (st.movein ? " \u00b7 " + moveinVerb(st).toLowerCase() + " " + st.movein : "");
+      (st.movein ? " \u00b7 " + moveinVerb(st).toLowerCase() + " " + st.movein : "") + mark;
   }
 
   function fillStudios() {
@@ -4663,11 +4685,12 @@
       // Soonest arrival first. A room with no move-in date given goes to
       // the end rather than the front, where an empty value would land.
       rooms.sort(function (a, b) {
-        var ka = (STUDIO_BY_ROOM[a] && STUDIO_BY_ROOM[a].moveinKey) || "";
-        var kb = (STUDIO_BY_ROOM[b] && STUDIO_BY_ROOM[b].moveinKey) || "";
+        var ka = dateGroupKey(a);
+        var kb = dateGroupKey(b);
         if (ka !== kb) {
-          if (!ka) { return 1; }
-          if (!kb) { return -1; }
+          var ra = dateRank(ka);
+          var rb = dateRank(kb);
+          if (ra !== rb) { return ra - rb; }
           return ka < kb ? -1 : 1;
         }
         return byRoom(a, b);
@@ -4716,9 +4739,8 @@
         continue;
       }
 
-      var sm = STUDIO_BY_ROOM[room];
-      var g = group((sm && sm.moveinKey) || "none",
-        (sm && sm.movein) || "No move-in date set");
+      var gk = dateGroupKey(room);
+      var g = group(gk || "none", dateGroupLabel(gk, room));
       g.cards += studioCard(room, sum);
       g.rooms++;
       if (!sum.complete) { g.out++; }

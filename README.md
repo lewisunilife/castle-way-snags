@@ -273,7 +273,10 @@ Twenty Tower 1 rooms are 15M fire regulation rooms (CW112, 113, 143, 144,
 212, 213, 243, 244, 312, 313, 343, 344, 412, 413, 443, 444, 503, 505, 525
 and 526; `FIRE_15M_LIST` in `site/index.html`). Each carries a **15M** mark
 beside its move-in on the trade lists and on its By studio card, and the
-audit log says so under the studio picker. The **15M fire reg rooms** control
+audit log says so under the studio picker and in its picker labels. A 15M
+room with no move-in date reads **15M** in the move-in column, and in date
+order those rooms group under "15M fire reg · no move-in date", after every
+date and before the rooms with no date at all. The **15M fire reg rooms** control
 shows every room, only those rooms, or everything but them, on By trade and
 By studio alike; it is remembered on the device and named on the amber
 filtered line like the other filters.
