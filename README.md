@@ -98,7 +98,7 @@ all worked out from the rows, so a failure joining a trade cannot leave them
 behind: the total goes from "0 of 383" to "0 of 384" and back when the check
 passes.
 
-**By studio** is public and lists all 257 studios in the tower in room order,
+**By studio** is public and lists every studio in the tower in room order,
 lowest to highest, with a line for everything still outstanding against each
 one — open jobs from the trade lists (audit failures among them, since they
 are jobs) and logged issues, each naming its trade. Ticking a failure off in
@@ -142,14 +142,15 @@ entirely — that is a fact about the studio, not about what someone chose to
 look at. All four choices are remembered on that device and change nobody
 else's view.
 
-The list is Castle Way Tower 1 only. It is generated from the floor layouts —
-ground floor, five standard floors, the short fifth, and the two annexe
-landings — which is where the 257 comes from; nothing outside those layouts
+The list is the tower being shown. Its rooms come from the control sheet's
+room-by-tower table (see **Four towers** below), so nothing outside the sheet
 can appear on it.
 
-The audit log's studio picker offers only Stelling's 37, since the rest of the
-building does not need auditing. Finished ones move into a **Completed** group
-rather than leaving the list, so a room can be re-audited.
+On Tower 1 the audit log's studio picker offers Stelling's rooms and any
+reopened for amendment, since the rest of the tower does not need auditing;
+on the other towers it offers every room. Finished ones move into a
+**Completed** group rather than leaving the list, so a room can be
+re-audited.
 
 One of Stelling's rooms is clear once all eighteen checks have passed, every
 logged issue is marked done, **and** nothing is left against it on the trade
@@ -164,13 +165,13 @@ Results are append-only: re-auditing a studio adds to the record rather than
 overwriting it, and the newest entry for a check is its status. Nothing is
 edited or deleted, which is the point of an audit trail.
 
-Stelling's 37 rooms are in `STELLING_LIST` in `site/index.html`, in the
-priority order they gave — nearest move-in first. Everything else comes from
-`EVERY_ROOM`, the same building-wide list the MVHR sweep is built from, so
-the audit and the MVHR tickets cannot drift apart: both cover the same 257
-rooms. Adding a room to the building means editing the floor layouts once.
+Stelling's rooms are in `TOWER1_LIST` in `site/index.html`, in the priority
+order they gave — nearest move-in first. Everything else comes from the
+tower's share of `TOWER_ROOMS`, the same table the MVHR sweep is built from,
+so the audit and the MVHR tickets cannot drift apart. Adding a room to the
+building means adding it to that table once.
 
-To change Stelling's order, reorder `STELLING_LIST`; priority is that array's
+To change Stelling's order, reorder `TOWER1_LIST`; priority is that array's
 order, not a stored number, so it cannot fall out of step.
 
 ## Who is carrying each trade
@@ -303,39 +304,49 @@ last entry, so an amendment is just recording the check as it now stands;
 the earlier entry stays in the record. Take the rooms out of `REOPENED` again
 to close the reopening.
 
-## Two towers
+## Four towers
 
-The page shows one tower at a time. `?tower=2` on the address is Tower 2;
-anything else is Tower 1. The **Tower** buttons under the heading go between
-them, and because they are plain links a Tower 2 address can be sent to a
-trade and opens on Tower 2.
+Castle Way is 257 studios in four towers standing side by side, so a room's
+number says which floor it is on and the control sheet's Tower column says
+which tower. That column is in `TOWER_ROOMS` in `site/index.html`, written
+out floor by floor (16 Sep): on each of floors 1 to 4, rooms 01-13 and 43-48
+are Tower 1, 14-19 and 40A-42B Tower 2, 20-39 Tower 3, and on floors 1 and 2
+rooms 49-52 are Tower 4, the annexe. The ground floor is CW001 and CW009B in
+Tower 1 and the rest in Tower 2. The 5th floor is 01-05 and 25-30 in Tower 1,
+06-11 and 22A-24B in Tower 2, 12-21 in Tower 3. That gives Tower 1 89
+studios, Tower 2 70, Tower 3 90 and Tower 4 8.
 
-Both towers share the same database tables and the same audit sign-in, and
-the trades are the same in both. Tower 2 starts with nothing on its trade
-lists: every check that fails in its audit log becomes a row under the trade
-it is sent to, and that is how its snagging list is built. The MVHR sweep is
-Tower 1's and is not repeated.
+The page shows one tower at a time. `?tower=2` on the address is Tower 2, and
+so on up to 4; anything else is Tower 1. The **Tower** buttons under the
+heading go between them, and because they are plain links a tower's address
+can be sent to a trade and opens on that tower.
 
-**Tower 2's room numbers are not in yet.** They go in `TOWER2_ROOMS` in
-`site/index.html`, in room order, and nothing else has to change: every one
-then appears on the audit picker as still to audit and on By studio as
-waiting to be audited. Until then the Tower 2 view says so on every tab.
+Every tower shares the one list, the same database tables and the same audit
+sign-in. Each tower's view is its own rooms only: its share of every trade
+list (the MVHR sweep covers the whole building, so each tower has its rooms'
+share of it; the rest of the trade rows are all Tower 1's), its rooms on By
+studio, and its rooms on the audit picker. A row keeps its key whichever
+tower shows it, so the split touches nothing that is ticked.
 
-Two rules for that list:
-
-- A Tower 2 number must never repeat a Tower 1 number. Jobs and audit
-  records are keyed by room, so the same number in both towers would be one
-  room to the record.
-- The floor and the ground-floor filter are read off the third character of
-  the number, as they are for Tower 1's `CWxxx` rooms. If Tower 2 numbers
-  another way, `floorOf` and the ground-floor test need to follow.
+Tower 1 has Stelling's priority list, so its other rooms count as audited
+already. The other towers have no list yet, so every room is still to audit,
+in room order, and a check that fails in the audit log becomes a row under
+the trade it is sent to: that is how their snagging lists are built. To put
+a tower's rooms in Stelling's order, give Tower 1's `TOWER1_LIST` a
+counterpart for that tower.
 
 Records stay in their tower. An audit entry or a logged issue only shows in
-the tower its room belongs to, so nothing from Tower 1 turns up on Tower 2's
-lists or the other way round. A comment posted on Tower 2 is tagged
-`tower:2`; one without a tag is Tower 1's, which is every comment made before
-there was a Tower 2. Move-in dates are keyed by room too, so the three
-control-sheet maps can hold both towers' rooms.
+the tower its room belongs to, so nothing from one tower turns up on
+another's lists. A comment posted on Tower 2, 3 or 4 is tagged `tower:N`;
+one without a tag is Tower 1's, which is every comment made before the
+split. Move-in dates are keyed by room, so the three control-sheet maps hold
+every tower's rooms.
+
+The annexe is numbered CW601-604 and CW701-704 on the floor plans and
+CW149-152 and CW249-252 on the control sheet. The eight MVHR rows for it
+were made from the plans, so their keys carry the plan numbers and any tick
+on them stays where it is; `ROOM_ALIAS` in the page maps each to the sheet's
+number, which is what the page shows and what the audit log records against.
 
 ## Updating the list
 

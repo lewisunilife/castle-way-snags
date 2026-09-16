@@ -1210,6 +1210,8 @@
     <span class="towers-label">Tower</span>
     <a class="tower-btn" data-tower="1" href="?tower=1">Tower 1</a>
     <a class="tower-btn" data-tower="2" href="?tower=2">Tower 2</a>
+    <a class="tower-btn" data-tower="3" href="?tower=3">Tower 3</a>
+    <a class="tower-btn" data-tower="4" href="?tower=4">Tower 4</a>
   </nav>
   <div class="setup" id="setup-notice" hidden>
     <strong>Not connected yet</strong>
@@ -1296,9 +1298,9 @@
   <div id="sections"></div>
   <p class="all-clear" id="all-clear" hidden>Everything is ticked off. Untick
     <strong>Hide completed</strong> above to see the full list.</p>
-  <p class="all-clear" id="trade-empty" hidden>Nothing on the Tower 2 trade
-    lists yet. A check that fails in the audit log lands here, under the
-    trade it is sent to.</p>
+  <p class="all-clear" id="trade-empty" hidden>Nothing on this tower&rsquo;s
+    trade lists yet. A check that fails in the audit log lands here, under
+    the trade it is sent to.</p>
 
   <h2>Comments</h2>
   <div class="panel">
@@ -1320,7 +1322,8 @@
   <div id="view-studio" hidden>
     <h2>By studio</h2>
     <p class="note-line" id="studio-note-2" hidden>All <span id="studio-total-2">0</span>
-      studios in Castle Way Tower 2, room by room. None has been audited yet,
+      studios in <span id="tower-name-2">Castle Way Tower 2</span>, room by
+      room. None has been audited yet,
       so every room reads <strong>waiting to be audited</strong> until its
       checks are recorded. A check that fails goes straight onto the trade
       lists as a ticket against the room and is shown here too, with anything
@@ -1431,7 +1434,7 @@
   var VENT = "Ventilation / Extract";
   var WIN = "Window Restrictors";
 
-  var TOWER1_SECTIONS = [
+  var ALL_SECTIONS = [
     {
       key: "cleaning",
       title: CLEAN,
@@ -1678,14 +1681,57 @@
 
   function pad2(n) { return n < 10 ? "0" + n : "" + n; }
 
-  function standardFloor(n) {
-    var out = [];
-    var i;
-    for (i = 1; i <= 39; i++) { out.push("CW" + n + pad2(i)); }
-    for (i = 40; i <= 42; i++) { out.push("CW" + n + i + "A", "CW" + n + i + "B"); }
-    for (i = 43; i <= 48; i++) { out.push("CW" + n + i); }
-    return out;
+  /* ====================================================================
+     THE BUILDING, TOWER BY TOWER
+
+     Castle Way is 257 studios in four towers standing side by side, so a
+     room's number says which floor it is on and the control sheet says
+     which tower. This is the sheet's Tower column, room by room (16 Sep):
+     on each of floors 1 to 4, rooms 01-13 and 43-48 are Tower 1, 14-19
+     and 40A-42B Tower 2, 20-39 Tower 3, and on floors 1 and 2 rooms 49-52
+     are Tower 4, the annexe. The ground floor is CW001 and CW009B in
+     Tower 1 and the rest in Tower 2. The 5th floor is 01-05 and 25-30 in
+     Tower 1, 06-11 and 22A-24B in Tower 2, 12-21 in Tower 3.
+
+     The page shows one tower at a time: ?tower=2 on the address is Tower
+     2, and so on up to 4; anything else is Tower 1. The Tower buttons
+     under the heading go between them. The trade lists, the rooms on By
+     studio and the audit picker are this tower's rooms only, and a record
+     made in one tower's audit log never turns up on another's lists.
+     ==================================================================== */
+  var TOWER_ROOMS = { 1: [], 2: [], 3: [], 4: [] };
+
+  function place(tower, prefix, from, to, suffixes) {
+    for (var i = from; i <= to; i++) {
+      var num = prefix + pad2(i);
+      if (!suffixes) { TOWER_ROOMS[tower].push(num); continue; }
+      for (var sfx = 0; sfx < suffixes.length; sfx++) {
+        TOWER_ROOMS[tower].push(num + suffixes[sfx]);
+      }
+    }
   }
+
+  var AB = ["A", "B"];
+  place(1, "CW0", 1, 1);
+  place(2, "CW0", 2, 6);
+  place(2, "CW0", 7, 8, AB);
+  TOWER_ROOMS[2].push("CW009A");
+  TOWER_ROOMS[1].push("CW009B");
+
+  for (var fl = 1; fl <= 4; fl++) {
+    place(1, "CW" + fl, 1, 13);
+    place(2, "CW" + fl, 14, 19);
+    place(3, "CW" + fl, 20, 39);
+    place(2, "CW" + fl, 40, 42, AB);
+    place(1, "CW" + fl, 43, 48);
+    if (fl <= 2) { place(4, "CW" + fl, 49, 52); }
+  }
+
+  place(1, "CW5", 1, 5);
+  place(2, "CW5", 6, 11);
+  place(3, "CW5", 12, 21);
+  place(2, "CW5", 22, 24, AB);
+  place(1, "CW5", 25, 30);
 
   function fifthFloor() {
     var out = [];
@@ -1696,77 +1742,76 @@
     return out;
   }
 
-  var TOWER1_ROOMS = ["CW001", "CW002", "CW003", "CW004", "CW005", "CW006",
-    "CW007A", "CW007B", "CW008A", "CW008B", "CW009A", "CW009B"]
-    .concat(standardFloor(1), ["CW601", "CW602", "CW603", "CW604"])
-    .concat(standardFloor(2), ["CW701", "CW702", "CW703", "CW704"])
-    .concat(standardFloor(3))
-    .concat(standardFloor(4))
-    .concat(fifthFloor());
+  var ALL_ROOMS = [];
+  var ROOM_TOWER = {};
+  var tw;
+  var ri;
+  for (tw = 1; tw <= 4; tw++) {
+    TOWER_ROOMS[tw].sort();
+    for (ri = 0; ri < TOWER_ROOMS[tw].length; ri++) {
+      ROOM_TOWER[TOWER_ROOMS[tw][ri]] = tw;
+      ALL_ROOMS.push(TOWER_ROOMS[tw][ri]);
+    }
+  }
+  ALL_ROOMS.sort();
 
-  var mvhrRows = [];
-  for (var mr = 0; mr < TOWER1_ROOMS.length; mr++) {
-    mvhrRows.push([TOWER1_ROOMS[mr], U, "Secure the MVHR cupboard."]);
+  /* The annexe is CW601-604 and CW701-704 on the floor plans and
+     CW149-152 and CW249-252 on the control sheet. The MVHR rows were made
+     from the plans, so their keys carry the plan numbers and every tick on
+     them stays where it is; the page shows the sheet's numbers. */
+  var ROOM_ALIAS = {
+    CW601: "CW149", CW602: "CW150", CW603: "CW151", CW604: "CW152",
+    CW701: "CW249", CW702: "CW250", CW703: "CW251", CW704: "CW252"
+  };
+  var PLAN_NUMBER = {};
+  for (var al in ROOM_ALIAS) {
+    if (Object.prototype.hasOwnProperty.call(ROOM_ALIAS, al)) {
+      PLAN_NUMBER[ROOM_ALIAS[al]] = al;
+    }
   }
 
-  TOWER1_SECTIONS.push({
+  var mvhrRows = [];
+  for (var mr = 0; mr < ALL_ROOMS.length; mr++) {
+    mvhrRows.push([PLAN_NUMBER[ALL_ROOMS[mr]] || ALL_ROOMS[mr], U,
+      "Secure the MVHR cupboard."]);
+  }
+
+  ALL_SECTIONS.push({
     key: "mvhr",
     title: "MVHR Cupboards",
     col3: "Source",
     rows: mvhrRows
   });
 
-  /* ====================================================================
-     TOWER 2
-
-     The page shows one tower at a time: ?tower=2 on the address is Tower 2,
-     anything else is Tower 1, and the Tower buttons under the heading go
-     between them. The trades are the same in both. Tower 2 starts with
-     nothing on them: every check that fails in its audit log becomes a row
-     under the trade it is sent to, and that is how its snagging list is
-     built.
-
-     TOWER2_ROOMS is Tower 2's room numbers, in room order. It is empty
-     until that list arrives. With it filled in, every room goes on the
-     audit picker as still to audit and on By studio as waiting to be
-     audited, and nothing else has to change. A Tower 2 number must never
-     repeat a Tower 1 number: jobs and audit records are keyed by room, so
-     the same number in both towers would be one room to the record.
-     ==================================================================== */
-  var TOWER2_ROOMS = [];
-
-  var TOWER2_SECTIONS = [];
-  for (var t2 = 0; t2 < TOWER1_SECTIONS.length; t2++) {
-    if (TOWER1_SECTIONS[t2].key === "mvhr") { continue; }   // a Tower 1 sweep
-    TOWER2_SECTIONS.push({
-      key: TOWER1_SECTIONS[t2].key,
-      title: TOWER1_SECTIONS[t2].title,
-      col3: TOWER1_SECTIONS[t2].col3,
-      rows: []
-    });
-  }
-
   var TOWER_N = (function () {
-    var m = /[?&]tower=(\d+)/.exec(window.location.search || "");
-    return m && m[1] === "2" ? 2 : 1;
+    var m = /[?&]tower=([1-4])(?![0-9])/.exec(window.location.search || "");
+    return m ? parseInt(m[1], 10) : 1;
   }());
   var TOWER_NAME = "Castle Way Tower " + TOWER_N;
+  var EVERY_ROOM = TOWER_ROOMS[TOWER_N];
 
-  var sections = TOWER_N === 2 ? TOWER2_SECTIONS : TOWER1_SECTIONS;
-  var EVERY_ROOM = TOWER_N === 2 ? TOWER2_ROOMS : TOWER1_ROOMS;
-
-  // Which tower a room number belongs to, so a record made in one tower's
-  // audit log never turns up on the other's lists. A number on neither list
-  // counts as Tower 1, where every record made before there was a Tower 2
-  // belongs.
-  var ROOM_TOWER = {};
-  var rt;
-  for (rt = 0; rt < TOWER1_ROOMS.length; rt++) { ROOM_TOWER[TOWER1_ROOMS[rt]] = 1; }
-  for (rt = 0; rt < TOWER2_ROOMS.length; rt++) { ROOM_TOWER[TOWER2_ROOMS[rt]] = 2; }
-
+  // A number on no tower's list counts as Tower 1, where every record
+  // made before the split belongs.
   function roomInTower(room) {
     var t = ROOM_TOWER[room];
     return t ? t === TOWER_N : TOWER_N === 1;
+  }
+
+  // This tower's share of every trade list. A row keeps its key whichever
+  // tower shows it, so the split touches nothing that is ticked.
+  var sections = [];
+  for (var ts = 0; ts < ALL_SECTIONS.length; ts++) {
+    var kept = [];
+    for (var trw = 0; trw < ALL_SECTIONS[ts].rows.length; trw++) {
+      var trRoom = ALL_SECTIONS[ts].rows[trw][0];
+      if (roomInTower(ROOM_ALIAS[trRoom] || trRoom)) { kept.push(ALL_SECTIONS[ts].rows[trw]); }
+    }
+    sections.push({
+      key: ALL_SECTIONS[ts].key,
+      title: ALL_SECTIONS[ts].title,
+      col3: ALL_SECTIONS[ts].col3,
+      rows: kept
+    });
   }
 
   /* The summary and the per-trade counts are worked out from the list
@@ -1783,7 +1828,7 @@
     var secSeen = {};
 
     for (var sj = 0; sj < sc.rows.length; sj++) {
-      var rm = sc.rows[sj][0];
+      var rm = ROOM_ALIAS[sc.rows[sj][0]] || sc.rows[sj][0];
       if (!secSeen[rm]) { secSeen[rm] = true; secRooms.push(rm); }
       if (!allRooms[rm]) { allRooms[rm] = true; totalRooms++; }
     }
@@ -1794,18 +1839,14 @@
     summary.push([sc.title, sc.issues, sc.rooms, secRooms]);
   }
 
-  // Keyed on the first digit of the room number. The annexe block is
-  // numbered 6xx and 7xx but sits at first and second floor level, which
-  // is how it is drawn on those two floor plans.
+  // Keyed on the first digit of the room number.
   var FLOORS = {
     "0": "Ground Floor",
     "1": "1st Floor",
     "2": "2nd Floor",
     "3": "3rd Floor",
     "4": "4th Floor",
-    "5": "5th Floor",
-    "6": "1st Floor (annexe)",
-    "7": "2nd Floor (annexe)"
+    "5": "5th Floor"
   };
 
   function floorOf(room) {
@@ -1907,25 +1948,27 @@
     { room: "CW205", floor: "2nd Floor", type: "Luxury Plus", movein: "" }
   ];
 
-  /* Tower 2 has no priority order yet: every room is still to audit, in
-     room order, with its floor read off the number. */
-  var TOWER2_LIST = [];
-  for (var t2r = 0; t2r < TOWER2_ROOMS.length; t2r++) {
-    TOWER2_LIST.push({
-      room: TOWER2_ROOMS[t2r],
-      floor: floorOf(TOWER2_ROOMS[t2r]),
-      type: "",
-      movein: ""
-    });
+  /* Tower 1 has Stelling's list. The other towers have no priority order
+     yet, so every room is still to audit, in room order. */
+  var STELLING_LIST = [];
+  if (TOWER_N === 1) {
+    STELLING_LIST = TOWER1_LIST;
+  } else {
+    for (var er = 0; er < EVERY_ROOM.length; er++) {
+      STELLING_LIST.push({
+        room: EVERY_ROOM[er],
+        floor: floorOf(EVERY_ROOM[er]),
+        type: "",
+        movein: ""
+      });
+    }
   }
-
-  var STELLING_LIST = TOWER_N === 2 ? TOWER2_LIST : TOWER1_LIST;
   var LIST_RANKED = TOWER_N === 1;   // Tower 1's list is in Stelling's priority order
 
-  /* Every other room in the building follows them, so all 257 studios are on
+  /* Every other room in the tower follows them, so all its studios are on
      the audit and a room nobody has been to is visible as exactly that.
-     EVERY_ROOM is the same building-wide list the MVHR sweep is built from,
-     so the two cannot drift apart. */
+     EVERY_ROOM is this tower's share of the same list the MVHR sweep is
+     built from, so the two cannot drift apart. */
   var AUDIT_STUDIOS = [];
   var STUDIO_BY_ROOM = {};
   var sx;
@@ -2320,7 +2363,9 @@
     for (var k = 0; k < sec.rows.length; k++) {
       var row = sec.rows[k];
       var id = rowKey(row[0], row[2]);
-      var floor = floorOf(row[0]);
+      // Keyed on the row as written; shown by the control sheet's number.
+      var shownRoom = ROOM_ALIAS[row[0]] || row[0];
+      var floor = floorOf(shownRoom);
 
       // One job, but it may be printed on two lines of the page, so the
       // DOM needs its own unique id per line while the data key stays
@@ -2328,10 +2373,10 @@
       var domId = sec.key + "-" + k;
 
       if (!index[id]) {
-        index[id] = { room: row[0], floor: floor, action: row[2], src: row[1], trades: [] };
+        index[id] = { room: shownRoom, floor: floor, action: row[2], src: row[1], trades: [] };
         total++;
-        if (!roomJobs[row[0]]) { roomJobs[row[0]] = []; }
-        roomJobs[row[0]].push(id);
+        if (!roomJobs[shownRoom]) { roomJobs[shownRoom] = []; }
+        roomJobs[shownRoom].push(id);
       }
       // A job listed under more than one heading belongs to each of them.
       if (index[id].trades.indexOf(sec.key) === -1) {
@@ -2349,28 +2394,28 @@
       // Every job this trade has in this room, so the summary can cross
       // the room off once the last of them is ticked.
       if (!roomIndex[sec.key]) { roomIndex[sec.key] = {}; }
-      if (!roomIndex[sec.key][row[0]]) { roomIndex[sec.key][row[0]] = []; }
-      roomIndex[sec.key][row[0]].push(id);
+      if (!roomIndex[sec.key][shownRoom]) { roomIndex[sec.key][shownRoom] = []; }
+      roomIndex[sec.key][shownRoom].push(id);
 
       out +=
         '<tr id="row-' + domId + '">' +
-        '<td class="room">' + esc(row[0]) + "</td>" +
+        '<td class="room">' + esc(shownRoom) + "</td>" +
         '<td class="floor">' + esc(floor) + "</td>" +
-        '<td class="movein' + moveinClass(row[0]) + '">' + esc(moveinFor(row[0])) + "</td>" +
+        '<td class="movein' + moveinClass(shownRoom) + '">' + esc(moveinFor(shownRoom)) + "</td>" +
         '<td class="src">' + esc(row[1]) + "</td>" +
         '<td class="action"><span class="action-text">' + esc(row[2]) + "</span>" +
         '<ul class="notes" id="notes-' + domId + '"></ul>' +
         '<div class="note-add">' +
         '<input class="note-field" type="text" id="note-' + domId + '" data-id="' + id + '"' +
         ' placeholder="Add a note"' +
-        ' aria-label="Note for ' + esc(row[0]) + " " + esc(row[2]) + '">' +
+        ' aria-label="Note for ' + esc(shownRoom) + " " + esc(row[2]) + '">' +
         '<button type="button" class="note-btn" data-id="' + id + '"' +
-        ' aria-label="Submit note for ' + esc(row[0]) + '">Submit</button>' +
+        ' aria-label="Submit note for ' + esc(shownRoom) + '">Submit</button>' +
         "</div>" +
         '<span class="by" id="by-' + domId + '"></span></td>' +
         '<td class="done"><label for="tick-' + domId + '">' +
         '<input type="checkbox" id="tick-' + domId + '" data-id="' + id + '"' +
-        ' aria-label="Mark ' + esc(row[0]) + " " + esc(row[2]) + ' as done">' +
+        ' aria-label="Mark ' + esc(shownRoom) + " " + esc(row[2]) + ' as done">' +
         "</label></td>" +
         "</tr>";
     }
@@ -3073,7 +3118,7 @@
   var listEl = document.getElementById("comment-list");
   var emptyEl = document.getElementById("comment-empty");
 
-  // A comment posted on Tower 2 is tagged tower:2; one with no tag is
+  // A comment posted on Tower 2, 3 or 4 is tagged tower:N; one with no tag is
   // Tower 1's, which is every comment made before there was a Tower 2.
   var TOWER_TAG = "tower:" + TOWER_N;
 
@@ -3967,9 +4012,7 @@
 
   function fillStudios() {
     if (!STELLING_LIST.length) {
-      auditStudioEl.innerHTML = '<option value="">' +
-        (TOWER_N === 2 ? "Tower 2 room numbers are not in yet" : "No studios set up yet") +
-        "</option>";
+      auditStudioEl.innerHTML = '<option value="">No studios set up yet</option>';
       auditStudioEl.disabled = true;
       return;
     }
@@ -4031,12 +4074,9 @@
   function renderAudit() {
     if (!auditIn) { return; }
     if (!AUDIT_STUDIOS.length) {
-      auditChecksEl.innerHTML = '<p class="all-clear">' + (TOWER_N === 2
-        ? "Tower 2 room numbers are not in yet. Once they are in " +
-          "<code>TOWER2_ROOMS</code> in the page source, every room is here to audit."
-        : "No studios have been set up for auditing yet. Add them to " +
-          "<code>AUDIT_STUDIOS</code> in the page source and they will appear here.") +
-        "</p>";
+      auditChecksEl.innerHTML = '<p class="all-clear">No studios have been set ' +
+        'up for auditing yet. Add them to <code>AUDIT_STUDIOS</code> in the page ' +
+        'source and they will appear here.</p>';
       auditProgressEl.textContent = "";
       auditStateEl.textContent = "";
       return;
@@ -4503,9 +4543,7 @@
     }
 
     if (!rooms.length) {
-      studioEmptyEl.textContent = TOWER_N === 2
-        ? "Tower 2 room numbers are not in yet. Once they are, every room is listed here."
-        : "No studios have been set up for auditing yet.";
+      studioEmptyEl.textContent = "No studios have been set up for auditing yet.";
       studioEmptyEl.hidden = false;
     } else if (!shown) {
       studioEmptyEl.textContent = "Nothing outstanding against any studio.";
@@ -4951,12 +4989,13 @@
 
   // The heading, the tab title and the note over By studio say which tower
   // this is, and the Tower buttons mark the one showing.
-  if (TOWER_N === 2) {
+  if (TOWER_N !== 1) {
     document.title = TOWER_NAME + " Snagging";
     document.getElementById("page-title").textContent = TOWER_NAME + ": issues by trade";
+    document.getElementById("tower-name-2").textContent = TOWER_NAME;
   }
   document.getElementById("studio-note-1").hidden = TOWER_N !== 1;
-  document.getElementById("studio-note-2").hidden = TOWER_N !== 2;
+  document.getElementById("studio-note-2").hidden = TOWER_N === 1;
   var towerBtns = document.querySelectorAll("#towers .tower-btn");
   for (var tb = 0; tb < towerBtns.length; tb++) {
     var isThis = towerBtns[tb].getAttribute("data-tower") === String(TOWER_N);
