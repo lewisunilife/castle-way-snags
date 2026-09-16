@@ -291,6 +291,18 @@ but nothing verifies it.
 - **Ticks cannot be deleted** by anyone using the page — the access rules
   allow read, insert and update only.
 
+## Reopening an audit
+
+Rooms that are not on Stelling's list count as audited already and are kept
+off the audit picker. To let an audit that is already done be amended, put
+the rooms in `REOPENED` in `site/index.html`: they come back on the picker
+under their own heading (at the moment: the 5th floor of Tower 1, "reopened
+for amendments"), and on By studio they stay as they are, audited, with
+whatever is outstanding against them. Recording a check again supersedes the
+last entry, so an amendment is just recording the check as it now stands;
+the earlier entry stays in the record. Take the rooms out of `REOPENED` again
+to close the reopening.
+
 ## Two towers
 
 The page shows one tower at a time. `?tower=2` on the address is Tower 2;

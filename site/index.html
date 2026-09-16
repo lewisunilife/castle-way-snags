@@ -1971,6 +1971,24 @@
 
   var STELLING_COUNT = STELLING_LIST.length;
 
+  /* Rooms whose audit is reopened so what was recorded can be amended.
+     They go back on the audit log's picker under their own heading; on By
+     studio they stay as they are, audited, with whatever is outstanding
+     against them. A check recorded again supersedes the last entry, so an
+     amendment is just recording the check as it now stands.
+     16 Sep: the 5th floor of Tower 1, at Stelling's request. */
+  var REOPENED = TOWER_N === 1
+    ? { label: "5th floor, reopened for amendments", rooms: fifthFloor() }
+    : { label: "", rooms: [] };
+  var REOPENED_ROOMS = [];
+
+  for (sx = 0; sx < REOPENED.rooms.length; sx++) {
+    var ro = STUDIO_BY_ROOM[REOPENED.rooms[sx]];
+    if (!ro || ro.listed) { continue; }   // already on the working list
+    ro.reopened = true;
+    REOPENED_ROOMS.push(ro);
+  }
+
   for (sx = 0; sx < AUDIT_STUDIOS.length; sx++) {
     AUDIT_STUDIOS[sx].priority = sx + 1;
   }
@@ -3944,7 +3962,7 @@
         (st.movein ? ", in " + st.movein : "");
     }
     return st.room + (st.floor ? " \u2014 " + st.floor : "") +
-      (st.movein ? ", in " + st.movein : "");
+      (st.movein ? " \u00b7 " + moveinVerb(st).toLowerCase() + " " + st.movein : "");
   }
 
   function fillStudios() {
@@ -3971,11 +3989,22 @@
       if (sum.complete) { done += opt; } else { todo += opt; }
     }
 
+    // Rooms reopened for amendment sit in their own group, whatever their
+    // state, so they are there to pick until the reopening is taken off.
+    var reopened = "";
+    for (var r = 0; r < REOPENED_ROOMS.length; r++) {
+      reopened += '<option value="' + esc(REOPENED_ROOMS[r].room) + '">' +
+        esc(studioLabel(REOPENED_ROOMS[r])) + "</option>";
+    }
+
     // Finished studios drop out of the working list into their own group,
     // still reachable so a studio can be re-audited.
     var html = "";
     if (todo) {
       html += '<optgroup label="Still to audit">' + todo + "</optgroup>";
+    }
+    if (reopened) {
+      html += '<optgroup label="' + esc(REOPENED.label) + '">' + reopened + "</optgroup>";
     }
     if (done) {
       html += '<optgroup label="Completed">' + done + "</optgroup>";
@@ -3983,7 +4012,7 @@
     auditStudioEl.innerHTML = html;
     auditStudioEl.disabled = false;
     var chosen = STUDIO_BY_ROOM[auditStudio];
-    if (!chosen || !chosen.listed) { auditStudio = STELLING_LIST[0].room; }
+    if (!chosen || !(chosen.listed || chosen.reopened)) { auditStudio = STELLING_LIST[0].room; }
     auditStudioEl.value = auditStudio;
   }
 
@@ -4121,7 +4150,12 @@
           ? " \u00b7 " + moveinVerb(meta).toLowerCase() + " " + meta.movein
           : " \u00b7 no move-in date");
     } else if (meta) {
-      line = meta.floor + " \u00b7 not on Stelling\u2019s list";
+      line = meta.floor + (meta.reopened
+        ? " \u00b7 reopened for amendments"
+        : " \u00b7 not on Stelling\u2019s list") +
+        (meta.movein
+          ? " \u00b7 " + moveinVerb(meta).toLowerCase() + " " + meta.movein
+          : "");
     }
     if (failed) {
       line += (line ? " \u2014 " : "") + failed +
