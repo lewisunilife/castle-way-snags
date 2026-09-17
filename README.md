@@ -69,7 +69,20 @@ and put back, and the panel is left alone entirely when the record behind it
 has not changed. The same draft is kept on the device too, so a refresh
 mid-sentence — including the one a new build asks for — hands it back.
 
+## Where it is served from
+
+GitHub Pages serves `main` at the link above. `deploy/hetzner/` sets up a
+second host on a Hetzner server that pulls the same file every minute and
+takes a nightly copy of the two Supabase tables; see the README there. The
+page holds no data, so the two hosts show the same live list and either
+can go away without the other noticing.
+
 ## Deploying while people are on it
+
+The deploy workflow refuses a build that would orphan a tick: it loads the
+live build and the new one (`tools/check_keys.py`, with the Supabase client
+mocked so nothing is written) and stops if any job key on the live build is
+missing from the new one. That is the rule below, enforced on every push.
 
 Pushing a build changes the page, not the data. Ticks, notes and audit records
 live in Supabase and are append-only or key-addressed; an open page keeps

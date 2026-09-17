@@ -1,0 +1,16 @@
+# Castle Way snagging list on Caddy. install.sh writes the real host in.
+#
+# With a hostname, Caddy fetches and renews the HTTPS certificate itself;
+# with none it serves plain HTTP on port 80 at the server's address.
+{$SNAGS_HOST::80} {
+	root * /var/www/castle-way-snags
+	file_server
+	encode gzip
+
+	# The page is one file that changes on every deploy: never cache it.
+	header /index.html Cache-Control "no-cache"
+	header / Cache-Control "no-cache"
+
+	# Tower links are ?tower=N on the same page.
+	try_files {path} /index.html
+}

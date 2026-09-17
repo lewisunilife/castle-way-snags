@@ -13,6 +13,7 @@ on:
     branches: [main]
     paths:
       - "site/**"
+      - "tools/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -28,6 +29,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # People are ticking this list while it deploys. A build that drops or
+      # rewords a job would leave their ticks with nothing to attach to, so
+      # the build going out is checked against the one that is live and the
+      # deploy stops if any job key would be lost. See tools/check_keys.py.
+      - name: Script parses
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re, subprocess, sys
+          s = open("site/index.html", encoding="utf-8").read()
+          m = re.search(r"<script>\n(\(function \(\) \{.*?)\n</script>", s, re.S)
+          open("/tmp/app.js", "w", encoding="utf-8").write(m.group(1))
+          PY
+          node --check /tmp/app.js
+
+      - name: Fetch the live build
+        id: live
+        run: |
+          set -euo pipefail
+          if git fetch -q origin gh-pages 2>/dev/null && git show origin/gh-pages:index.html > /tmp/live.html 2>/dev/null; then
+            echo "have=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "have=false" >> "$GITHUB_OUTPUT"
+            echo "No live build yet; nothing to compare against."
+          fi
+
+      - name: No job key may be lost
+        if: steps.live.outputs.have == 'true'
+        run: |
+          set -euo pipefail
+          pip install -q playwright
+          python -m playwright install --with-deps chromium
+          python tools/check_keys.py /tmp/live.html site/index.html
 
       - name: Publish site/ to gh-pages
         run: |
