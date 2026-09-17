@@ -13,8 +13,10 @@ BACKUP_DIR="${BACKUP_DIR:-/var/backups/castle-way-snags}"
 KEEP_DAYS="${KEEP_DAYS:-90}"
 PAGE="$REPO_DIR/site/index.html"
 
-SUPABASE_URL="${SUPABASE_URL:-$(grep -o 'https://[a-z0-9]*\.supabase\.co' "$PAGE" | head -1)}"
-SUPABASE_KEY="${SUPABASE_KEY:-$(grep -o 'sb_publishable_[A-Za-z0-9_-]*' "$PAGE" | head -1)}"
+# Read off the two assignment lines in the page, not the first thing that
+# looks like a key: a comment above them mentions the key's prefix.
+SUPABASE_URL="${SUPABASE_URL:-$(sed -n 's/^ *var SUPABASE_URL = "\([^"]*\)".*/\1/p' "$PAGE" | head -1)}"
+SUPABASE_KEY="${SUPABASE_KEY:-$(sed -n 's/^ *var SUPABASE_ANON_KEY = "\([^"]*\)".*/\1/p' "$PAGE" | head -1)}"
 if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
   echo "could not find the Supabase URL and key" >&2
   exit 1
