@@ -14,17 +14,28 @@ git clone https://github.com/lewisunilife/castle-way-snags.git /opt/castle-way-s
 SNAGS_HOST=snags.unilife.co.uk bash /opt/castle-way-snags/deploy/hetzner/install.sh
 ```
 
-Point the DNS A record for that host at the server first and Caddy fetches
-the HTTPS certificate itself. Without `SNAGS_HOST` it serves plain HTTP on
-the server's address, which is fine for a look before the DNS is in; run the
-script again with the host set once it is.
+Point the DNS A record for that host at the server first. The script looks
+at what already answers on port 80 before it touches anything:
+
+- **Nothing** (a fresh box): Caddy serves the page and fetches the HTTPS
+  certificate itself. Without `SNAGS_HOST` it serves plain HTTP on the
+  server's address, fine for a look before the DNS is in; run it again with
+  the host set once it is.
+- **nginx or apache already there** (say, a WordPress site): the page gets a
+  server block of its own for `SNAGS_HOST`, beside what is already served,
+  which is left alone. A host name is required in that case. Add
+  `CERT_EMAIL=you@unilife.co.uk` and certbot puts HTTPS on it; without it the
+  page is up on plain HTTP and the script prints the command for later.
+- **Anything else on port 80**: it stops and says what it found.
+
+The script is safe to run again; it only rewrites what it put there.
 
 What is put in place:
 
 | Path or unit | What it is |
 |---|---|
 | `/opt/castle-way-snags` | a clone of the repo, pulled from `main` every minute |
-| `/var/www/castle-way-snags/index.html` | the page Caddy serves, swapped in one move |
+| `/var/www/castle-way-snags/index.html` | the page that is served, swapped in one move |
 | `/var/backups/castle-way-snags/<time>/` | nightly JSON copies of the two tables, kept 90 days |
 | `castle-way-pull.timer` | the minute-by-minute pull |
 | `castle-way-backup.timer` | the 02:30 backup |
