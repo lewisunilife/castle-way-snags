@@ -1045,6 +1045,30 @@
     border-bottom: 1px dashed var(--rule);
   }
 
+  .move-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .move-to {
+    font: inherit;
+    font-size: 12px;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 3px 4px;
+    max-width: 100%;
+  }
+
+  .move-to:disabled { opacity: 0.5; }
+  .studio-card li .move-row, #issue-list li .move-row { display: flex; margin-left: 26px; }
+  .studio-card li.ticked .move-row { text-decoration: none; }
+
   .note-field::placeholder { color: var(--muted); opacity: 0.75; }
   .note-field:focus { border-bottom-color: var(--tick); outline: none; }
   .note-field:not(:placeholder-shown) { border-bottom-style: solid; }
@@ -1672,6 +1696,14 @@
       ]
     },
     {
+      // Fire detection is iKew's: the check that was Electrical's until 17
+      // Sep fails into here now, and its earlier fails read as iKew's too.
+      key: "ikew",
+      title: "iKew",
+      col3: "Source",
+      rows: []
+    },
+    {
       key: "plumbing",
       title: PLUMB,
       col3: "Source",
@@ -1785,37 +1817,46 @@
       col3: "Source",
       rows: [
         ["CW111", L, "Prop/support the drawer below the oven so it sits correctly."],
-        ["CW111", S, "Doorstep broken."],
         ["CW111", S, "Shelves underneath the oven are not attached."],
         ["CW111", A, "Kitchen shelves."],
         ["CW202", S, "Missing skirting behind the door."],
         ["CW209", S, "Missing skirting behind the door."],
-        ["CW212", S, "Door seal has come off."],
-        ["CW212", A, "Door fire stopping flapping around."],
         ["CW246", L, "Fix entrance skirting gap."],
         ["CW247", L, "Fit missing wardrobe shelf."],
         ["CW304", S, "TV wobbles excessively."],
-        ["CW311", L, "Fix the gap at the bathroom door/panel."],
         ["CW347", L, "Finish second wardrobe and repair stiff/wobbly kitchen drawer."],
         ["CW347", S, "Wardrobe is missing its kickboard."],
         ["CW347", A, "Wardrobe and sink cabinet."],
         ["CW402", L, "Finish bathroom mirror boxing."],
         ["CW403", S, "Kitchen bin cupboard will not close."],
-        ["CW408", S, "Work required around the door frame."],
         ["CW409", L, "Fit/fix missing entrance skirting."],
         ["CW445", L, "Fit missing wardrobe shelving."],
         ["CW446", L, "Fit the loose brown circular cap."],
         ["CW448", L, "Adjust left kitchen cupboard rubbing at ceiling/join."],
+        ["CW444", U15, "Fix wobbly dining table."],
+        ["CW213", U15, "Refix loose toilet roll holder."],
+        ["CW213", U15, "Finish boxing-in in the bathroom."],
+        ["CW245", S, "Refix panel: extremely loose."]
+      ]
+    },
+    {
+      // Doors are a trade of their own (Lewis, 17 Sep): the door rows that
+      // were under Joinery, and the fire door and studio door checks.
+      key: "doors",
+      title: "Doors",
+      col3: "Source",
+      rows: [
+        ["CW111", S, "Doorstep broken."],
+        ["CW212", S, "Door seal has come off."],
+        ["CW212", A, "Door fire stopping flapping around."],
+        ["CW311", L, "Fix the gap at the bathroom door/panel."],
+        ["CW408", S, "Work required around the door frame."],
         ["CW501", JBA, "Ease front door: dragging."],
         ["CW501", JBA, "Secure bathroom door: loose and shakes when closed."],
         ["CW526", JBA, "Ease bathroom door: drags and will not close."],
         ["CW529", JBA, "Ease bathroom door: drags and will not close."],
         ["CW530", JBA, "Ease bathroom door: drags and will not close."],
-        ["CW444", U15, "Fix wobbly dining table."],
-        ["CW213", U15, "Refix loose toilet roll holder."],
-        ["CW213", U15, "Finish boxing-in in the bathroom."],
-        ["CW113", U15, "Refix loose doorstop."],
-        ["CW245", S, "Refix panel: extremely loose."]
+        ["CW113", U15, "Refix loose doorstop."]
       ]
     },
     {
@@ -2029,6 +2070,8 @@
     if (t !== TOWER_N) { return false; }
     return !SIDE || roomSide(room) === SIDE;
   }
+
+  var UNASSIGNED = "unassigned";
 
   // This tower's share of every trade list. A row keeps its key whichever
   // tower shows it, so the split touches nothing that is ticked.
@@ -2531,6 +2574,42 @@
     return room.toLowerCase() + "-" + h.toString(36);
   }
 
+  // The control on every ticket, in every view, for sending it to another
+  // trade: the same list of trades the audit log's Send to offers, so the
+  // trades and Unassigned read the same everywhere.
+  function moveSelect(id, trade, room, action, disabled) {
+    return '<label class="move-row">Trade ' +
+      '<select class="move-to" data-id="' + esc(id) + '"' + (disabled ? " disabled" : "") +
+      ' aria-label="Trade for ' + esc(room) + " " + esc(action) + '">' +
+      tradeOptions(trade) + "</select></label>";
+  }
+
+  // One shape for a built-in row, whether it is drawn at load under the
+  // trade it was printed for or later under the trade it was moved to.
+  function fixedRowHtml(domId, id, shownRoom, floor, src, action, trade) {
+    return '<tr id="row-' + domId + '">' +
+      '<td class="room">' + esc(shownRoom) + "</td>" +
+      '<td class="floor">' + esc(floor) + "</td>" +
+      '<td class="movein' + moveinClass(shownRoom) + '">' + moveinCell(shownRoom) + "</td>" +
+      '<td class="src">' + esc(src) + "</td>" +
+      '<td class="action"><span class="action-text">' + esc(action) + "</span>" +
+      '<ul class="notes" id="notes-' + domId + '"></ul>' +
+      '<div class="note-add">' +
+      '<input class="note-field" type="text" id="note-' + domId + '" data-id="' + id + '"' +
+      ' placeholder="Add a note"' +
+      ' aria-label="Note for ' + esc(shownRoom) + " " + esc(action) + '">' +
+      '<button type="button" class="note-btn" data-id="' + id + '"' +
+      ' aria-label="Submit note for ' + esc(shownRoom) + '">Submit</button>' +
+      "</div>" +
+      moveSelect(id, trade, shownRoom, action) +
+      '<span class="by" id="by-' + domId + '"></span></td>' +
+      '<td class="done"><label for="tick-' + domId + '">' +
+      '<input type="checkbox" id="tick-' + domId + '" data-id="' + id + '"' +
+      ' aria-label="Mark ' + esc(shownRoom) + " " + esc(action) + ' as done">' +
+      "</label></td>" +
+      "</tr>";
+  }
+
   function uuid() {
     if (window.crypto && window.crypto.randomUUID) {
       return window.crypto.randomUUID();
@@ -2647,7 +2726,7 @@
 
     // Re-read each time: audit rows and the untick question are added
     // after load, and a cached list would leave them out.
-    gatedInputs = document.querySelectorAll("#sections input, #sections button");
+    gatedInputs = document.querySelectorAll("#sections input, #sections button, #sections select");
     for (var g = 0; g < gatedInputs.length; g++) {
       gatedInputs[g].disabled = !open;
     }
@@ -2825,27 +2904,7 @@
       if (!roomIndex[sec.key][shownRoom]) { roomIndex[sec.key][shownRoom] = []; }
       roomIndex[sec.key][shownRoom].push(id);
 
-      out +=
-        '<tr id="row-' + domId + '">' +
-        '<td class="room">' + esc(shownRoom) + "</td>" +
-        '<td class="floor">' + esc(floor) + "</td>" +
-        '<td class="movein' + moveinClass(shownRoom) + '">' + moveinCell(shownRoom) + "</td>" +
-        '<td class="src">' + esc(row[1]) + "</td>" +
-        '<td class="action"><span class="action-text">' + esc(row[2]) + "</span>" +
-        '<ul class="notes" id="notes-' + domId + '"></ul>' +
-        '<div class="note-add">' +
-        '<input class="note-field" type="text" id="note-' + domId + '" data-id="' + id + '"' +
-        ' placeholder="Add a note"' +
-        ' aria-label="Note for ' + esc(shownRoom) + " " + esc(row[2]) + '">' +
-        '<button type="button" class="note-btn" data-id="' + id + '"' +
-        ' aria-label="Submit note for ' + esc(shownRoom) + '">Submit</button>' +
-        "</div>" +
-        '<span class="by" id="by-' + domId + '"></span></td>' +
-        '<td class="done"><label for="tick-' + domId + '">' +
-        '<input type="checkbox" id="tick-' + domId + '" data-id="' + id + '"' +
-        ' aria-label="Mark ' + esc(shownRoom) + " " + esc(row[2]) + ' as done">' +
-        "</label></td>" +
-        "</tr>";
+      out += fixedRowHtml(domId, id, shownRoom, floor, row[1], row[2], sec.key);
     }
 
     out += "</tbody></table></div></div>";
@@ -3018,8 +3077,54 @@
      re-failing the same check does not create a second one, and passing
      it later takes the line away again. The reason given at audit time
      rides along as the line's note. */
+  /* ---- Moving a ticket to another trade ---- */
+
+  /* A ticket moved to another trade is a record like any other:
+     move:<job key>, body the trade it goes to. The newest move per job
+     wins. The job keeps its key, so its tick and its notes go with it, and
+     a move made on one device shows on every other the moment it arrives.
+     Nothing is rewritten: the row as printed and the fail as recorded stay
+     as they were, and the move sits on top. */
+  function tradeMoves() {
+    var all = comments.concat(queuedComments);
+    var out = {};
+    for (var i = 0; i < all.length; i++) {
+      var c = all[i];
+      if (!c || !c.snag_id || c.snag_id.indexOf("move:") !== 0) { continue; }
+      var id = c.snag_id.slice(5);
+      var to = String(c.body || "").trim().toLowerCase();
+      if (!knownTrade(to)) { continue; }
+      var prior = out[id];
+      if (prior && String(prior.at || "") > String(c.created_at || "")) { continue; }
+      out[id] = { to: to, by: c.author, at: c.created_at };
+    }
+    return out;
+  }
+
+  function moveJob(id, to) {
+    if (!index[id] || !knownTrade(to)) { return; }
+    var cur = index[id].trades || [];
+    if (cur.length === 1 && cur[0] === to) { return; }
+    postEntry("move:" + id, to);
+  }
+
+  // The trade a failed check is work for: what the auditor sent it to, or
+  // the check's own trade. A fail recorded while the check still failed
+  // into another trade (fire detection was Electrical's until 17 Sep) reads
+  // as the check's trade now. A move made after the fail was recorded wins,
+  // and a fail sent somewhere else again from the audit log after the move
+  // wins back: the newest word is the one that stands.
+  function failTrade(ck, st, moves, room) {
+    var to = st.trade || ck.trade;
+    if (ck.was && to === ck.was.trade && String(st.at || "") < ck.was.until) { to = ck.trade; }
+    var mv = moves[rowKey(room, "Audit fail: " + ck.label)];
+    if (mv && String(mv.at || "") > String(st.at || "")) { to = mv.to; }
+    return to;
+  }
+
   function auditFailRows() {
     var state = auditState();
+    var moves = tradeMoves();
     var out = {};
     var room;
 
@@ -3053,7 +3158,7 @@
         var st = state[room][cid];
         var ck = CHECK_BY_ID[cid];
         if (!ck || st.status !== "fail") { continue; }
-        var to = st.trade || ck.trade;
+        var to = failTrade(ck, st, moves, room);
         if (!out[to]) { out[to] = []; }
         out[to].push({
           room: room,
@@ -3083,7 +3188,7 @@
      being drawn separately. */
   var auditRowIds = {};   // job key -> the trade it is currently filed under
 
-  function auditRowHtml(domId, id, f) {
+  function auditRowHtml(domId, id, f, trade) {
     var stamp = f.by ? (f.kind === "issue" ? "Logged by " : "Failed by ") + esc(f.by) : "";
     var when = shortDate(f.at);
     if (when) { stamp += (stamp ? " \u00b7 " : "") + esc(when); }
@@ -3105,6 +3210,7 @@
       '<button type="button" class="note-btn" data-id="' + id + '"' +
       ' aria-label="Submit note for ' + esc(f.room) + '">Submit</button>' +
       "</div>" +
+      moveSelect(id, trade, roomLabel(f.room), f.action) +
       '<span class="by" id="by-' + domId + '"></span></td>' +
       '<td class="done"><label for="tick-' + domId + '">' +
       '<input type="checkbox" id="tick-' + domId + '" data-id="' + id + '"' +
@@ -3174,7 +3280,7 @@
     roomIndex[trade][f.room].push(id);
     total++;
 
-    body.insertAdjacentHTML("beforeend", auditRowHtml(domId, id, f));
+    body.insertAdjacentHTML("beforeend", auditRowHtml(domId, id, f, trade));
     auditRowIds[id] = trade;
   }
 
@@ -3249,6 +3355,59 @@
       if (wrap) {
         wrap.hidden = !(sectionRows[UNASSIGNED] || []).length;
       }
+    }
+  }
+
+  /* A built-in row moved off the trade it was printed under is taken out of
+     every list it was on and drawn once under the trade it was moved to:
+     the same row shape, the same key. Audit rows move through
+     syncAuditRows, which files them by trade already. */
+  function placeFixedRow(id, to) {
+    var job = index[id];
+    var occ = occurrences[id] || [];
+    for (var o = 0; o < occ.length; o++) {
+      var el = document.getElementById("row-" + occ[o]);
+      if (el && el.parentNode) { el.parentNode.removeChild(el); }
+    }
+    for (var t = 0; t < job.trades.length; t++) {
+      var tk = job.trades[t];
+      dropFromList(sectionRows[tk], id);
+      if (sectionDom[tk]) { delete sectionDom[tk][id]; }
+      if (roomIndex[tk]) { dropFromList(roomIndex[tk][job.room], id); }
+    }
+    var body = document.getElementById("tbody-" + to);
+    if (!body) { return; }
+    var domId = "mv-" + id;
+    job.trades = [to];
+    occurrences[id] = [domId];
+    if (!sectionRows[to]) { sectionRows[to] = []; }
+    sectionRows[to].push(id);
+    if (!sectionDom[to]) { sectionDom[to] = {}; }
+    sectionDom[to][id] = domId;
+    if (!roomIndex[to]) { roomIndex[to] = {}; }
+    if (!roomIndex[to][job.room]) { roomIndex[to][job.room] = []; }
+    roomIndex[to][job.room].push(id);
+    body.insertAdjacentHTML("beforeend",
+      fixedRowHtml(domId, id, job.room, job.floor, job.src, job.action, to));
+  }
+
+  function syncMoves() {
+    var moves = tradeMoves();
+    var changed = false;
+    for (var id in moves) {
+      if (!Object.prototype.hasOwnProperty.call(moves, id)) { continue; }
+      var job = index[id];
+      if (!job || job.fromAudit) { continue; }
+      if (job.trades.length === 1 && job.trades[0] === moves[id].to) { continue; }
+      placeFixedRow(id, moves[id].to);
+      changed = true;
+    }
+    if (changed) {
+      appliedOrder = null;
+      gateOpen = null;
+      applyGate();
+      var wrap = document.getElementById("sec-unassigned");
+      if (wrap) { wrap.hidden = !(sectionRows[UNASSIGNED] || []).length; }
     }
   }
 
@@ -3371,8 +3530,9 @@
     var doneCount = 0;
     var id;
 
-    // Audit failures are rows on the trade lists, so they have to exist
-    // before anything counts or draws them.
+    // Moved rows and audit failures are rows on the trade lists, so they
+    // have to be where they belong before anything counts or draws them.
+    syncMoves();
     syncAuditRows();
     var grouped = groupNotes();
     var confirmed = grouped.__confirmed;
@@ -3978,6 +4138,10 @@
 
   sectionsEl.addEventListener("change", function (ev) {
     var box = ev.target;
+    if (box && box.classList && box.classList.contains("move-to")) {
+      moveJob(box.getAttribute("data-id"), box.value);
+      return;
+    }
     if (!box || box.type !== "checkbox") { return; }
 
     if (box.classList.contains("all-box")) {
@@ -4213,9 +4377,13 @@
      repeats, priorities 1-37 unbroken, and every stated floor agrees with
      both the room number and the floor plans. */
   var AUDIT_CHECKS = [
-    { id: "fire-detect", trade: "electrical",
+    { id: "fire-detect", trade: "ikew",
+      // Electrical's until 17 Sep: a fail recorded before then reads as iKew's.
+      was: { trade: "electrical", until: "2026-09-17T18:00:00Z" },
       label: "Fire detection operational, protective covers removed" },
-    { id: "fire-doors", trade: "joinery",
+    { id: "fire-doors", trade: "doors",
+      // Joinery's until 17 Sep: a fail recorded before then reads as Doors'.
+      was: { trade: "joinery", until: "2026-09-17T18:00:00Z" },
       label: "Fire doors close and latch properly" },
     { id: "fob", trade: "access",
       label: "Room key fob tested on door (not master) \u2014 lock works" },
@@ -4251,7 +4419,8 @@
       label: "Hob, microwave/oven, fridge working" },
     { id: "windows-blinds", trade: "blinds",
       label: "Windows close/lock, blinds working" },
-    { id: "studio-doors", trade: "joinery",
+    { id: "studio-doors", trade: "doors",
+      was: { trade: "joinery", until: "2026-09-17T18:00:00Z" },
       label: "Studio doors" },
     { id: "skirting", trade: "joinery",
       label: "Skirting" },
@@ -4360,8 +4529,7 @@
 
   // A fail can be parked with no trade against it rather than forced onto
   // the wrong one. It still shows, under Unassigned, so it is not lost.
-  var UNASSIGNED = "unassigned";
-
+  // (UNASSIGNED itself is declared with the sections, which need it first.)
   function knownTrade(key) {
     return !!key && (key === UNASSIGNED || !!sectionTitles[key]);
   }
@@ -4470,6 +4638,7 @@
   function studioIssues() {
     var all = comments.concat(queuedComments);
     var res = issueResolutions();
+    var moves = tradeMoves();
     var out = {};
     for (var i = 0; i < all.length; i++) {
       var c = all[i];
@@ -4481,11 +4650,13 @@
       var tm = ISSUE_TO_RE.exec(text);
       var to = tm && knownTrade(tm[1]) ? tm[1] : UNASSIGNED;
       if (tm) { text = text.slice(0, tm.index); }
+      var rowId = rowKey(room, "Logged: " + text);
+      if (moves[rowId]) { to = moves[rowId].to; }
       out[room].push({
         id: c.id,
         body: text,
         trade: to,
-        rowId: rowKey(room, "Logged: " + text),
+        rowId: rowId,
         author: c.author,
         created_at: c.created_at,
         done: res[c.id] || null
@@ -4801,10 +4972,11 @@
     var failed = 0;
 
     var checks = checksFor(auditStudio);
+    var moves = tradeMoves();
     for (var i = 0; i < checks.length; i++) {
       var ck = checks[i];
       var st = state[ck.id];
-      var goesTo = st && st.trade ? st.trade : ck.trade;
+      var goesTo = st ? failTrade(ck, st, moves, auditStudio) : ck.trade;
       var hab = st && st.status === "fail" ? st.hab : "";
       var cls = st ? (st.status === "fail" ? " is-fail" : " is-pass") : "";
       if (st && st.status === "pass") { passed++; }
@@ -4971,7 +5143,8 @@
           ' aria-label="Done: ' + esc(issues[q].body || "") + '">' +
           '<span><span class="note-who">' + meta + "</span>" +
           '<span class="note-body">' + esc(issues[q].body || "") + "</span>" +
-          tail + "</span></label></li>";
+          tail + "</span></label>" +
+          moveSelect(issues[q].rowId, issues[q].trade, roomLabel(auditStudio), issues[q].body || "", !!igate) + "</li>";
       }
       issueListEl.innerHTML = ih;
     }
@@ -5010,7 +5183,8 @@
         ' aria-label="Mark ' + esc(room) + " " + esc(job.action || "") + ' as done">' +
         "<span>" + esc(job.action || "") +
         (job.fromAudit && job.why ? " \u2014 " + esc(job.why) : "") +
-        '<span class="note-who">' + esc(names.join(" / ")) + "</span></span></label></li>";
+        '<span class="note-who">' + esc(names.join(" / ")) + "</span></span></label>" +
+        moveSelect(jid, (job.trades || [])[0] || UNASSIGNED, room, job.action || "", !!gate) + "</li>";
     }
 
     // A comment left on a passed check is worth seeing here too, though
@@ -5066,6 +5240,10 @@
   // it is finished it drops out of the working list into Completed.
   studioListEl.addEventListener("change", function (ev) {
     var box = ev.target;
+    if (box && box.classList && box.classList.contains("move-to")) {
+      moveJob(box.getAttribute("data-id"), box.value);
+      return;
+    }
     if (!box || box.type !== "checkbox") { return; }
     if (box.classList.contains("studio-tick")) {
       tickWithUndo(box.getAttribute("data-id"), box.checked);
@@ -5550,6 +5728,10 @@
 
   issueListEl.addEventListener("change", function (ev) {
     var box = ev.target;
+    if (box && box.classList && box.classList.contains("move-to")) {
+      moveJob(box.getAttribute("data-id"), box.value);
+      return;
+    }
     if (!box || box.type !== "checkbox" || !box.classList.contains("studio-tick")) { return; }
     tickWithUndo(box.getAttribute("data-id"), box.checked);
   });

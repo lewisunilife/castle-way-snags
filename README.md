@@ -236,6 +236,21 @@ shows against the section heading and in the summary; a trade with nobody
 against it shows a dash rather than a blank, so an unassigned one is visible
 rather than just quiet.
 
+## iKew and Doors
+
+Two trades were added on 17 Sep. **iKew** carries fire detection: the audit
+check "Fire detection operational, protective covers removed" fails into
+iKew rather than Electrical, and a fail recorded while the check was still
+Electrical's (before 18:00 on 17 Sep, so a phone still holding the old page
+that afternoon counts) reads as iKew's, so nothing has to be re-audited. **Doors** is
+the door work that was under Joinery: the door rows on the list (easing
+doors, door seals, door frames, doorstops), and the "Fire doors close and
+latch properly" and "Studio doors" checks, whose earlier fails read as
+Doors' in the same way. Locks stay with Access, skirting behind a door stays
+with Joinery, and the MVHR door stays with MVHR Cupboards. A row that moved
+kept its key, so its ticks and notes came with it; if any of them belongs
+elsewhere, move it (see **Moving a ticket to another trade**).
+
 ## The list controls
 
 One panel under the view switcher drives **By trade** and **By studio** alike,
@@ -319,6 +334,24 @@ previews, some Android webviews) swallow `window.confirm()` and answer "no"
 without ever showing it, which is why untick-all used to do nothing for some
 people. The question now appears under the trade's heading with **Untick
 all** and **Keep them**.
+
+## Moving a ticket to another trade
+
+Every ticket carries a **Trade** control, in every view: the row on By
+trade, the line on the studio card in By studio, and in the audit log the
+Send to on a failed check and the control on each logged issue. Choose
+another trade and the ticket goes there: off the list it was on, onto the
+new one, its tick and its notes with it, the headings and the summary
+following, and every other device sees the move as soon as it arrives.
+
+A move is a record like any other, `move:<job key>` with the trade as its
+body, appended and never edited, so the newest move stands and the history
+is kept. The job's key is the room and the action, not the heading, so a
+moved job is the same job wherever it is filed. A built-in row moved off the
+trade it was printed under is listed once, under the trade it went to. For a
+failed check, the audit log's Send to and a move are two ways of saying the
+same thing, and the newer of the two wins. The control is gated like the
+ticks: a name and company at the top first.
 
 ## 15M fire regulation rooms
 
