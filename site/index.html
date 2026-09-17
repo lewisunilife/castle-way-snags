@@ -360,6 +360,22 @@
 
   .check-need:empty { display: none; }
 
+  .check-hint {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .check-hint:empty { display: none; }
+
+  .pf-note { flex: 0 1 auto; font-weight: 400; }
+
+  .studio-card li.passed-note {
+    border-left-color: var(--live);
+    color: var(--muted);
+  }
+
   .check-why select {
     width: 100%;
     font: inherit;
@@ -1555,6 +1571,8 @@
       <div class="panel">
         <label for="issue-text">Anything else found in this studio</label>
         <textarea id="issue-text" placeholder="Something not covered by the checks above."></textarea>
+        <label class="check-assign" for="issue-trade">Send to</label>
+        <select id="issue-trade"></select>
         <div class="panel-actions">
           <button type="button" id="issue-add">Add issue</button>
         </div>
@@ -2887,6 +2905,29 @@
     var out = {};
     var room;
 
+    // Every logged issue is a row, done or not: a ticked ticket is the
+    // record that it was seen to, and Hide completed takes it like any
+    // other. Marked done in the audit log before issues were tickets: that
+    // seeds the row's tick when it is added, below.
+    var logged = studioIssues();
+    for (room in logged) {
+      if (!Object.prototype.hasOwnProperty.call(logged, room)) { continue; }
+      for (var li = 0; li < logged[room].length; li++) {
+        var iss = logged[room][li];
+        if (!out[iss.trade]) { out[iss.trade] = []; }
+        out[iss.trade].push({
+          room: room,
+          action: "Logged: " + iss.body,
+          why: "",
+          hab: "",
+          kind: "issue",
+          legacyDone: iss.done,
+          by: iss.author,
+          at: iss.created_at
+        });
+      }
+    }
+
     for (room in state) {
       if (!Object.prototype.hasOwnProperty.call(state, room)) { continue; }
       for (var cid in state[room]) {
@@ -2925,7 +2966,7 @@
   var auditRowIds = {};   // job key -> the trade it is currently filed under
 
   function auditRowHtml(domId, id, f) {
-    var stamp = f.by ? "Failed by " + esc(f.by) : "";
+    var stamp = f.by ? (f.kind === "issue" ? "Logged by " : "Failed by ") + esc(f.by) : "";
     var when = shortDate(f.at);
     if (when) { stamp += (stamp ? " \u00b7 " : "") + esc(when); }
 
@@ -2935,7 +2976,7 @@
       '<td class="movein' + moveinClass(f.room) + '">' + moveinCell(f.room) + "</td>" +
       '<td class="src">' + esc(f.src) + "</td>" +
       '<td class="action"><span class="action-text">' + esc(f.action) + "</span>" +
-      '<span class="fail-why">' + esc(f.why || "no reason given") + "</span>" +
+      (f.kind === "issue" ? "" : '<span class="fail-why">' + esc(f.why || "no reason given") + "</span>") +
       '<span class="tag-nh hab-flag">' + (f.hab === "nh" ? "Not habitable" : "") + "</span>" +
       '<span class="note-who">' + stamp + "</span>" +
       '<ul class="notes" id="notes-' + domId + '"></ul>' +
@@ -2990,9 +3031,19 @@
       src: f.src,
       srcKey: f.srcKey,
       why: f.why,
+      kind: f.kind || "fail",
       trades: [trade],
       fromAudit: true
     };
+    // Marked done in the audit log before issues were tickets: shown as
+    // ticked, held on this device only, and any real tick on the row wins.
+    if (f.kind === "issue" && f.legacyDone && !items[id] && !queued[id]) {
+      items[id] = {
+        done: true, note: "", seeded: true,
+        updated_by: f.legacyDone.by || "",
+        updated_at: f.legacyDone.at || ""
+      };
+    }
     occurrences[id] = [domId];
     if (!sectionRows[trade]) { sectionRows[trade] = []; }
     sectionRows[trade].push(id);
@@ -3325,6 +3376,9 @@
     renderSummary();
     progressEl.textContent = doneCount + " of " + total + " items ticked";
     renderUnsaved();
+    // The audit log's own issue list ticks the same rows, so it follows a
+    // tick made there or anywhere else while it is showing.
+    if (auditIn && activeView === "audit") { renderAudit(); }
   }
 
   // Cross a room off a trade's summary line once every job that trade has
@@ -4079,8 +4133,24 @@
       label: "Hob, microwave/oven, fridge working" },
     { id: "windows-blinds", trade: "blinds",
       label: "Windows close/lock, blinds working" },
+    { id: "studio-doors", trade: "joinery",
+      label: "Studio doors" },
+    { id: "skirting", trade: "joinery",
+      label: "Skirting" },
+    { id: "architraves", trade: "joinery",
+      label: "Architraves" },
+    { id: "mastic", trade: "decorating",
+      label: "Mastic" },
+    { id: "sprinkler", trade: "plumbing",
+      label: "Sprinkler check" },
+    { id: "egger", trade: "joinery",
+      label: "Egger panel" },
     { id: "clean", trade: "cleaning",
-      label: "Full clean completed \u2014 room clean, packaging/stickers removed" }
+      label: "Full clean completed \u2014 room clean, packaging/stickers removed" },
+    // A fail here is whatever is stopping the room being ready, so it goes
+    // to no trade until the auditor says which.
+    { id: "final", trade: "unassigned",
+      label: "Final sense check \u2014 is the room student move-in ready?" }
   ];
 
   var CHECK_BY_ID = {};
@@ -4091,7 +4161,8 @@
   /* A corridor or stair core has no door fob, bed, taps, toilet or
      appliances, so it takes the checks that apply to a common area. */
   var COMMON_CHECK_IDS = ["fire-detect", "fire-doors", "restrictors", "sockets",
-    "leaks", "lights", "switches", "heating", "extraction", "windows-blinds", "clean"];
+    "leaks", "lights", "switches", "heating", "extraction", "windows-blinds",
+    "skirting", "architraves", "mastic", "sprinkler", "clean"];
   var COMMON_CHECKS = [];
   for (var cc = 0; cc < COMMON_CHECK_IDS.length; cc++) {
     COMMON_CHECKS.push(CHECK_BY_ID[COMMON_CHECK_IDS[cc]]);
@@ -4154,9 +4225,13 @@
   // neither and reads as habitable.
   var HAB_RE = /\s*\[(h|nh)\]\s*$/;
 
+  // The trade a logged issue was sent to rides on the end of its text.
+  var ISSUE_TO_RE = /\s*\[to:([a-z0-9-]{1,30})\]\s*$/;
+
   // A pass may carry an answer, "PASS [2]" for two restrictors. A copy of
   // the page from before reads it as a plain pass.
-  var PASS_RE = /^PASS(?:\s*\[([a-z0-9]{1,12})\])?/i;
+  // ... and a comment after a colon: "PASS [2]: stiff on the left".
+  var PASS_RE = /^PASS(?:\s*\[([a-z0-9]{1,12})\])?(?:\s*:\s*([\s\S]*))?$/i;
 
   function optionLabel(ck, v) {
     for (var i = 0; ck && ck.options && i < ck.options.length; i++) {
@@ -4211,6 +4286,7 @@
       var hm = m ? HAB_RE.exec(comment) : null;
       if (hm) { comment = comment.slice(0, hm.index); }
       var pm = m ? null : PASS_RE.exec(body);
+      if (pm && pm[2]) { comment = pm[2].trim(); }
 
       out[room][checkId] = {
         status: m ? "fail" : "pass",
@@ -4226,8 +4302,8 @@
     return out;
   }
 
-  // Marking an issue done is its own entry rather than an edit, so the
-  // record still shows it was raised and who cleared it.
+  // Before issues were tickets, marking one done was its own entry. Those
+  // entries still seed the tick on the issue's row, so nothing is lost.
   function issueResolutions() {
     var all = comments.concat(queuedComments);
     var latest = {};
@@ -4283,9 +4359,15 @@
       var room = c.snag_id.split(":")[1];
       if (!roomInTower(room)) { continue; }
       if (!out[room]) { out[room] = []; }
+      var text = String(c.body || "");
+      var tm = ISSUE_TO_RE.exec(text);
+      var to = tm && knownTrade(tm[1]) ? tm[1] : UNASSIGNED;
+      if (tm) { text = text.slice(0, tm.index); }
       out[room].push({
         id: c.id,
-        body: c.body,
+        body: text,
+        trade: to,
+        rowId: rowKey(room, "Logged: " + text),
         author: c.author,
         created_at: c.created_at,
         done: res[c.id] || null
@@ -4339,11 +4421,15 @@
     var i;
 
     var list = checksFor(room);
+    var passNotes = [];
     for (i = 0; i < list.length; i++) {
       var st = checks[list[i].id];
       if (!st) { continue; }
       checked++;
-      if (st.status !== "fail") { continue; }
+      if (st.status !== "fail") {
+        if (st.comment) { passNotes.push({ check: list[i], st: st }); }
+        continue;
+      }
       fails.push({ check: list[i], st: st });
     }
 
@@ -4359,9 +4445,10 @@
     var listed = !!(sm && sm.listed);
     var notHab = false;
     for (i = 0; i < fails.length; i++) { if (fails[i].st.hab === "nh") { notHab = true; } }
-    // A failed check is a row on its trade's list, so it is already in
-    // tickets; counting it here as well would count it twice.
-    var outstanding = open.length + tickets.length;
+    // A failed check and a logged issue are each a row on a trade's list,
+    // so both are already in tickets; counting them here as well would
+    // count them twice.
+    var outstanding = tickets.length;
     var awaiting = listed && checked === 0;
 
     return {
@@ -4369,6 +4456,7 @@
       checked: checked,
       notHabitable: notHab,
       fails: fails,
+      passNotes: passNotes,
       open: open,
       issues: logged,
       jobs: jobs,
@@ -4417,7 +4505,8 @@
     var mark = hab === "h" || hab === "nh" ? " [" + hab + "]" : "";
     var answer = pass && opt && optionLabel(ck, opt) ? " [" + opt + "]" : "";
     postEntry("audit:" + room + ":" + checkId,
-      pass ? "PASS" + answer : "FAIL(" + to + "): " + (comment || "no reason given") + mark);
+      pass ? "PASS" + answer + (comment ? ": " + comment : "")
+           : "FAIL(" + to + "): " + (comment || "no reason given") + mark);
   }
 
   // The rooms a failed check has left not habitable, from a read of the
@@ -4433,16 +4522,6 @@
       }
     }
     return out;
-  }
-
-  function setIssueDone(issueId) {
-    postEntry("issue-done:" + issueId, "DONE");
-  }
-
-  // Reopening is its own entry too, so the record shows it was closed and
-  // then found not to be.
-  function setIssueOpen(issueId) {
-    postEntry("issue-open:" + issueId, "REOPENED");
   }
 
   /* ---- The audit view ---- */
@@ -4642,12 +4721,16 @@
         '<button type="button" class="pf' +
         (st && st.status === "fail" ? " on-fail" : "") +
         '" data-check="' + esc(ck.id) + '" data-pass="0">Fail</button>' +
+        '<button type="button" class="pf pf-note" data-check="' + esc(ck.id) + '" data-note="1"' +
+        ' aria-label="Comment on ' + esc(ck.label) + '">Comment</button>' +
         "</div>" +
         '<div class="check-why"' +
-        ((st && st.status === "fail") || whyOpen[ck.id] ? "" : " hidden") + ">" +
-        '<input type="text" id="why-' + esc(ck.id) + '" placeholder="Why did it fail?"' +
+        ((st && (st.status === "fail" || st.comment)) || whyOpen[ck.id] ? "" : " hidden") + ">" +
+        '<input type="text" id="why-' + esc(ck.id) + '"' +
+        ' placeholder="' + (st && st.status === "pass" ? "Comment on this check" : "Why did it fail? Or a comment on a pass") + '"' +
         ' value="' + esc(st && st.comment ? st.comment : "") + '"' +
-        ' aria-label="Reason ' + esc(ck.label) + ' failed">' +
+        ' aria-label="Comment on ' + esc(ck.label) + '">' +
+        '<div class="fail-only"' + (st && st.status === "pass" ? " hidden" : "") + ">" +
         '<label class="check-assign" for="trade-' + esc(ck.id) + '">Send to</label>' +
         '<select id="trade-' + esc(ck.id) + '" data-check="' + esc(ck.id) + '"' +
         ' aria-label="Trade to send ' + esc(ck.label) + ' to">' +
@@ -4660,6 +4743,10 @@
         (hab === "nh" ? " checked" : "") + "> Not habitable</label>" +
         "</div>" +
         '<span class="check-need" id="need-' + esc(ck.id) + '"></span>' +
+        "</div>" +
+        '<span class="check-hint">' + (st && st.status === "pass"
+          ? "Press Enter to save the comment against the pass."
+          : "") + "</span>" +
         "</div>" +
         '<span class="check-stamp">' + stamp + "</span>" +
         "</div>";
@@ -4751,19 +4838,23 @@
     } else {
       issueEmptyEl.hidden = true;
       var ih = "";
+      var igate = identified() ? "" : " disabled";
       for (var q = 0; q < issues.length; q++) {
         var meta = esc(issues[q].author || "Someone");
         var iw = shortDate(issues[q].created_at);
         if (iw) { meta += " \u00b7 " + esc(iw); }
-        var fin = issues[q].done;
+        meta += " \u00b7 " + esc(tradeName(issues[q].trade));
+        // The same tick as the row on the trade list and the By studio card.
+        var rec = effective(issues[q].rowId);
+        var fin = rec && rec.done === true;
         var tail = fin
           ? '<span class="note-who">Done' +
-            (fin.by ? " by " + esc(fin.by) : "") +
-            (shortDate(fin.at) ? " \u00b7 " + esc(shortDate(fin.at)) : "") + "</span>"
+            (rec.updated_by ? " by " + esc(rec.updated_by) : "") +
+            (shortDate(rec.updated_at) ? " \u00b7 " + esc(shortDate(rec.updated_at)) : "") + "</span>"
           : "";
         ih += '<li' + (fin ? ' class="is-done"' : "") + '>' +
-          '<label class="issue-row"><input type="checkbox" class="issue-tick" data-issue="' +
-          esc(issues[q].id) + '"' + (fin ? " checked" : "") +
+          '<label class="issue-row"><input type="checkbox" class="studio-tick" data-id="' +
+          esc(issues[q].rowId) + '"' + (fin ? " checked" : "") + igate +
           ' aria-label="Done: ' + esc(issues[q].body || "") + '">' +
           '<span><span class="note-who">' + meta + "</span>" +
           '<span class="note-body">' + esc(issues[q].body || "") + "</span>" +
@@ -4799,6 +4890,7 @@
         names.push(tradeName(job.trades[t]));
       }
       items += '<li class="ticket' + (job.fromAudit ? " from-audit" : "") +
+        (job.kind === "issue" ? " logged" : "") +
         (done ? " ticked" : "") + '"><label class="studio-row">' +
         '<input type="checkbox" class="studio-tick" data-id="' + esc(jid) + '"' +
         (done ? " checked" : "") + gate +
@@ -4808,19 +4900,14 @@
         '<span class="note-who">' + esc(names.join(" / ")) + "</span></span></label></li>";
     }
 
-    for (i = 0; i < sum.issues.length; i++) {
-      var iss = sum.issues[i];
-      if (iss.done && hideDone) { continue; }
-      items += '<li class="logged' + (iss.done ? " ticked" : "") +
-        '"><label class="studio-row">' +
-        '<input type="checkbox" class="issue-tick" data-issue="' + esc(iss.id) + '"' +
-        (iss.done ? " checked" : "") + gate +
-        ' aria-label="Done: ' + esc(iss.body || "") + '">' +
-        "<span>" + esc(iss.body || "") +
-        '<span class="note-who">Logged' +
-        (iss.author ? " by " + esc(iss.author) : "") +
-        (iss.done && iss.done.by ? " \u00b7 done by " + esc(iss.done.by) : "") +
-        "</span></span></label></li>";
+    // A comment left on a passed check is worth seeing here too, though
+    // there is nothing to tick: the check passed.
+    for (i = 0; i < sum.passNotes.length; i++) {
+      var pn = sum.passNotes[i];
+      items += '<li class="passed-note"><span>\u2713 ' + esc(pn.check.label) +
+        " \u2014 " + esc(pn.st.comment) +
+        '<span class="note-who">Passed' + (pn.st.by ? " by " + esc(pn.st.by) : "") +
+        "</span></span></li>";
     }
 
     var head;
@@ -4869,9 +4956,7 @@
     if (!box || box.type !== "checkbox") { return; }
     if (box.classList.contains("studio-tick")) {
       tickWithUndo(box.getAttribute("data-id"), box.checked);
-      return;
     }
-    onIssueTick(ev);
   });
 
   function onDateToggle(ev) {
@@ -5224,11 +5309,23 @@
     var why = document.getElementById("why-" + checkId);
     var box = document.getElementById("check-" + checkId);
     var tsel = document.getElementById("trade-" + checkId);
+    var wrap = box ? box.querySelector(".check-why") : null;
+
+    if (btn.getAttribute("data-note") === "1") {
+      // A comment on any check, passed, failed or not yet done.
+      whyOpen[checkId] = true;
+      saveDrafts();
+      lastChecksHtml = null;
+      if (wrap) { wrap.hidden = false; }
+      if (why) { why.focus(); }
+      return;
+    }
 
     if (!pass) {
       var reason = why ? why.value.trim() : "";
       var hab = habChoice(checkId);
-      var wrap = box ? box.querySelector(".check-why") : null;
+      var failOnly = box ? box.querySelector(".fail-only") : null;
+      if (failOnly && failOnly.hidden) { failOnly.hidden = false; }
       if (!reason || !hab) {
         // Show the box and let them say why, who it is for and whether the
         // room is still habitable, before it is recorded. Remembered rather
@@ -5250,8 +5347,10 @@
       return;
     }
 
+    // A pass carries whatever comment was typed for it.
     clearDraft(checkId);
-    setCheck(auditStudio, checkId, true, "", "", "", btn.getAttribute("data-opt") || "");
+    setCheck(auditStudio, checkId, true, why ? why.value.trim() : "", "", "",
+      btn.getAttribute("data-opt") || "");
   });
 
   // Hold what is being typed, so an entry landing from another phone
@@ -5270,6 +5369,14 @@
     var cid = field.id.slice(4);
     var sel = document.getElementById("trade-" + cid);
     var typed = field.value.trim();
+    var cur = (auditState()[auditStudio] || {})[cid];
+    if (cur && cur.status === "pass") {
+      // Already passed: Enter keeps the pass and saves the comment on it.
+      if ((cur.comment || "") === typed) { return; }
+      clearDraft(cid);
+      setCheck(auditStudio, cid, true, typed, "", "", cur.opt || "");
+      return;
+    }
     var hab = habChoice(cid);
     if (!hab) { needHab(cid, true); return; }
     clearDraft(cid);
@@ -5326,22 +5433,13 @@
     setCheck(auditStudio, cid, false, why ? why.value.trim() : st.comment, sel.value, st.hab);
   });
 
-  function onIssueTick(ev) {
-    var box = ev.target;
-    if (!box || !box.classList || !box.classList.contains("issue-tick")) { return; }
-    var id = box.getAttribute("data-issue");
-    if (!id) { return; }
-    if (box.checked) {
-      var lbl = box.parentNode ? box.parentNode.textContent : "";
-      var issueBody = (lbl || "").replace(/\s*Logged by .*$/, "").replace(/\s+/g, " ").trim();
-      offerUndo("Marked done: " + (issueBody || "that issue"), function () { setIssueOpen(id); });
-      setIssueDone(id);
-    } else {
-      setIssueOpen(id);
-    }
-  }
 
-  issueListEl.addEventListener("change", onIssueTick);
+
+  issueListEl.addEventListener("change", function (ev) {
+    var box = ev.target;
+    if (!box || box.type !== "checkbox" || !box.classList.contains("studio-tick")) { return; }
+    tickWithUndo(box.getAttribute("data-id"), box.checked);
+  });
 
   var hideGroundEl = document.getElementById("hide-ground");
   var studioSortEl = document.getElementById("studio-sort");
@@ -5600,13 +5698,20 @@
     renderStudios();
   });
 
+  var issueTradeEl = document.getElementById("issue-trade");
+  issueTradeEl.innerHTML = tradeOptions(UNASSIGNED);
+
+  // An issue is a ticket from the moment it is logged: it goes to the
+  // trade chosen here, or to Unassigned until someone picks one.
   document.getElementById("issue-add").addEventListener("click", function () {
     var field = document.getElementById("issue-text");
     var body = field.value.trim();
     if (!body) { field.focus(); return; }
     if (!auditStudio) { return; }
+    var to = knownTrade(issueTradeEl.value) ? issueTradeEl.value : UNASSIGNED;
     field.value = "";
-    postEntry("issue:" + auditStudio, body);
+    issueTradeEl.value = UNASSIGNED;
+    postEntry("issue:" + auditStudio, body + (to === UNASSIGNED ? "" : " [to:" + to + "]"));
   });
 
   /* ---- Boot ---- */
@@ -5742,6 +5847,7 @@
   function newestSnagAt() {
     var best = "";
     for (var id in items) {
+      if (items[id] && items[id].seeded) { continue; }   // not from the server
       if (Object.prototype.hasOwnProperty.call(items, id) && (items[id].updated_at || "") > best) {
         best = items[id].updated_at;
       }
