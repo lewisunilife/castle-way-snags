@@ -282,27 +282,24 @@ in By studio the counts follow the filter, since whether a room has anything
 outstanding is the question being asked. The audit log's own idea of whether a
 studio is finished ignores the filters entirely.
 
-Each trade table carries a **Move-in** column. Only the rooms on Stelling's
-list have a date so far, so the rest are blank rather than guessed; on a phone
-the line is dropped entirely rather than leaving a gap on every card.
+Each trade table carries a **Move-in** column. Every let room has a date;
+the ground floor and the one unbooked room (CW205) are blank rather than
+guessed, and on a phone the line is dropped entirely rather than leaving a
+gap on the card.
 
-The date a room is actually let comes from three tabs of the control
-spreadsheet, held in `site/index.html` as room number to date and **nothing
-else from that sheet** — it holds tenants' names, emails, phone numbers and
-travel details, none of which belongs on a public page or in this public
-repository. They win in this order:
+The date a room is actually let is the **Effective move-in** column of the
+control sheet's Every Room tab (Lewis, 17 Sep). That column already folds in
+any deferral, the booked check-in and the tower handover, so it is the one
+date the page needs. It is held in `site/index.html` as `MOVE_IN`, room
+number to date and **nothing else from that sheet** — it carries tenants'
+names, emails, phone numbers, hotel bookings and travel details, none of
+which belongs on a public page or in this public repository.
 
-1. `DEFERRED_TO` — the CW tabs: a tenant who has deferred, and the date they
-   now arrive (contract start plus the one or two weeks deferred).
-2. `CHECK_IN` — the check-in API: the check-in they have booked. So far this
-   holds the seven rooms from the "Tuesday 15th Arrivals" tab.
-3. `CONTRACT_START` — the tenants API: the contract start date.
-
-A room with none of the three falls back to the date on Stelling's audit
+A room missing from `MOVE_IN` falls back to the date on Stelling's audit
 list; one with nothing at all shows no date rather than a guess. The page
-says which kind of date it is — **Deferred to**, **Checks in** / **Checked
-in**, **Contract from**, or **Moves in** / **Moved in** for Stelling's own —
-in the card, the column and the date headers.
+says **Moves in** before the day and **Moved in** once it has passed, in the
+card, the column and the date headers. When the sheet changes, replace the
+map: it is grouped by date, so a new date is one comment line and its rooms.
 
 ## Ticking, everywhere
 

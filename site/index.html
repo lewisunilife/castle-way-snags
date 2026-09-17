@@ -1242,10 +1242,6 @@
     td.movein:empty { display: none; }
     td.movein .movein-date:not(:empty)::before { content: "Moves in "; }
     td.movein.past .movein-date:not(:empty)::before { content: "Moved in "; }
-    td.movein.checkin .movein-date:not(:empty)::before { content: "Checks in "; }
-    td.movein.checkin.past .movein-date:not(:empty)::before { content: "Checked in "; }
-    td.movein.deferred .movein-date:not(:empty)::before { content: "Deferred to "; }
-    td.movein.contract .movein-date:not(:empty)::before { content: "Contract from "; }
     td.action { grid-area: action; margin-top: 8px; }
 
     /* Beats the base `td.done` column rules, which outrank `tbody td`. */
@@ -2058,53 +2054,130 @@
     return FLOORS[room.charAt(2)] || "";
   }
 
-  /* When each room is actually let, from the control spreadsheet. Three
-     tabs feed it, and they win in this order:
-
-       1. DEFERRED_TO  - the CW tabs: a tenant who has deferred, and the
-                         date they now arrive (contract start plus the one
-                         or two weeks deferred).
-       2. CHECK_IN     - the check-in API: the check-in they have booked.
-       3. CONTRACT_START - the tenants API: the contract start date.
-
-     A room with none of the three falls back to the date on Stelling's
-     audit list, and one with nothing at all shows no date rather than a
-     guess. Room number and date only, from every tab: the sheet carries
-     tenants' names, emails, phone numbers and travel details, none of which
-     belongs on a public page or in this public repository. */
-  var DEFERRED_TO = {};
-
-  var CHECK_IN = {
-    // "Tuesday 15th Arrivals" tab: the Fri 11 - Tue 15 Sep 2026 window.
-    "CW528": "Fri 11 Sep 2026",
-    "CW530": "Sat 12 Sep 2026",
-    "CW404": "Mon 14 Sep 2026",
-    "CW502": "Mon 14 Sep 2026",
-    "CW148": "Tue 15 Sep 2026",
-    "CW245": "Tue 15 Sep 2026",
-    "CW529": "Tue 15 Sep 2026",
-    // 15 Sep: this week's arrivals, now the top of Stelling's audit.
-    "CW204": "Wed 16 Sep 2026",
-    "CW302": "Wed 16 Sep 2026",
-    "CW243": "Thu 17 Sep 2026",
-    "CW307": "Thu 17 Sep 2026"
+  /* When each room is actually let: the "Effective move-in" column of the
+     control sheet's Every Room tab (Lewis, 17 Sep), which already folds in
+     any deferral, the booked check-in and the tower handover, so it is the
+     one date the page needs. Room number and date only: the sheet carries
+     tenants' names, emails, phone numbers, hotel bookings and travel
+     details, none of which belongs on a public page or in this public
+     repository. A room missing here (the ground floor, and CW205 which is
+     not booked) falls back to the date on Stelling's audit list if it has
+     one, and otherwise shows no date rather than a guess. */
+  var MOVE_IN = {
+    // Fri 18 Sep 2026 (60 rooms)
+    "CW104": "Fri 18 Sep 2026", "CW109": "Fri 18 Sep 2026", "CW111": "Fri 18 Sep 2026",
+    "CW113": "Fri 18 Sep 2026", "CW145": "Fri 18 Sep 2026", "CW148": "Fri 18 Sep 2026",
+    "CW201": "Fri 18 Sep 2026", "CW204": "Fri 18 Sep 2026", "CW209": "Fri 18 Sep 2026",
+    "CW211": "Fri 18 Sep 2026", "CW212": "Fri 18 Sep 2026", "CW213": "Fri 18 Sep 2026",
+    "CW243": "Fri 18 Sep 2026", "CW244": "Fri 18 Sep 2026", "CW245": "Fri 18 Sep 2026",
+    "CW246": "Fri 18 Sep 2026", "CW247": "Fri 18 Sep 2026", "CW248": "Fri 18 Sep 2026",
+    "CW302": "Fri 18 Sep 2026", "CW303": "Fri 18 Sep 2026", "CW304": "Fri 18 Sep 2026",
+    "CW305": "Fri 18 Sep 2026", "CW307": "Fri 18 Sep 2026", "CW308": "Fri 18 Sep 2026",
+    "CW310": "Fri 18 Sep 2026", "CW311": "Fri 18 Sep 2026", "CW312": "Fri 18 Sep 2026",
+    "CW313": "Fri 18 Sep 2026", "CW344": "Fri 18 Sep 2026", "CW345": "Fri 18 Sep 2026",
+    "CW346": "Fri 18 Sep 2026", "CW347": "Fri 18 Sep 2026", "CW348": "Fri 18 Sep 2026",
+    "CW401": "Fri 18 Sep 2026", "CW402": "Fri 18 Sep 2026", "CW403": "Fri 18 Sep 2026",
+    "CW404": "Fri 18 Sep 2026", "CW405": "Fri 18 Sep 2026", "CW407": "Fri 18 Sep 2026",
+    "CW408": "Fri 18 Sep 2026", "CW409": "Fri 18 Sep 2026", "CW410": "Fri 18 Sep 2026",
+    "CW411": "Fri 18 Sep 2026", "CW412": "Fri 18 Sep 2026", "CW413": "Fri 18 Sep 2026",
+    "CW443": "Fri 18 Sep 2026", "CW444": "Fri 18 Sep 2026", "CW445": "Fri 18 Sep 2026",
+    "CW446": "Fri 18 Sep 2026", "CW447": "Fri 18 Sep 2026", "CW448": "Fri 18 Sep 2026",
+    "CW501": "Fri 18 Sep 2026", "CW502": "Fri 18 Sep 2026", "CW503": "Fri 18 Sep 2026",
+    "CW504": "Fri 18 Sep 2026", "CW505": "Fri 18 Sep 2026", "CW525": "Fri 18 Sep 2026",
+    "CW528": "Fri 18 Sep 2026", "CW529": "Fri 18 Sep 2026", "CW530": "Fri 18 Sep 2026",
+    // Sat 19 Sep 2026 (1 room)
+    "CW301": "Sat 19 Sep 2026",
+    // Sun 20 Sep 2026 (3 rooms)
+    "CW203": "Sun 20 Sep 2026", "CW210": "Sun 20 Sep 2026", "CW526": "Sun 20 Sep 2026",
+    // Tue 22 Sep 2026 (1 room)
+    "CW309": "Tue 22 Sep 2026",
+    // Thu 24 Sep 2026 (1 room)
+    "CW112": "Thu 24 Sep 2026",
+    // Fri 25 Sep 2026 (165 rooms)
+    "CW101": "Fri 25 Sep 2026", "CW103": "Fri 25 Sep 2026", "CW105": "Fri 25 Sep 2026",
+    "CW106": "Fri 25 Sep 2026", "CW107": "Fri 25 Sep 2026", "CW108": "Fri 25 Sep 2026",
+    "CW114": "Fri 25 Sep 2026", "CW115": "Fri 25 Sep 2026", "CW116": "Fri 25 Sep 2026",
+    "CW117": "Fri 25 Sep 2026", "CW118": "Fri 25 Sep 2026", "CW119": "Fri 25 Sep 2026",
+    "CW120": "Fri 25 Sep 2026", "CW121": "Fri 25 Sep 2026", "CW122": "Fri 25 Sep 2026",
+    "CW123": "Fri 25 Sep 2026", "CW124": "Fri 25 Sep 2026", "CW125": "Fri 25 Sep 2026",
+    "CW126": "Fri 25 Sep 2026", "CW127": "Fri 25 Sep 2026", "CW128": "Fri 25 Sep 2026",
+    "CW129": "Fri 25 Sep 2026", "CW130": "Fri 25 Sep 2026", "CW131": "Fri 25 Sep 2026",
+    "CW132": "Fri 25 Sep 2026", "CW134": "Fri 25 Sep 2026", "CW135": "Fri 25 Sep 2026",
+    "CW136": "Fri 25 Sep 2026", "CW137": "Fri 25 Sep 2026", "CW138": "Fri 25 Sep 2026",
+    "CW139": "Fri 25 Sep 2026", "CW140A": "Fri 25 Sep 2026", "CW140B": "Fri 25 Sep 2026",
+    "CW141A": "Fri 25 Sep 2026", "CW141B": "Fri 25 Sep 2026", "CW142A": "Fri 25 Sep 2026",
+    "CW142B": "Fri 25 Sep 2026", "CW144": "Fri 25 Sep 2026", "CW147": "Fri 25 Sep 2026",
+    "CW149": "Fri 25 Sep 2026", "CW150": "Fri 25 Sep 2026", "CW151": "Fri 25 Sep 2026",
+    "CW206": "Fri 25 Sep 2026", "CW207": "Fri 25 Sep 2026", "CW214": "Fri 25 Sep 2026",
+    "CW215": "Fri 25 Sep 2026", "CW216": "Fri 25 Sep 2026", "CW217": "Fri 25 Sep 2026",
+    "CW218": "Fri 25 Sep 2026", "CW219": "Fri 25 Sep 2026", "CW220": "Fri 25 Sep 2026",
+    "CW221": "Fri 25 Sep 2026", "CW222": "Fri 25 Sep 2026", "CW223": "Fri 25 Sep 2026",
+    "CW224": "Fri 25 Sep 2026", "CW225": "Fri 25 Sep 2026", "CW226": "Fri 25 Sep 2026",
+    "CW227": "Fri 25 Sep 2026", "CW228": "Fri 25 Sep 2026", "CW229": "Fri 25 Sep 2026",
+    "CW230": "Fri 25 Sep 2026", "CW231": "Fri 25 Sep 2026", "CW232": "Fri 25 Sep 2026",
+    "CW233": "Fri 25 Sep 2026", "CW234": "Fri 25 Sep 2026", "CW236": "Fri 25 Sep 2026",
+    "CW237": "Fri 25 Sep 2026", "CW238": "Fri 25 Sep 2026", "CW239": "Fri 25 Sep 2026",
+    "CW240A": "Fri 25 Sep 2026", "CW240B": "Fri 25 Sep 2026", "CW241A": "Fri 25 Sep 2026",
+    "CW241B": "Fri 25 Sep 2026", "CW242A": "Fri 25 Sep 2026", "CW249": "Fri 25 Sep 2026",
+    "CW250": "Fri 25 Sep 2026", "CW251": "Fri 25 Sep 2026", "CW252": "Fri 25 Sep 2026",
+    "CW306": "Fri 25 Sep 2026", "CW314": "Fri 25 Sep 2026", "CW315": "Fri 25 Sep 2026",
+    "CW316": "Fri 25 Sep 2026", "CW317": "Fri 25 Sep 2026", "CW318": "Fri 25 Sep 2026",
+    "CW319": "Fri 25 Sep 2026", "CW320": "Fri 25 Sep 2026", "CW321": "Fri 25 Sep 2026",
+    "CW322": "Fri 25 Sep 2026", "CW323": "Fri 25 Sep 2026", "CW324": "Fri 25 Sep 2026",
+    "CW325": "Fri 25 Sep 2026", "CW326": "Fri 25 Sep 2026", "CW327": "Fri 25 Sep 2026",
+    "CW328": "Fri 25 Sep 2026", "CW329": "Fri 25 Sep 2026", "CW330": "Fri 25 Sep 2026",
+    "CW331": "Fri 25 Sep 2026", "CW332": "Fri 25 Sep 2026", "CW333": "Fri 25 Sep 2026",
+    "CW334": "Fri 25 Sep 2026", "CW335": "Fri 25 Sep 2026", "CW336": "Fri 25 Sep 2026",
+    "CW337": "Fri 25 Sep 2026", "CW338": "Fri 25 Sep 2026", "CW339": "Fri 25 Sep 2026",
+    "CW340A": "Fri 25 Sep 2026", "CW340B": "Fri 25 Sep 2026", "CW341A": "Fri 25 Sep 2026",
+    "CW341B": "Fri 25 Sep 2026", "CW342A": "Fri 25 Sep 2026", "CW342B": "Fri 25 Sep 2026",
+    "CW414": "Fri 25 Sep 2026", "CW415": "Fri 25 Sep 2026", "CW416": "Fri 25 Sep 2026",
+    "CW417": "Fri 25 Sep 2026", "CW418": "Fri 25 Sep 2026", "CW419": "Fri 25 Sep 2026",
+    "CW420": "Fri 25 Sep 2026", "CW421": "Fri 25 Sep 2026", "CW422": "Fri 25 Sep 2026",
+    "CW423": "Fri 25 Sep 2026", "CW424": "Fri 25 Sep 2026", "CW425": "Fri 25 Sep 2026",
+    "CW426": "Fri 25 Sep 2026", "CW427": "Fri 25 Sep 2026", "CW428": "Fri 25 Sep 2026",
+    "CW429": "Fri 25 Sep 2026", "CW430": "Fri 25 Sep 2026", "CW431": "Fri 25 Sep 2026",
+    "CW432": "Fri 25 Sep 2026", "CW433": "Fri 25 Sep 2026", "CW434": "Fri 25 Sep 2026",
+    "CW435": "Fri 25 Sep 2026", "CW436": "Fri 25 Sep 2026", "CW437": "Fri 25 Sep 2026",
+    "CW438": "Fri 25 Sep 2026", "CW439": "Fri 25 Sep 2026", "CW440A": "Fri 25 Sep 2026",
+    "CW440B": "Fri 25 Sep 2026", "CW441A": "Fri 25 Sep 2026", "CW441B": "Fri 25 Sep 2026",
+    "CW442A": "Fri 25 Sep 2026", "CW442B": "Fri 25 Sep 2026", "CW506": "Fri 25 Sep 2026",
+    "CW507": "Fri 25 Sep 2026", "CW508": "Fri 25 Sep 2026", "CW509": "Fri 25 Sep 2026",
+    "CW510": "Fri 25 Sep 2026", "CW511": "Fri 25 Sep 2026", "CW512": "Fri 25 Sep 2026",
+    "CW513": "Fri 25 Sep 2026", "CW514": "Fri 25 Sep 2026", "CW515": "Fri 25 Sep 2026",
+    "CW516": "Fri 25 Sep 2026", "CW517": "Fri 25 Sep 2026", "CW518": "Fri 25 Sep 2026",
+    "CW520": "Fri 25 Sep 2026", "CW521": "Fri 25 Sep 2026", "CW522A": "Fri 25 Sep 2026",
+    "CW522B": "Fri 25 Sep 2026", "CW523A": "Fri 25 Sep 2026", "CW523B": "Fri 25 Sep 2026",
+    "CW524A": "Fri 25 Sep 2026", "CW524B": "Fri 25 Sep 2026", "CW527": "Fri 25 Sep 2026",
+    // Sat 26 Sep 2026 (3 rooms)
+    "CW133": "Sat 26 Sep 2026", "CW242B": "Sat 26 Sep 2026", "CW343": "Sat 26 Sep 2026",
+    // Sun 27 Sep 2026 (1 room)
+    "CW202": "Sun 27 Sep 2026",
+    // Mon 28 Sep 2026 (2 rooms)
+    "CW235": "Mon 28 Sep 2026", "CW406": "Mon 28 Sep 2026",
+    // Wed 30 Sep 2026 (1 room)
+    "CW152": "Wed 30 Sep 2026",
+    // Thu 01 Oct 2026 (2 rooms)
+    "CW110": "Thu 01 Oct 2026", "CW208": "Thu 01 Oct 2026",
+    // Fri 02 Oct 2026 (1 room)
+    "CW143": "Fri 02 Oct 2026",
+    // Wed 07 Oct 2026 (1 room)
+    "CW102": "Wed 07 Oct 2026",
+    // Fri 09 Oct 2026 (1 room)
+    "CW146": "Fri 09 Oct 2026",
+    // Mon 12 Oct 2026 (1 room)
+    "CW519": "Mon 12 Oct 2026"
   };
 
-  var CONTRACT_START = {};
-
-  // What the date is, so the page can say so, and the text it leads with.
+  // The text the date leads with, before and after the day itself.
   var MOVEIN_KINDS = {
-    deferred: { future: "Deferred to", past: "Deferred to" },
-    checkin:  { future: "Checks in",  past: "Checked in" },
-    contract: { future: "Contract from", past: "Contract from" },
-    listed:   { future: "Moves in",    past: "Moved in" }
+    movein: { future: "Moves in", past: "Moved in" },
+    listed: { future: "Moves in", past: "Moved in" }
   };
 
   function resolveMoveIn(room, listed) {
-    if (DEFERRED_TO[room])     { return { date: DEFERRED_TO[room], kind: "deferred" }; }
-    if (CHECK_IN[room])        { return { date: CHECK_IN[room], kind: "checkin" }; }
-    if (CONTRACT_START[room])  { return { date: CONTRACT_START[room], kind: "contract" }; }
-    if (listed)                { return { date: listed, kind: "listed" }; }
+    if (MOVE_IN[room]) { return { date: MOVE_IN[room], kind: "movein" }; }
+    if (listed)        { return { date: listed, kind: "listed" }; }
     return { date: "", kind: "" };
   }
 
