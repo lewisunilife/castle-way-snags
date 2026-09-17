@@ -25,6 +25,23 @@ dir="$BACKUP_DIR/$stamp"
 mkdir -p "$dir"
 chmod 700 "$BACKUP_DIR"
 
+# The new sb_publishable_ keys go in the apikey header alone: sent as a
+# bearer token too they are refused. The older JWT anon keys want both.
+# Try the key alone first and fall back to both, so either kind works.
+AUTH_MODE=""
+get_rows() {
+  local url="$1" from="$2" to="$3"
+  if [ "$AUTH_MODE" != both ]; then
+    if curl -sS --fail --max-time 60 -H "apikey: $SUPABASE_KEY" \
+        -H "Range-Unit: items" -H "Range: $from-$to" "$url"; then
+      AUTH_MODE=apikey; return 0
+    fi
+    [ "$AUTH_MODE" = apikey ] && return 1
+  fi
+  curl -sS --fail --max-time 60 -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY" \
+    -H "Range-Unit: items" -H "Range: $from-$to" "$url" && AUTH_MODE=both
+}
+
 fetch_table() {
   local table="$1" out="$2" from=0 size=1000 got
   echo "[" > "$out.tmp"
@@ -32,10 +49,7 @@ fetch_table() {
   while :; do
     local to=$((from + size - 1))
     local chunk
-    chunk="$(curl -sS --fail --max-time 60 \
-      -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY" \
-      -H "Range-Unit: items" -H "Range: $from-$to" \
-      "$SUPABASE_URL/rest/v1/$table?select=*&order=id")"
+    chunk="$(get_rows "$SUPABASE_URL/rest/v1/$table?select=*&order=id" "$from" "$to")"
     got="$(printf '%s' "$chunk" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')"
     if [ "$got" -gt 0 ]; then
       [ "$first" = 1 ] || echo "," >> "$out.tmp"
