@@ -236,9 +236,9 @@ shows against the section heading and in the summary; a trade with nobody
 against it shows a dash rather than a blank, so an unassigned one is visible
 rather than just quiet.
 
-## iKew and Doors
+## iKew, Doors, Sprinklers and Marius
 
-Two trades were added on 17 Sep. **iKew** carries fire detection: the audit
+Four trades were added on 17 Sep. **iKew** carries fire detection: the audit
 check "Fire detection operational, protective covers removed" fails into
 iKew rather than Electrical, and a fail recorded while the check was still
 Electrical's (before 18:00 on 17 Sep, so a phone still holding the old page
@@ -249,7 +249,16 @@ latch properly" and "Studio doors" checks, whose earlier fails read as
 Doors' in the same way. Locks stay with Access, skirting behind a door stays
 with Joinery, and the MVHR door stays with MVHR Cupboards. A row that moved
 kept its key, so its ticks and notes came with it; if any of them belongs
-elsewhere, move it (see **Moving a ticket to another trade**).
+elsewhere, move it (see **Moving a ticket to another trade**). **Sprinklers**
+takes the "Sprinkler check", which failed into Plumbing / Water before, its
+earlier fails reading as Sprinklers' in the same way. **Marius** is a list of
+his own with nothing on it to start with: a ticket reaches it by being moved
+there, or by a fail being sent to it from the audit log. A trade with
+nothing on it is hidden until something arrives, so an empty Marius or
+Sprinklers is not a heading over an empty table. Wherever a trade is picked
+from or filtered on, the trades read A to Z: the Filter by trade boxes, the
+Trade control on every ticket and the audit log's Send to, with Unassigned
+last. The lists on By trade keep their own order.
 
 ## The list controls
 

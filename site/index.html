@@ -1722,6 +1722,14 @@
       ]
     },
     {
+      // Sprinklers are a trade of their own (Lewis, 17 Sep): the sprinkler
+      // check fails into here, and its earlier fails read as Sprinklers' too.
+      key: "sprinklers",
+      title: "Sprinklers",
+      col3: "Source",
+      rows: []
+    },
+    {
       key: "access",
       title: ACCESS,
       col3: "Source",
@@ -2027,6 +2035,16 @@
     title: "MVHR Cupboards",
     col3: "Source",
     rows: mvhrRows
+  });
+
+  // A list for Marius (Lewis, 17 Sep), with nothing on it until a ticket is
+  // sent there: moved from another trade, or a fail sent to it from the
+  // audit log.
+  ALL_SECTIONS.push({
+    key: "marius",
+    title: "Marius",
+    col3: "Source",
+    rows: []
   });
 
   var TOWER_N = (function () {
@@ -4428,7 +4446,9 @@
       label: "Architraves" },
     { id: "mastic", trade: "decorating",
       label: "Mastic" },
-    { id: "sprinkler", trade: "plumbing",
+    { id: "sprinkler", trade: "sprinklers",
+      // Plumbing's until 17 Sep: a fail recorded before then reads as Sprinklers'.
+      was: { trade: "plumbing", until: "2026-09-17T18:00:00Z" },
       label: "Sprinkler check" },
     { id: "egger", trade: "joinery",
       label: "Egger panel" },
@@ -4943,12 +4963,21 @@
     return html;
   }
 
+  // The trades A to Z wherever they are picked from or filtered on (Lewis,
+  // 17 Sep). The lists on By trade keep their own order.
+  function sectionsByTitle() {
+    var out = sections.slice();
+    out.sort(function (a, b) { return a.title.localeCompare(b.title); });
+    return out;
+  }
+
   function tradeOptions(sel) {
     var html = "";
-    for (var i = 0; i < sections.length; i++) {
-      var k = sections[i].key;
+    var az = sectionsByTitle();
+    for (var i = 0; i < az.length; i++) {
+      var k = az[i].key;
       html += '<option value="' + esc(k) + '"' + (k === sel ? " selected" : "") +
-        ">" + esc(sections[i].title) + "</option>";
+        ">" + esc(az[i].title) + "</option>";
     }
     html += '<option value="' + UNASSIGNED + '"' +
       (sel === UNASSIGNED ? " selected" : "") + ">Unassigned</option>";
@@ -5778,11 +5807,12 @@
 
   function fillTradeBoxes() {
     var html = "";
-    for (var i = 0; i < sections.length; i++) {
-      var k = sections[i].key;
+    var az = sectionsByTitle();
+    for (var i = 0; i < az.length; i++) {
+      var k = az[i].key;
       html += '<label for="tf-' + esc(k) + '">' +
         '<input type="checkbox" id="tf-' + esc(k) + '" data-trade="' + esc(k) + '"' +
-        (tradeHidden(k) ? "" : " checked") + "> " + esc(sections[i].title) + "</label>";
+        (tradeHidden(k) ? "" : " checked") + "> " + esc(az[i].title) + "</label>";
     }
     tradeBoxesEl.innerHTML = html;
     tradeSummaryText();
