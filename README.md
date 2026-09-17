@@ -288,9 +288,10 @@ guessed, and on a phone the line is dropped entirely rather than leaving a
 gap on the card.
 
 The date a room is actually let is the **Effective move-in** column of the
-control sheet's Every Room tab (Lewis, 17 Sep). That column already folds in
-any deferral, the booked check-in and the tower handover, so it is the one
-date the page needs. It is held in `site/index.html` as `MOVE_IN`, room
+control sheet's Every Room tab (Lewis, 17 Sep, refreshed that afternoon with
+the arrivals recorded so far). That column already folds in any deferral,
+the booked check-in, the tower handover and the actual arrival where there
+is one, so it is the one date the page needs. It is held in `site/index.html` as `MOVE_IN`, room
 number to date and **nothing else from that sheet** — it carries tenants'
 names, emails, phone numbers, hotel bookings and travel details, none of
 which belongs on a public page or in this public repository.
@@ -461,6 +462,20 @@ The page shows one tower at a time. `?tower=2` on the address is Tower 2, and
 so on up to 4; anything else is Tower 1. The **Tower** buttons under the
 heading go between them, and because they are plain links a tower's address
 can be sent to a trade and opens on that tower.
+
+Tower 2 also splits north and south. The singles (14-19 on each floor,
+506-511 on the 5th, CW002-006 on the ground) are the north side and the
+twodios (the A/B rooms) the south, which is the control sheet's Side column
+for all 70 rooms (17 Sep). `?tower=2&side=north` or `?tower=2&side=south`
+shows that side's rooms only, in every view: the trade lists, By studio and
+the audit picker. On Tower 2 a row of **Side** buttons appears under the
+Tower buttons, going between Both, North and South, and like the Tower
+buttons they are plain links, so a side's address can be sent on. The
+corridors and the stair core are shared, so they stay on both sides. The
+side is a view and nothing more: a record is still tagged with its tower, so
+a check recorded on the north view shows on the whole-tower view too, and a
+room's keys are the same whichever side shows it. The side is ignored on
+the other towers.
 
 Every tower shares the one list, the same database tables and the same audit
 sign-in. Each tower's view is its own rooms only: its share of every trade

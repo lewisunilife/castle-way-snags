@@ -1380,6 +1380,12 @@
     <a class="tower-btn" data-tower="3" href="?tower=3">Tower 3</a>
     <a class="tower-btn" data-tower="4" href="?tower=4">Tower 4</a>
   </nav>
+  <nav class="towers" id="sides" aria-label="Side of Tower 2" hidden>
+    <span class="towers-label">Side</span>
+    <a class="tower-btn" data-side="" href="?tower=2">Both</a>
+    <a class="tower-btn" data-side="north" href="?tower=2&amp;side=north">North</a>
+    <a class="tower-btn" data-side="south" href="?tower=2&amp;side=south">South</a>
+  </nav>
   <div class="setup" id="setup-notice" hidden>
     <strong>Not connected yet</strong>
     Ticks and notes are saving to this device only. To make the list shared,
@@ -1895,6 +1901,8 @@
      under the heading go between them. The trade lists, the rooms on By
      studio and the audit picker are this tower's rooms only, and a record
      made in one tower's audit log never turns up on another's lists.
+     Tower 2 can be narrowed further to its north or south side with
+     &side=north or &side=south (see SIDE below).
      ==================================================================== */
   var TOWER_ROOMS = { 1: [], 2: [], 3: [], 4: [] };
 
@@ -1984,8 +1992,31 @@
     var m = /[?&]tower=([1-4])(?![0-9])/.exec(window.location.search || "");
     return m ? parseInt(m[1], 10) : 1;
   }());
-  var TOWER_NAME = "Castle Way Tower " + TOWER_N;
-  var EVERY_ROOM = TOWER_ROOMS[TOWER_N];
+
+  /* Tower 2 has a north and a south side: the singles (14-19 on each
+     floor, 506-511 on the 5th, CW002-006 on the ground) are north and the
+     twodios (the A/B rooms) south, which is the control sheet's Side
+     column for all 70 rooms (Lewis, 17 Sep). ?tower=2&side=north or
+     &side=south shows that side's rooms only, in every view; the Side
+     buttons under the heading go between them. The corridors and the
+     stair core are shared, so they stay on both. The side is a view and
+     nothing more: a record is still tagged with its tower, and a room's
+     keys are the same whichever side shows it. */
+  var SIDE = (function () {
+    if (TOWER_N !== 2) { return ""; }
+    var m = /[?&]side=(north|south)(?![a-z])/i.exec(window.location.search || "");
+    return m ? m[1].toLowerCase() : "";
+  }());
+  function roomSide(room) {
+    if (ROOM_TOWER[room] !== 2) { return ""; }
+    return /[AB]$/.test(room) ? "south" : "north";
+  }
+  var TOWER_NAME = "Castle Way Tower " + TOWER_N +
+    (SIDE ? " " + SIDE.charAt(0).toUpperCase() + SIDE.slice(1) : "");
+  var EVERY_ROOM = [];
+  for (var evr = 0; evr < TOWER_ROOMS[TOWER_N].length; evr++) {
+    if (!SIDE || roomSide(TOWER_ROOMS[TOWER_N][evr]) === SIDE) { EVERY_ROOM.push(TOWER_ROOMS[TOWER_N][evr]); }
+  }
 
   // A number on no tower's list counts as Tower 1, where every record
   // made before the split belongs.
@@ -1994,7 +2025,9 @@
     var cm = /^T([1-4])-/.exec(room || "");
     if (cm) { return parseInt(cm[1], 10) === TOWER_N; }
     var t = ROOM_TOWER[room];
-    return t ? t === TOWER_N : TOWER_N === 1;
+    if (!t) { return TOWER_N === 1; }
+    if (t !== TOWER_N) { return false; }
+    return !SIDE || roomSide(room) === SIDE;
   }
 
   // This tower's share of every trade list. A row keeps its key whichever
@@ -2055,45 +2088,48 @@
   }
 
   /* When each room is actually let: the "Effective move-in" column of the
-     control sheet's Every Room tab (Lewis, 17 Sep), which already folds in
-     any deferral, the booked check-in and the tower handover, so it is the
-     one date the page needs. Room number and date only: the sheet carries
+     control sheet's Every Room tab (Lewis, 17 Sep, refreshed that afternoon
+     with the arrivals recorded so far), which already folds in any
+     deferral, the booked check-in, the tower handover and the actual
+     arrival where there is one, so it is the one date the page needs. Room number and date only: the sheet carries
      tenants' names, emails, phone numbers, hotel bookings and travel
      details, none of which belongs on a public page or in this public
      repository. A room missing here (the ground floor, and CW205 which is
      not booked) falls back to the date on Stelling's audit list if it has
      one, and otherwise shows no date rather than a guess. */
   var MOVE_IN = {
-    // Fri 18 Sep 2026 (60 rooms)
-    "CW104": "Fri 18 Sep 2026", "CW109": "Fri 18 Sep 2026", "CW111": "Fri 18 Sep 2026",
-    "CW113": "Fri 18 Sep 2026", "CW145": "Fri 18 Sep 2026", "CW148": "Fri 18 Sep 2026",
-    "CW201": "Fri 18 Sep 2026", "CW204": "Fri 18 Sep 2026", "CW209": "Fri 18 Sep 2026",
-    "CW211": "Fri 18 Sep 2026", "CW212": "Fri 18 Sep 2026", "CW213": "Fri 18 Sep 2026",
-    "CW243": "Fri 18 Sep 2026", "CW244": "Fri 18 Sep 2026", "CW245": "Fri 18 Sep 2026",
-    "CW246": "Fri 18 Sep 2026", "CW247": "Fri 18 Sep 2026", "CW248": "Fri 18 Sep 2026",
-    "CW302": "Fri 18 Sep 2026", "CW303": "Fri 18 Sep 2026", "CW304": "Fri 18 Sep 2026",
-    "CW305": "Fri 18 Sep 2026", "CW307": "Fri 18 Sep 2026", "CW308": "Fri 18 Sep 2026",
-    "CW310": "Fri 18 Sep 2026", "CW311": "Fri 18 Sep 2026", "CW312": "Fri 18 Sep 2026",
-    "CW313": "Fri 18 Sep 2026", "CW344": "Fri 18 Sep 2026", "CW345": "Fri 18 Sep 2026",
-    "CW346": "Fri 18 Sep 2026", "CW347": "Fri 18 Sep 2026", "CW348": "Fri 18 Sep 2026",
-    "CW401": "Fri 18 Sep 2026", "CW402": "Fri 18 Sep 2026", "CW403": "Fri 18 Sep 2026",
-    "CW404": "Fri 18 Sep 2026", "CW405": "Fri 18 Sep 2026", "CW407": "Fri 18 Sep 2026",
-    "CW408": "Fri 18 Sep 2026", "CW409": "Fri 18 Sep 2026", "CW410": "Fri 18 Sep 2026",
-    "CW411": "Fri 18 Sep 2026", "CW412": "Fri 18 Sep 2026", "CW413": "Fri 18 Sep 2026",
-    "CW443": "Fri 18 Sep 2026", "CW444": "Fri 18 Sep 2026", "CW445": "Fri 18 Sep 2026",
-    "CW446": "Fri 18 Sep 2026", "CW447": "Fri 18 Sep 2026", "CW448": "Fri 18 Sep 2026",
-    "CW501": "Fri 18 Sep 2026", "CW502": "Fri 18 Sep 2026", "CW503": "Fri 18 Sep 2026",
-    "CW504": "Fri 18 Sep 2026", "CW505": "Fri 18 Sep 2026", "CW525": "Fri 18 Sep 2026",
-    "CW528": "Fri 18 Sep 2026", "CW529": "Fri 18 Sep 2026", "CW530": "Fri 18 Sep 2026",
+    // Mon 14 Sep 2026 (21 rooms)
+    "CW104": "Mon 14 Sep 2026", "CW111": "Mon 14 Sep 2026", "CW145": "Mon 14 Sep 2026",
+    "CW201": "Mon 14 Sep 2026", "CW209": "Mon 14 Sep 2026", "CW211": "Mon 14 Sep 2026",
+    "CW212": "Mon 14 Sep 2026", "CW248": "Mon 14 Sep 2026", "CW303": "Mon 14 Sep 2026",
+    "CW304": "Mon 14 Sep 2026", "CW311": "Mon 14 Sep 2026", "CW345": "Mon 14 Sep 2026",
+    "CW346": "Mon 14 Sep 2026", "CW347": "Mon 14 Sep 2026", "CW348": "Mon 14 Sep 2026",
+    "CW402": "Mon 14 Sep 2026", "CW407": "Mon 14 Sep 2026", "CW409": "Mon 14 Sep 2026",
+    "CW445": "Mon 14 Sep 2026", "CW446": "Mon 14 Sep 2026", "CW448": "Mon 14 Sep 2026",
+    // Tue 15 Sep 2026 (6 rooms)
+    "CW148": "Tue 15 Sep 2026", "CW245": "Tue 15 Sep 2026", "CW502": "Tue 15 Sep 2026",
+    "CW528": "Tue 15 Sep 2026", "CW529": "Tue 15 Sep 2026", "CW530": "Tue 15 Sep 2026",
+    // Wed 16 Sep 2026 (3 rooms)
+    "CW204": "Wed 16 Sep 2026", "CW302": "Wed 16 Sep 2026", "CW404": "Wed 16 Sep 2026",
+    // Fri 18 Sep 2026 (9 rooms)
+    "CW246": "Fri 18 Sep 2026", "CW307": "Fri 18 Sep 2026", "CW308": "Fri 18 Sep 2026",
+    "CW310": "Fri 18 Sep 2026", "CW401": "Fri 18 Sep 2026", "CW403": "Fri 18 Sep 2026",
+    "CW408": "Fri 18 Sep 2026", "CW410": "Fri 18 Sep 2026", "CW411": "Fri 18 Sep 2026",
     // Sat 19 Sep 2026 (1 room)
     "CW301": "Sat 19 Sep 2026",
     // Sun 20 Sep 2026 (3 rooms)
-    "CW203": "Sun 20 Sep 2026", "CW210": "Sun 20 Sep 2026", "CW526": "Sun 20 Sep 2026",
-    // Tue 22 Sep 2026 (1 room)
-    "CW309": "Tue 22 Sep 2026",
+    "CW203": "Sun 20 Sep 2026", "CW210": "Sun 20 Sep 2026", "CW525": "Sun 20 Sep 2026",
+    // Mon 21 Sep 2026 (1 room)
+    "CW503": "Mon 21 Sep 2026",
+    // Tue 22 Sep 2026 (14 rooms)
+    "CW113": "Tue 22 Sep 2026", "CW213": "Tue 22 Sep 2026", "CW243": "Tue 22 Sep 2026",
+    "CW244": "Tue 22 Sep 2026", "CW309": "Tue 22 Sep 2026", "CW312": "Tue 22 Sep 2026",
+    "CW313": "Tue 22 Sep 2026", "CW344": "Tue 22 Sep 2026", "CW412": "Tue 22 Sep 2026",
+    "CW413": "Tue 22 Sep 2026", "CW443": "Tue 22 Sep 2026", "CW444": "Tue 22 Sep 2026",
+    "CW504": "Tue 22 Sep 2026", "CW505": "Tue 22 Sep 2026",
     // Thu 24 Sep 2026 (1 room)
     "CW112": "Thu 24 Sep 2026",
-    // Fri 25 Sep 2026 (165 rooms)
+    // Fri 25 Sep 2026 (170 rooms)
     "CW101": "Fri 25 Sep 2026", "CW103": "Fri 25 Sep 2026", "CW105": "Fri 25 Sep 2026",
     "CW106": "Fri 25 Sep 2026", "CW107": "Fri 25 Sep 2026", "CW108": "Fri 25 Sep 2026",
     "CW114": "Fri 25 Sep 2026", "CW115": "Fri 25 Sep 2026", "CW116": "Fri 25 Sep 2026",
@@ -2118,43 +2154,47 @@
     "CW233": "Fri 25 Sep 2026", "CW234": "Fri 25 Sep 2026", "CW236": "Fri 25 Sep 2026",
     "CW237": "Fri 25 Sep 2026", "CW238": "Fri 25 Sep 2026", "CW239": "Fri 25 Sep 2026",
     "CW240A": "Fri 25 Sep 2026", "CW240B": "Fri 25 Sep 2026", "CW241A": "Fri 25 Sep 2026",
-    "CW241B": "Fri 25 Sep 2026", "CW242A": "Fri 25 Sep 2026", "CW249": "Fri 25 Sep 2026",
-    "CW250": "Fri 25 Sep 2026", "CW251": "Fri 25 Sep 2026", "CW252": "Fri 25 Sep 2026",
-    "CW306": "Fri 25 Sep 2026", "CW314": "Fri 25 Sep 2026", "CW315": "Fri 25 Sep 2026",
-    "CW316": "Fri 25 Sep 2026", "CW317": "Fri 25 Sep 2026", "CW318": "Fri 25 Sep 2026",
-    "CW319": "Fri 25 Sep 2026", "CW320": "Fri 25 Sep 2026", "CW321": "Fri 25 Sep 2026",
-    "CW322": "Fri 25 Sep 2026", "CW323": "Fri 25 Sep 2026", "CW324": "Fri 25 Sep 2026",
-    "CW325": "Fri 25 Sep 2026", "CW326": "Fri 25 Sep 2026", "CW327": "Fri 25 Sep 2026",
-    "CW328": "Fri 25 Sep 2026", "CW329": "Fri 25 Sep 2026", "CW330": "Fri 25 Sep 2026",
-    "CW331": "Fri 25 Sep 2026", "CW332": "Fri 25 Sep 2026", "CW333": "Fri 25 Sep 2026",
-    "CW334": "Fri 25 Sep 2026", "CW335": "Fri 25 Sep 2026", "CW336": "Fri 25 Sep 2026",
-    "CW337": "Fri 25 Sep 2026", "CW338": "Fri 25 Sep 2026", "CW339": "Fri 25 Sep 2026",
-    "CW340A": "Fri 25 Sep 2026", "CW340B": "Fri 25 Sep 2026", "CW341A": "Fri 25 Sep 2026",
-    "CW341B": "Fri 25 Sep 2026", "CW342A": "Fri 25 Sep 2026", "CW342B": "Fri 25 Sep 2026",
-    "CW414": "Fri 25 Sep 2026", "CW415": "Fri 25 Sep 2026", "CW416": "Fri 25 Sep 2026",
-    "CW417": "Fri 25 Sep 2026", "CW418": "Fri 25 Sep 2026", "CW419": "Fri 25 Sep 2026",
-    "CW420": "Fri 25 Sep 2026", "CW421": "Fri 25 Sep 2026", "CW422": "Fri 25 Sep 2026",
-    "CW423": "Fri 25 Sep 2026", "CW424": "Fri 25 Sep 2026", "CW425": "Fri 25 Sep 2026",
-    "CW426": "Fri 25 Sep 2026", "CW427": "Fri 25 Sep 2026", "CW428": "Fri 25 Sep 2026",
-    "CW429": "Fri 25 Sep 2026", "CW430": "Fri 25 Sep 2026", "CW431": "Fri 25 Sep 2026",
-    "CW432": "Fri 25 Sep 2026", "CW433": "Fri 25 Sep 2026", "CW434": "Fri 25 Sep 2026",
-    "CW435": "Fri 25 Sep 2026", "CW436": "Fri 25 Sep 2026", "CW437": "Fri 25 Sep 2026",
-    "CW438": "Fri 25 Sep 2026", "CW439": "Fri 25 Sep 2026", "CW440A": "Fri 25 Sep 2026",
-    "CW440B": "Fri 25 Sep 2026", "CW441A": "Fri 25 Sep 2026", "CW441B": "Fri 25 Sep 2026",
-    "CW442A": "Fri 25 Sep 2026", "CW442B": "Fri 25 Sep 2026", "CW506": "Fri 25 Sep 2026",
-    "CW507": "Fri 25 Sep 2026", "CW508": "Fri 25 Sep 2026", "CW509": "Fri 25 Sep 2026",
-    "CW510": "Fri 25 Sep 2026", "CW511": "Fri 25 Sep 2026", "CW512": "Fri 25 Sep 2026",
-    "CW513": "Fri 25 Sep 2026", "CW514": "Fri 25 Sep 2026", "CW515": "Fri 25 Sep 2026",
-    "CW516": "Fri 25 Sep 2026", "CW517": "Fri 25 Sep 2026", "CW518": "Fri 25 Sep 2026",
-    "CW520": "Fri 25 Sep 2026", "CW521": "Fri 25 Sep 2026", "CW522A": "Fri 25 Sep 2026",
-    "CW522B": "Fri 25 Sep 2026", "CW523A": "Fri 25 Sep 2026", "CW523B": "Fri 25 Sep 2026",
-    "CW524A": "Fri 25 Sep 2026", "CW524B": "Fri 25 Sep 2026", "CW527": "Fri 25 Sep 2026",
+    "CW241B": "Fri 25 Sep 2026", "CW242A": "Fri 25 Sep 2026", "CW247": "Fri 25 Sep 2026",
+    "CW249": "Fri 25 Sep 2026", "CW250": "Fri 25 Sep 2026", "CW251": "Fri 25 Sep 2026",
+    "CW252": "Fri 25 Sep 2026", "CW305": "Fri 25 Sep 2026", "CW306": "Fri 25 Sep 2026",
+    "CW314": "Fri 25 Sep 2026", "CW315": "Fri 25 Sep 2026", "CW316": "Fri 25 Sep 2026",
+    "CW317": "Fri 25 Sep 2026", "CW318": "Fri 25 Sep 2026", "CW319": "Fri 25 Sep 2026",
+    "CW320": "Fri 25 Sep 2026", "CW321": "Fri 25 Sep 2026", "CW322": "Fri 25 Sep 2026",
+    "CW323": "Fri 25 Sep 2026", "CW324": "Fri 25 Sep 2026", "CW325": "Fri 25 Sep 2026",
+    "CW326": "Fri 25 Sep 2026", "CW327": "Fri 25 Sep 2026", "CW328": "Fri 25 Sep 2026",
+    "CW329": "Fri 25 Sep 2026", "CW330": "Fri 25 Sep 2026", "CW331": "Fri 25 Sep 2026",
+    "CW332": "Fri 25 Sep 2026", "CW333": "Fri 25 Sep 2026", "CW334": "Fri 25 Sep 2026",
+    "CW335": "Fri 25 Sep 2026", "CW336": "Fri 25 Sep 2026", "CW337": "Fri 25 Sep 2026",
+    "CW338": "Fri 25 Sep 2026", "CW339": "Fri 25 Sep 2026", "CW340A": "Fri 25 Sep 2026",
+    "CW340B": "Fri 25 Sep 2026", "CW341A": "Fri 25 Sep 2026", "CW341B": "Fri 25 Sep 2026",
+    "CW342A": "Fri 25 Sep 2026", "CW342B": "Fri 25 Sep 2026", "CW414": "Fri 25 Sep 2026",
+    "CW415": "Fri 25 Sep 2026", "CW416": "Fri 25 Sep 2026", "CW417": "Fri 25 Sep 2026",
+    "CW418": "Fri 25 Sep 2026", "CW419": "Fri 25 Sep 2026", "CW420": "Fri 25 Sep 2026",
+    "CW421": "Fri 25 Sep 2026", "CW422": "Fri 25 Sep 2026", "CW423": "Fri 25 Sep 2026",
+    "CW424": "Fri 25 Sep 2026", "CW425": "Fri 25 Sep 2026", "CW426": "Fri 25 Sep 2026",
+    "CW427": "Fri 25 Sep 2026", "CW428": "Fri 25 Sep 2026", "CW429": "Fri 25 Sep 2026",
+    "CW430": "Fri 25 Sep 2026", "CW431": "Fri 25 Sep 2026", "CW432": "Fri 25 Sep 2026",
+    "CW433": "Fri 25 Sep 2026", "CW434": "Fri 25 Sep 2026", "CW435": "Fri 25 Sep 2026",
+    "CW436": "Fri 25 Sep 2026", "CW437": "Fri 25 Sep 2026", "CW438": "Fri 25 Sep 2026",
+    "CW439": "Fri 25 Sep 2026", "CW440A": "Fri 25 Sep 2026", "CW440B": "Fri 25 Sep 2026",
+    "CW441A": "Fri 25 Sep 2026", "CW441B": "Fri 25 Sep 2026", "CW442A": "Fri 25 Sep 2026",
+    "CW442B": "Fri 25 Sep 2026", "CW447": "Fri 25 Sep 2026", "CW501": "Fri 25 Sep 2026",
+    "CW506": "Fri 25 Sep 2026", "CW507": "Fri 25 Sep 2026", "CW508": "Fri 25 Sep 2026",
+    "CW509": "Fri 25 Sep 2026", "CW510": "Fri 25 Sep 2026", "CW511": "Fri 25 Sep 2026",
+    "CW512": "Fri 25 Sep 2026", "CW513": "Fri 25 Sep 2026", "CW514": "Fri 25 Sep 2026",
+    "CW515": "Fri 25 Sep 2026", "CW516": "Fri 25 Sep 2026", "CW517": "Fri 25 Sep 2026",
+    "CW518": "Fri 25 Sep 2026", "CW520": "Fri 25 Sep 2026", "CW521": "Fri 25 Sep 2026",
+    "CW522A": "Fri 25 Sep 2026", "CW522B": "Fri 25 Sep 2026", "CW523A": "Fri 25 Sep 2026",
+    "CW523B": "Fri 25 Sep 2026", "CW524A": "Fri 25 Sep 2026", "CW524B": "Fri 25 Sep 2026",
+    "CW526": "Fri 25 Sep 2026", "CW527": "Fri 25 Sep 2026",
     // Sat 26 Sep 2026 (3 rooms)
     "CW133": "Sat 26 Sep 2026", "CW242B": "Sat 26 Sep 2026", "CW343": "Sat 26 Sep 2026",
     // Sun 27 Sep 2026 (1 room)
     "CW202": "Sun 27 Sep 2026",
-    // Mon 28 Sep 2026 (2 rooms)
-    "CW235": "Mon 28 Sep 2026", "CW406": "Mon 28 Sep 2026",
+    // Mon 28 Sep 2026 (3 rooms)
+    "CW235": "Mon 28 Sep 2026", "CW405": "Mon 28 Sep 2026", "CW406": "Mon 28 Sep 2026",
+    // Tue 29 Sep 2026 (1 room)
+    "CW109": "Tue 29 Sep 2026",
     // Wed 30 Sep 2026 (1 room)
     "CW152": "Wed 30 Sep 2026",
     // Thu 01 Oct 2026 (2 rooms)
@@ -5827,6 +5867,14 @@
     var isThis = towerBtns[tb].getAttribute("data-tower") === String(TOWER_N);
     towerBtns[tb].classList.toggle("is-on", isThis);
     if (isThis) { towerBtns[tb].setAttribute("aria-current", "page"); }
+  }
+  var sidesNav = document.getElementById("sides");
+  sidesNav.hidden = TOWER_N !== 2;
+  var sideBtns = sidesNav.querySelectorAll(".tower-btn");
+  for (var sb = 0; sb < sideBtns.length; sb++) {
+    var isSide = sideBtns[sb].getAttribute("data-side") === SIDE;
+    sideBtns[sb].classList.toggle("is-on", isSide);
+    if (isSide) { sideBtns[sb].setAttribute("aria-current", "page"); }
   }
 
   render();
