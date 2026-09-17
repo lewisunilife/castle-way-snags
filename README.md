@@ -69,6 +69,22 @@ and put back, and the panel is left alone entirely when the record behind it
 has not changed. The same draft is kept on the device too, so a refresh
 mid-sentence — including the one a new build asks for — hands it back.
 
+## Nothing is ever this device's copy alone
+
+Every tick, note, comment and audit entry goes into the send queue,
+connected or not, and is sent the moment the list is reachable. The status
+line says "held here, will send" with a count while it is not. A read that
+fails no longer leaves the page in that state until someone reloads: it
+keeps asking for the list, a little less often each time, and the first
+read that answers puts it back live and sends what was held.
+
+Before this build, a change made while the page had lost the list was
+written to the device only, and the once-only migration that would have
+sent it had already run on that phone, so it stayed there. On the first
+full read after boot the page now sends anything held from the last ten
+days that the server does not have. Anyone whose audit showed on their own
+phone but nobody else's need only open the page again.
+
 ## How much it reads, and the limits that matter
 
 Every read is paged: Supabase answers at most a thousand rows to one

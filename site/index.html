@@ -2783,8 +2783,13 @@
   }
 
   function renderUnsaved() {
-    if (!live) { unsavedEl.textContent = ""; return; }
     var n = pendingCount();
+    if (!live) {
+      unsavedEl.textContent = n
+        ? (n === 1 ? "1 change held here, will send" : n + " changes held here, will send")
+        : "";
+      return;
+    }
     unsavedEl.textContent = n
       ? (n === 1 ? "1 change still saving" : n + " changes still saving")
       : "";
@@ -3565,11 +3570,32 @@
     document.head.appendChild(el);
   }
 
+  var liveRetryTimer = null;
+  var liveRetryDelay = window.__liveRetryMs || 15000;
+
+  // A read that fails drops the page to "held here", and used to leave it
+  // there until someone reloaded. Now it keeps asking for the list, a
+  // little less often each time, and the first read that answers puts it
+  // back live and sends whatever queued in the meantime.
+  function needsRead() { return !live || !snagsRead || !commentsRead; }
+
+  function retryLive() {
+    if (liveRetryTimer || !client || !needsRead()) { return; }
+    liveRetryTimer = window.setTimeout(function () {
+      liveRetryTimer = null;
+      if (needsRead()) { refetch(); }
+    }, liveRetryDelay);
+    liveRetryDelay = Math.min(liveRetryDelay * 2, 120000);
+  }
+
   function goLocal(reason) {
     live = false;
-    setStatus(reason || "Saved on this device only — not shared", "is-local");
+    setStatus(reason || (configured()
+      ? "Can't reach the list — changes are held here and will send"
+      : "Saved on this device only — not shared"), "is-local");
     document.getElementById("setup-notice").hidden = configured();
     renderUnsaved();
+    retryLive();
   }
 
   /* ---- The write queue ---- */
@@ -3721,24 +3747,15 @@
   function enqueueMany(ids, change) {
     if (!ids.length) { return; }
 
+    // Always into the queue, connected or not. Written to the device and
+    // sent when the connection is there: a change made while the page had
+    // lost the list is not this device's copy alone, it is unsent.
     for (var i = 0; i < ids.length; i++) {
-      var rec = recordFor(ids[i], change);
-      if (live) {
-        queued[ids[i]] = rec;
-      } else {
-        // Not connected: this device's copy is the only copy.
-        items[ids[i]] = rec;
-      }
+      queued[ids[i]] = recordFor(ids[i], change);
     }
-
-    if (live) {
-      saveQueue();
-      render();
-      flush();
-    } else {
-      saveLocal();
-      render();
-    }
+    saveQueue();
+    render();
+    flush();
   }
 
   function enqueue(id, change) {
@@ -3874,16 +3891,10 @@
 
     field.value = "";
 
-    if (live) {
-      queuedComments.push(entry);
-      saveQueue();
-      render();
-      flush();
-    } else {
-      comments.push(entry);
-      saveLocal();
-      render();
-    }
+    queuedComments.push(entry);
+    saveQueue();
+    render();
+    flush();
 
     field.focus();
   }
@@ -3943,16 +3954,10 @@
     };
     commentText.value = "";
 
-    if (live) {
-      queuedComments.push(entry);
-      saveQueue();
-      renderComments();
-      flush();
-    } else {
-      comments.push(entry);
-      saveLocal();
-      renderComments();
-    }
+    queuedComments.push(entry);
+    saveQueue();
+    renderComments();
+    flush();
   });
 
   /* ---- Copy summary ---- */
@@ -4484,14 +4489,9 @@
       created_at: new Date().toISOString()
     };
 
-    if (live) {
-      queuedComments.push(entry);
-      saveQueue();
-      flush();
-    } else {
-      comments.push(entry);
-      saveLocal();
-    }
+    queuedComments.push(entry);
+    saveQueue();
+    flush();
 
     if (auditIn) { fillStudios(); }
     renderAudit();
@@ -5863,11 +5863,81 @@
     return best;
   }
 
+  /* Before this build, a change made while the page had lost the list was
+     written to this device only, and the once-only migration that would
+     have sent it had already run, so it stayed here. On the first full read
+     after boot, anything held here from the last STRANDED_DAYS that the
+     server does not have is queued and sent. Older than that is left, since
+     an entry the server no longer has from long ago was taken out on
+     purpose. */
+  var STRANDED_DAYS = 10;
+  var sweptSnags = false;
+  var sweptComments = false;
+
+  function recentEnough(stamp) {
+    var d = new Date(stamp || "");
+    return !isNaN(d.getTime()) && (Date.now() - d.getTime()) < STRANDED_DAYS * 86400000;
+  }
+
+  function sweepStrandedSnags(serverIds) {
+    if (sweptSnags) { return 0; }
+    sweptSnags = true;
+    var sent = 0;
+    Object.keys(bootItems).forEach(function (id) {
+      var rec = bootItems[id];
+      if (!rec || rec.seeded || serverIds[id] || queued[id] || !index[id]) { return; }
+      if (!(rec.done === true || (rec.note && rec.note.length))) { return; }
+      if (!recentEnough(rec.updated_at)) { return; }
+      queued[id] = {
+        done: rec.done === true,
+        note: rec.note || "",
+        updated_by: rec.updated_by || who(),
+        updated_at: rec.updated_at || new Date().toISOString()
+      };
+      sent++;
+    });
+    if (sent) { saveQueue(); }
+    return sent;
+  }
+
+  function sweepStrandedComments(serverIds) {
+    if (sweptComments) { return 0; }
+    sweptComments = true;
+    var sent = 0;
+    var queuedIds = {};
+    queuedComments.forEach(function (q) { if (q && q.id) { queuedIds[q.id] = true; } });
+    bootComments.forEach(function (c) {
+      if (!c || !c.id || !c.body || serverIds[c.id] || queuedIds[c.id]) { return; }
+      if (!recentEnough(c.created_at)) { return; }
+      queuedComments.push({
+        id: c.id,
+        snag_id: c.snag_id || null,
+        body: c.body,
+        author: c.author || "Someone",
+        created_at: c.created_at || new Date().toISOString()
+      });
+      queuedIds[c.id] = true;
+      sent++;
+    });
+    if (sent) {
+      // Out of the held copy and into the queue, so the queue is not
+      // emptied again by the check below that drops what the server has.
+      comments = comments.filter(function (c) { return !(c && c.id && queuedIds[c.id] && !serverIds[c.id]); });
+      saveQueue();
+    }
+    return sent;
+  }
+
+  var snagsRead = false;      // a full read of each table has landed since boot
+  var commentsRead = false;
+
   function refetch() {
     if (!client) { return; }
 
-    var snagSince = sinceFor(newestSnagAt());
-    var commentSince = sinceFor(newestCommentAt());
+    // The first read after boot is the whole table: what this device holds
+    // is not knowledge of the server, and the stranded sweep needs it all.
+    var snagSince = snagsRead ? sinceFor(newestSnagAt()) : "";
+    var commentSince = commentsRead ? sinceFor(newestCommentAt()) : "";
 
     fetchPaged(function () {
       var qy = client.from(SNAGS_TABLE).select("*");
@@ -5898,8 +5968,15 @@
       }
       items = next;
       live = true;
+      snagsRead = true;
+      liveRetryDelay = window.__liveRetryMs || 15000;
       document.getElementById("setup-notice").hidden = true;
       if (!wasLive) { migrateLocal(); }
+      if (!snagSince) {
+        var serverSnags = {};
+        for (var sv = 0; sv < data.length; sv++) { if (data[sv] && data[sv].id) { serverSnags[data[sv].id] = true; } }
+        sweepStrandedSnags(serverSnags);
+      }
       render();
       renderComments();
       flush();
@@ -5935,6 +6012,12 @@
           return !comments.some(function (c) { return c.id === q.id; });
         });
         saveQueue();
+        commentsRead = true;
+        if (!commentSince) {
+          var serverComments = {};
+          for (var sc = 0; sc < data.length; sc++) { if (data[sc] && data[sc].id) { serverComments[data[sc].id] = true; } }
+          if (sweepStrandedComments(serverComments)) { flush(); }
+        }
         // render() as well: the fetched rows carry the notes hanging off
         // each line, not just the general comments, and without this they
         // stay blank on a fresh load until something else redraws.
@@ -5942,7 +6025,7 @@
         renderComments();
         refreshAuditViews();
         renderUnsaved();
-    }, function () { /* keep what is held; the next read will try again */ });
+    }, function () { retryLive(); /* keep what is held; try again */ });
   }
 
   function subscribe() {
@@ -6016,10 +6099,16 @@
   }
 
   // Coming back into signal, or back to the tab, is the moment to retry.
-  window.addEventListener("online", function () { retryDelay = 4000; flush(); });
+  window.addEventListener("online", function () {
+    retryDelay = 4000;
+    if (live) { flush(); } else if (client) { refetch(); }
+  });
 
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden && live) { flush(); refetch(); }
+    if (document.hidden || !client) { return; }
+    // Back to the tab: fetch what is new, or get the list back if it was lost.
+    if (live) { flush(); }
+    refetch();
   });
 
   // Last line of defence: don't let someone walk away from unsent work.

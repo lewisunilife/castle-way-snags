@@ -4,7 +4,7 @@
 (function () {
   var KEY='__mock_server4__';
   var chan=new BroadcastChannel('mocksb4');
-  var handlers=[]; window.__hasSnagId=false; window.__mockCalls=[];
+  var handlers=[]; window.__hasSnagId=false; window.__mockCalls=[]; window.__failReads=window.__failReads||0;
   function read(){try{return JSON.parse(localStorage.getItem(KEY))||{castle_way_snags:{},castle_way_comments:{}};}catch(e){return {castle_way_snags:{},castle_way_comments:{}};}}
   function write(t){localStorage.setItem(KEY,JSON.stringify(t));}
   function fire(tb,ty,rw){handlers.forEach(function(h){if(h.table!==tb)return;if(h.event!=='*'&&h.event!==ty)return;h.cb({eventType:ty,new:rw,old:rw});});}
@@ -19,6 +19,7 @@
         order:function(c,o){st.order.push([c,!(o&&o.ascending===false)]);return b;},
         range:function(a,z){st.range=[a,z];return b;},
         then:function(ok,ko){
+          if(window.__failReads>0){window.__failReads--;window.__mockCalls.push({table:tb,failed:true});return Promise.resolve({data:null,error:{message:'read failed (test)'}}).then(ok,ko);}
           var out=rows.filter(function(r){return st.gt.every(function(f){return String(r[f[0]]==null?'':r[f[0]])>f[1];});});
           if(st.order.length){out.sort(function(x,y){for(var i=0;i<st.order.length;i++){var c=st.order[i][0],asc=st.order[i][1];var a=String(x[c]==null?'':x[c]),bb=String(y[c]==null?'':y[c]);if(a!==bb)return (a<bb?-1:1)*(asc?1:-1);}return 0;});}
           window.__mockCalls.push({table:tb,gt:st.gt.map(function(f){return f[0];}),range:st.range,total:out.length});
@@ -37,5 +38,5 @@
       rw.created_at=new Date().toISOString(); return Promise.resolve(put(tb,rw.id,rw,'INSERT'));}
   };}
   window.supabase={createClient:function(){return {from:function(t){return q(t);},removeChannel:function(){handlers=[];},
-    channel:function(){var ch={on:function(_e,o,cb){handlers.push({table:o.table,event:o.event,cb:cb});return ch;},subscribe:function(cb){setTimeout(function(){cb('SUBSCRIBED');},10);return ch;}};return ch;}};}};
+    channel:function(){var ch={on:function(_e,o,cb){handlers.push({table:o.table,event:o.event,cb:cb});return ch;},subscribe:function(cb){setTimeout(function(){cb(window.__failReads>0?'TIMED_OUT':'SUBSCRIBED');},10);return ch;}};return ch;}};}};
 })();
