@@ -1,0 +1,68 @@
+name: Deploy to Hetzner
+
+# Runs deploy/hetzner/install.sh on the server over SSH. Never on a push:
+# the box also carries other sites, so this only runs when someone starts
+# it from the Actions tab, and it stops before touching anything if what
+# it finds on port 80 is unexpected (see the script).
+#
+# Repository secrets it needs (Settings > Secrets and variables > Actions):
+#   HETZNER_HOST     the server's address, e.g. 62.238.63.13
+#   HETZNER_SSH_KEY  a private key whose public half is in the server's
+#                    /root/.ssh/authorized_keys
+#   HETZNER_USER     optional, defaults to root
+
+on:
+  workflow_dispatch:
+    inputs:
+      snags_host:
+        description: "Host name to serve the page on (blank: plain HTTP on the server's address)"
+        required: false
+        default: "snags.unilife.co.uk"
+      cert_email:
+        description: "Email for the HTTPS certificate when nginx/apache is already on the box (blank: no certbot)"
+        required: false
+        default: ""
+
+concurrency:
+  group: hetzner
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the page on the server
+        env:
+          KEY: ${{ secrets.HETZNER_SSH_KEY }}
+          HOST: ${{ secrets.HETZNER_HOST }}
+          USER: ${{ secrets.HETZNER_USER }}
+          SNAGS_HOST: ${{ inputs.snags_host }}
+          CERT_EMAIL: ${{ inputs.cert_email }}
+        run: |
+          set -euo pipefail
+          if [ -z "$KEY" ] || [ -z "$HOST" ]; then
+            echo "Add the HETZNER_SSH_KEY and HETZNER_HOST repository secrets first." >&2
+            exit 1
+          fi
+          USER="${USER:-root}"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/hetzner
+          chmod 600 ~/.ssh/hetzner
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -i ~/.ssh/hetzner -o BatchMode=yes -o ConnectTimeout=20 "$USER@$HOST" \
+            "SNAGS_HOST='$SNAGS_HOST' CERT_EMAIL='$CERT_EMAIL' bash -s" < deploy/hetzner/install.sh
+
+      - name: What is now on the box
+        if: always()
+        env:
+          KEY: ${{ secrets.HETZNER_SSH_KEY }}
+          HOST: ${{ secrets.HETZNER_HOST }}
+          USER: ${{ secrets.HETZNER_USER }}
+        run: |
+          [ -n "$KEY" ] && [ -n "$HOST" ] || exit 0
+          ssh -i ~/.ssh/hetzner -o BatchMode=yes -o ConnectTimeout=20 "${USER:-root}@$HOST" \
+            'echo "--- timers"; systemctl list-timers --no-pager 2>/dev/null | grep castle-way || true;
+             echo "--- backups"; ls -1 /var/backups/castle-way-snags 2>/dev/null || true;
+             echo "--- port 80"; ss -ltnp 2>/dev/null | grep -E ":80 |:443 " || true' || true

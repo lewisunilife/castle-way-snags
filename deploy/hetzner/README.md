@@ -40,6 +40,27 @@ What is put in place:
 | `castle-way-pull.timer` | the minute-by-minute pull |
 | `castle-way-backup.timer` | the 02:30 backup |
 
+## Running it from GitHub instead
+
+`.github/workflows/hetzner.yml` does the same over SSH from a GitHub Actions
+runner, so nobody has to open a console on the box. It needs two repository
+secrets (Settings > Secrets and variables > Actions): `HETZNER_HOST`, the
+server's address, and `HETZNER_SSH_KEY`, a private key whose public half is
+in the server's `/root/.ssh/authorized_keys` (`HETZNER_USER` if not root).
+Then Actions > Deploy to Hetzner > Run workflow, with the host name and the
+certificate email as inputs. It never runs on a push, only when started, and
+it ends by printing what is now on the box: the timers, the backups and what
+holds ports 80 and 443.
+
+To make a key on the server itself, in its console:
+
+```bash
+ssh-keygen -t ed25519 -N "" -f /root/.ssh/castle-way-deploy
+cat /root/.ssh/castle-way-deploy.pub >> /root/.ssh/authorized_keys
+cat /root/.ssh/castle-way-deploy      # this is HETZNER_SSH_KEY
+rm /root/.ssh/castle-way-deploy
+```
+
 ## Updates
 
 Nothing to do: a push to `main` reaches the box within a minute, after the
