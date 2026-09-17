@@ -69,6 +69,26 @@ and put back, and the panel is left alone entirely when the record behind it
 has not changed. The same draft is kept on the device too, so a refresh
 mid-sentence — including the one a new build asks for — hands it back.
 
+## How much it reads, and the limits that matter
+
+Every read is paged: Supabase answers at most a thousand rows to one
+request, and the audit record alone passes that, so the page asks in pages
+of a thousand until a short page says it has everything. The first load
+reads the whole record; after that, coming back to the tab or reconnecting
+asks only for rows newer than the newest one already held (starting an hour
+behind, since phone clocks drift), so a phone flicking back to the list
+fetches a handful of rows, not the record.
+
+What can actually run out is Supabase's free plan, not GitHub: as of
+writing, 500 MB of database, 5 GB of egress a month, 200 realtime
+connections at once (one per open tab), 2 million realtime messages a
+month, no backups, and a project paused after a week idle. The paged,
+incremental reads keep egress small. If use grows past a few dozen phones
+at once, or the list has to outlive the handover, the Pro plan (about $25 a
+month) lifts every one of those and adds daily backups on Supabase's side.
+GitHub Pages itself serves a 52 KB gzipped file from a CDN and is not the
+constraint; its only soft limit is ten builds an hour, so batch pushes.
+
 ## Where it is served from
 
 GitHub Pages serves `main` at the link above. `deploy/hetzner/` sets up a

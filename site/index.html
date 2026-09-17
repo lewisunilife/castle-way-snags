@@ -5705,41 +5705,91 @@
     if (carried) { saveQueue(); }
   }
 
+  /* Supabase answers at most PAGE rows to one request (its default is a
+     thousand). The audit record alone will pass that, so every read goes
+     in pages, in a stable order, until a short page says it is all here.
+     `build` makes a fresh query for each page with the filter and order on
+     it. */
+  var PAGE = 1000;
+
+  function fetchPaged(build, done, fail) {
+    var rows = [];
+    function page(from) {
+      build().range(from, from + PAGE - 1).then(function (res) {
+        if (res.error) { fail(res.error); return; }
+        var got = res.data || [];
+        for (var i = 0; i < got.length; i++) { rows.push(got[i]); }
+        if (got.length < PAGE) { done(rows); } else { page(from + PAGE); }
+      }, fail);
+    }
+    page(0);
+  }
+
+  /* After the first load, a read asks only for rows newer than the newest
+     one already held, so a phone coming back to the tab fetches a handful
+     of rows rather than the whole record. The timestamps are set on the
+     phones themselves, whose clocks drift, so the ask starts an hour
+     behind; the merges below make the overlap free. */
+  var SYNC_MARGIN_MS = 60 * 60 * 1000;
+
+  function sinceFor(stamp) {
+    if (!stamp) { return ""; }
+    var d = new Date(stamp);
+    if (isNaN(d.getTime())) { return ""; }
+    return new Date(d.getTime() - SYNC_MARGIN_MS).toISOString();
+  }
+
+  function newestSnagAt() {
+    var best = "";
+    for (var id in items) {
+      if (Object.prototype.hasOwnProperty.call(items, id) && (items[id].updated_at || "") > best) {
+        best = items[id].updated_at;
+      }
+    }
+    return best;
+  }
+
+  function newestCommentAt() {
+    var best = "";
+    for (var i = 0; i < comments.length; i++) {
+      if ((comments[i].created_at || "") > best) { best = comments[i].created_at; }
+    }
+    return best;
+  }
+
   function refetch() {
     if (!client) { return; }
 
-    client.from(SNAGS_TABLE).select("*").then(function (res) {
-      if (res.error) {
-        goLocal("Can't reach the list — changes are held here and will send");
-        scheduleFlush();
-        return;
-      }
+    var snagSince = sinceFor(newestSnagAt());
+    var commentSince = sinceFor(newestCommentAt());
 
+    fetchPaged(function () {
+      var qy = client.from(SNAGS_TABLE).select("*");
+      if (snagSince) { qy = qy.gt("updated_at", snagSince); }
+      return qy.order("updated_at", { ascending: true }).order("id", { ascending: true });
+    }, function (data) {
       var wasLive = live;
+
+      // Laid over what is held, newest copy of each row winning: a write
+      // that landed while this request was in flight, or a realtime echo
+      // that beat it, must not be undone by a stale read, and a read that
+      // only asked for recent rows leaves the rest as they were.
       var next = {};
-      for (var r = 0; r < res.data.length; r++) {
-        var row = res.data[r];
+      Object.keys(items).forEach(function (id) { next[id] = items[id]; });
+      for (var r = 0; r < data.length; r++) {
+        var row = data[r];
         if (!row || !row.id) { continue; }
-        next[row.id] = {
+        var theirs = {
           done: row.done === true,
           note: row.note || "",
           updated_by: row.updated_by || "",
           updated_at: row.updated_at || ""
         };
-      }
-
-      // A reply can arrive older than something we already know — a write
-      // that landed while this request was in flight, or a realtime echo
-      // that beat it. Keep whichever copy is newer rather than letting a
-      // stale read undo it.
-      Object.keys(items).forEach(function (id) {
-        var mine = items[id];
-        var theirs = next[id];
-        if (!mine) { return; }
-        if (!theirs || (mine.updated_at || "") > (theirs.updated_at || "")) {
-          next[id] = mine;
+        var mine = next[row.id];
+        if (!mine || (theirs.updated_at || "") >= (mine.updated_at || "")) {
+          next[row.id] = theirs;
         }
-      });
+      }
       items = next;
       live = true;
       document.getElementById("setup-notice").hidden = true;
@@ -5755,15 +5805,16 @@
       scheduleFlush();
     });
 
-    client.from(COMMENTS_TABLE).select("*").order("created_at", { ascending: true })
-      .then(function (res) {
-        if (res.error) { return; }
-
+    fetchPaged(function () {
+      var qy = client.from(COMMENTS_TABLE).select("*");
+      if (commentSince) { qy = qy.gt("created_at", commentSince); }
+      return qy.order("created_at", { ascending: true }).order("id", { ascending: true });
+    }, function (data) {
         // Merge rather than replace: a comment posted while this request
         // was in flight is not in the reply, and must not be dropped.
         var seen = {};
         var merged = [];
-        readComments(res.data).concat(comments).forEach(function (c) {
+        readComments(data).concat(comments).forEach(function (c) {
           if (!c || !c.id || seen[c.id]) { return; }
           seen[c.id] = true;
           merged.push(c);
@@ -5785,7 +5836,7 @@
         renderComments();
         refreshAuditViews();
         renderUnsaved();
-      });
+    }, function () { /* keep what is held; the next read will try again */ });
   }
 
   function subscribe() {
