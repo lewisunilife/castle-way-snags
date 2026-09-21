@@ -423,15 +423,18 @@ Tower 2 was inspected room by room on 21 Sep, north and south, and every
 item is a row on the list with the source **Tower 2 inspection**: the solo
 rooms on the north side, the twodio bedrooms on the south, and each twodio's
 shared living area. The rows are in `T2_ROWS` in `site/index.html`.
-Lewis's rules of 21 Sep place 212 of the 288, the first rule to match
+Lewis's rules of 21 Sep place 237 of the 288, the first rule to match
 winning: any mention of paint, mastic or sealant to Decorating / Sealant (81
 rows; the painting or sealing is the decorator's whatever it is on, so
 "Skirting repainting", "Door architrave painting" and the vinyl gap that
 needs mastic are decorating), vinyl to Flooring Repairs (36), heat sensors
 to iKew (14), sprinkler caps and heads to Sprinklers (15), blinds to Blinds
-(10), door handles to Doors (6), bathroom and shower door adjustments,
-mirrors, architraves and skirting to Joinery / Carpentry (29), furniture or
-laying out to Room Setup / Removals (21). The other 76 sit under
+(10), door handles to Doors (6), lights and sockets to Electrical (5),
+bathroom and shower door adjustments, mirrors, architraves, skirting, MEP
+boxes and boxing, kitchen and bathroom cabinets, and drawers and furniture
+fit to Joinery / Carpentry (49), furniture or laying out to Room Setup /
+Removals (21). MVHR work is not placed yet, whatever box it names. The
+other 51 sit under
 **Unassigned**, to be placed on their trade by hand with the Trade control on
 each row; a row keeps its key when it is moved, so a tick or a note made
 while it is unassigned goes with it, and a move made by hand wins over the
