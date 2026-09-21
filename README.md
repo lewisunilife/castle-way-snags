@@ -423,15 +423,19 @@ Tower 2 was inspected room by room on 21 Sep, north and south, and every
 item is a row on the list with the source **Tower 2 inspection**: the solo
 rooms on the north side, the twodio bedrooms on the south, and each twodio's
 shared living area. The rows are in `T2_ROWS` in `site/index.html`.
-Lewis's rules of 21 Sep place 138 of the 288: any mention of paint to
-Decorating / Sealant (73 rows; paint wins over the thing being painted, so
-"Skirting repainting" and "Door architrave painting" are decorating), vinyl
-to Flooring Repairs (37), architrave and skirting to Joinery / Carpentry
-(7), furniture or laying out to Room Setup / Removals (21). The other 150
-sit under **Unassigned**, to be placed on their trade by hand with the Trade
-control on each row; a row keeps its key when it is moved, so a tick or a
-note made while it is unassigned goes with it, and a move made by hand wins
-over the rule. Rooms that passed everything have no rows. 215 and 217
+Lewis's rules of 21 Sep place 212 of the 288, the first rule to match
+winning: any mention of paint, mastic or sealant to Decorating / Sealant (81
+rows; the painting or sealing is the decorator's whatever it is on, so
+"Skirting repainting", "Door architrave painting" and the vinyl gap that
+needs mastic are decorating), vinyl to Flooring Repairs (36), heat sensors
+to iKew (14), sprinkler caps and heads to Sprinklers (15), blinds to Blinds
+(10), door handles to Doors (6), bathroom and shower door adjustments,
+mirrors, architraves and skirting to Joinery / Carpentry (29), furniture or
+laying out to Room Setup / Removals (21). The other 76 sit under
+**Unassigned**, to be placed on their trade by hand with the Trade control on
+each row; a row keeps its key when it is moved, so a tick or a note made
+while it is unassigned goes with it, and a move made by hand wins over the
+rule. Rooms that passed everything have no rows. 215 and 217
 were mid-rework and not yet inspected, and shared area 240 was still in
 progress across the board, so those carry only what the report itemised.
 
