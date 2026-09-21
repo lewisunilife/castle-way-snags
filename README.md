@@ -458,17 +458,17 @@ and twodios", and audited with the same checks as a corridor.
 
 ## By floor
 
-The fourth view lists every ticket floor by floor from the top down: a fold
-for Level 5, Level 4, Level 3, Level 2 and Level 1, always listed, then the
-ground floor and the stair core when they have rows. The rows are the same
-tickets as By trade, with the trade against each in place of the floor
-column, and the same tick box, note field and Trade control: a tick, a note
-or a move made here is the one record, and shows on By trade and By studio
-the same. The list controls apply here too (Hide completed, the ground
-floor, 15M, habitable, the trade and source filters), and each fold's header
-counts its tickets, rooms and what is outstanding. A fold shut is remembered
-per floor and per tower on the device. Within a floor the rows run in room
-order, a twodio (CW524) before its rooms (CW524A, CW524B), then by trade.
+The fourth view is the summary by trade, floor by floor from the top down:
+a fold for Level 5, Level 4, Level 3, Level 2 and Level 1, always listed,
+then the ground floor and the stair core when they have rows. Each fold
+holds the trade summary for that level, the same table as the one at the
+top of By trade: each trade with issues on that floor, who is carrying it,
+how many issues, in how many rooms, and the room numbers, with a room struck
+through once that trade has nothing left in it and the trade struck once
+every room is, plus a total row. The fold's header gives the level's issues,
+rooms and what is outstanding. It is a summary, not the tickets: those stay
+on By trade and By studio. A fold shut is remembered per floor and per tower
+on the device.
 
 ## Corridors and the stair core
 

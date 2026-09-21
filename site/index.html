@@ -678,7 +678,6 @@
 
   .date-group .group-body { padding-top: 12px; }
   .floor-group .group-body .scroller { margin-top: 0; }
-  #floor-list tbody tr.ticked td.action .action-text { text-decoration: line-through; color: var(--muted); }
 
   tr.date-row td {
     padding: 0;
@@ -980,15 +979,18 @@
     text-decoration-thickness: 2px;
   }
 
-  #summary-table tr.trade-done td.t-trade {
+  #summary-table tr.trade-done td.t-trade,
+  .floor-summary tr.trade-done td.t-trade {
     color: var(--muted);
     text-decoration: line-through;
     text-decoration-color: var(--strike);
     text-decoration-thickness: 2px;
   }
 
-  #summary-table tr.trade-done td { background: var(--done-bg); }
-  #summary-table tr.trade-done:hover td { background: var(--done-bg); }
+  #summary-table tr.trade-done td,
+  .floor-summary tr.trade-done td { background: var(--done-bg); }
+  #summary-table tr.trade-done:hover td,
+  .floor-summary tr.trade-done:hover td { background: var(--done-bg); }
 
   .by {
     display: block;
@@ -1299,7 +1301,8 @@
     #who, textarea { font-size: 16px; }
 
     /* Summary table as cards */
-    #summary-table tbody tr {
+    #summary-table tbody tr,
+    .floor-summary tbody tr {
       grid-template-columns: 1fr auto auto;
       grid-template-areas:
         "trade  issues rooms"
@@ -1307,44 +1310,58 @@
         "nums   nums   nums";
     }
 
-    #summary-table td.t-who {
+    #summary-table td.t-who,
+    .floor-summary td.t-who {
       grid-area: who;
       margin-top: 4px;
       font-size: 13px;
     }
 
-    #summary-table td.t-who:not(:empty)::before {
+    #summary-table td.t-who:not(:empty)::before,
+    .floor-summary td.t-who:not(:empty)::before {
       content: "Assigned: ";
       font-weight: 400;
       color: var(--muted);
     }
 
-    #summary-table tr.total td.t-who { display: none; }
+    #summary-table tr.total td.t-who,
+    .floor-summary tr.total td.t-who { display: none; }
 
-    #summary-table td.t-trade { grid-area: trade; font-weight: 700; font-size: 15px; }
-    #summary-table td.t-issues { grid-area: issues; }
-    #summary-table td.t-rooms { grid-area: rooms; }
+    #summary-table td.t-trade,
+    .floor-summary td.t-trade { grid-area: trade; font-weight: 700; font-size: 15px; }
+    #summary-table td.t-issues,
+    .floor-summary td.t-issues { grid-area: issues; }
+    #summary-table td.t-rooms,
+    .floor-summary td.t-rooms { grid-area: rooms; }
 
     #summary-table td.t-issues,
-    #summary-table td.t-rooms {
+    #summary-table td.t-rooms,
+    .floor-summary td.t-issues,
+    .floor-summary td.t-rooms {
       font-size: 13px;
       color: var(--muted);
       white-space: nowrap;
     }
 
-    #summary-table td.t-issues::before { content: "Issues: "; }
-    #summary-table td.t-rooms::before { content: "Rooms: "; }
+    #summary-table td.t-issues::before,
+    .floor-summary td.t-issues::before { content: "Issues: "; }
+    #summary-table td.t-rooms::before,
+    .floor-summary td.t-rooms::before { content: "Rooms: "; }
 
-    #summary-table td.t-nums {
+    #summary-table td.t-nums,
+    .floor-summary td.t-nums {
       grid-area: nums;
       margin-top: 8px;
       font-size: 13px;
       line-height: 1.5;
     }
 
-    #summary-table tr.total { background: var(--band); }
-    #summary-table tr.total td { background: transparent; }
-    #summary-table tr.total td.t-nums { display: none; }
+    #summary-table tr.total,
+    .floor-summary tr.total { background: var(--band); }
+    #summary-table tr.total td,
+    .floor-summary tr.total td { background: transparent; }
+    #summary-table tr.total td.t-nums,
+    .floor-summary tr.total td.t-nums { display: none; }
 
     .panel { padding: 14px; }
     button { width: 100%; }
@@ -1566,10 +1583,10 @@
 
   <div id="view-floors" hidden>
     <h2>By floor</h2>
-    <p class="note-line">Every ticket on the list, floor by floor from the top
-      down: the same rows as By trade, with the trade against each, and the
-      same ticks, notes and Trade control. The list controls above apply here
-      too.</p>
+    <p class="note-line">The summary by trade, floor by floor from the top
+      down: for each level, how many issues each trade has there, in how many
+      rooms, and which rooms, with a room struck through once that trade has
+      nothing left in it.</p>
     <p class="studio-counts" id="floor-counts"></p>
     <div id="floor-list"></div>
   </div>
@@ -5551,12 +5568,13 @@
 
   /* ---- By floor ---- */
 
-  /* The same tickets as By trade, gathered by floor from the top down
-     (Lewis, 21 Sep): Level 5 to Level 1 always listed, then the ground
-     floor and the stair core when they have rows. Each floor is a fold that
-     remembers whether it is open. The rows are drawn from the index, like
-     the studio cards, so a tick, a note or a move made here is the same
-     record as one made on By trade, and the list controls apply. */
+  /* The summary by trade, floor by floor from the top down (Lewis, 21
+     Sep): Level 5 to Level 1 always listed, then the ground floor and the
+     stair core when they have rows, each a fold that remembers whether it
+     is open. Each level's table is the trade summary for that level: the
+     same columns, a room struck through once the trade has nothing left in
+     it, the trade struck once every room is. Drawn from the index, so a
+     tick made anywhere shows here at once. */
   var floorListEl = document.getElementById("floor-list");
   var floorCountsEl = document.getElementById("floor-counts");
   var FLOOR_OPEN_KEY = "cw-tower" + TOWER_N + "-floor-open";
@@ -5573,141 +5591,99 @@
     return "";
   }
 
-  function floorRowHtml(id, job, rec, thread, gate) {
-    var done = rec.done === true;
-    var isPending = Object.prototype.hasOwnProperty.call(queued, id);
-    var names = [];
-    for (var t = 0; t < (job.trades || []).length; t++) { names.push(tradeName(job.trades[t])); }
-    var shown = roomLabel(job.room);
-    var stamp = "";
-    var by = rec.updated_by || "";
-    var note = typeof rec.note === "string" ? rec.note : "";
-    if (by && (done || note)) {
-      stamp = (done ? "Ticked by " : "Updated by ") + esc(by);
-      var when = shortDate(rec.updated_at);
-      if (when) { stamp += " \u00b7 " + esc(when); }
-      if (isPending && live) { stamp += " \u00b7 saving\u2026"; }
-    }
-    return '<tr id="row-fl-' + id + '" class="' + (done ? "ticked" : "") +
-      (job.fromAudit ? " audit-row" : "") + (isPending && live ? " unsaved" : "") + '">' +
-      '<td class="room">' + esc(shown) + "</td>" +
-      '<td class="floor">' + esc(names.join(" / ")) + "</td>" +
-      '<td class="movein' + moveinClass(job.room) + '">' + moveinCell(job.room) + "</td>" +
-      '<td class="src">' + esc(job.src || "") + "</td>" +
-      '<td class="action"><span class="action-text">' + esc(job.action || "") + "</span>" +
-      (job.fromAudit && job.kind !== "issue"
-        ? '<span class="fail-why">' + esc(job.why || "no reason given") + "</span>" : "") +
-      '<span class="tag-nh hab-flag">' + (job.hab === "nh" ? "Not habitable" : "") + "</span>" +
-      '<ul class="notes">' + thread + "</ul>" +
-      '<div class="note-add">' +
-      '<input class="note-field" type="text" data-id="' + esc(id) + '"' + gate +
-      ' placeholder="' + (gate ? "Add your name and company at the top first" : "Add a note") + '"' +
-      ' aria-label="Note for ' + esc(shown) + " " + esc(job.action || "") + '">' +
-      '<button type="button" class="note-btn" data-id="' + esc(id) + '"' + gate +
-      ' aria-label="Submit note for ' + esc(shown) + '">Submit</button>' +
-      "</div>" +
-      moveSelect(id, (job.trades || [])[0] || UNASSIGNED, shown, job.action || "", !!gate) +
-      '<span class="by">' + stamp + "</span></td>" +
-      '<td class="done"><label>' +
-      '<input type="checkbox" class="studio-tick" data-id="' + esc(id) + '"' +
-      (done ? " checked" : "") + gate +
-      ' aria-label="Mark ' + esc(shown) + " " + esc(job.action || "") + ' as done">' +
-      "</label></td></tr>";
-  }
-
   function renderFloors() {
     if (!floorViewOn) { return; }
-    var grouped = groupNotes();
-    var confirmed = grouped.__confirmed;
-    var gate = identified() ? "" : " disabled";
-    var groups = {};
+    var order = ["5", "4", "3", "2", "1", "0", ""];
+    var byLevel = {};   // level -> trade key -> { ids, rooms: room -> ids }
     var id;
     for (id in index) {
       if (!Object.prototype.hasOwnProperty.call(index, id)) { continue; }
       var job = index[id];
-      if (!jobVisible(job)) { continue; }
-      if (hideGround && (job.room || "").charAt(2) === "0") { continue; }
-      if (fireHidden(job.room) || habHidden(job.room)) { continue; }
-      if (hideDone && effective(id).done === true) { continue; }
       var lv = levelOf(job.room);
-      if (!groups[lv]) { groups[lv] = []; }
-      groups[lv].push(id);
+      var trades = job.trades && job.trades.length ? job.trades : [UNASSIGNED];
+      if (!byLevel[lv]) { byLevel[lv] = {}; }
+      for (var t = 0; t < trades.length; t++) {
+        var tk = trades[t];
+        if (!byLevel[lv][tk]) { byLevel[lv][tk] = { ids: [], rooms: {} }; }
+        byLevel[lv][tk].ids.push(id);
+        if (!byLevel[lv][tk].rooms[job.room]) { byLevel[lv][tk].rooms[job.room] = []; }
+        byLevel[lv][tk].rooms[job.room].push(id);
+      }
     }
-    var order = ["5", "4", "3", "2", "1", "0", ""];
+    function byLabel(x, y) {
+      var lx = roomLabel(x), ly = roomLabel(y);
+      return lx < ly ? -1 : (lx > ly ? 1 : 0);
+    }
     var html = "";
-    var shownTotal = 0;
+    var grand = 0;
+    var grandOpen = 0;
     var floorsWithRows = 0;
     for (var g = 0; g < order.length; g++) {
-      var lv = order[g];
-      var ids = groups[lv] || [];
-      var isLevel = lv !== "0" && lv !== "";
-      if (!ids.length && !isLevel) { continue; }
-      ids.sort(function (a, b) {
-        var ra = roomLabel(index[a].room), rb = roomLabel(index[b].room);
-        if (ra !== rb) { return ra < rb ? -1 : 1; }
-        var ta = tradeName((index[a].trades || [])[0] || UNASSIGNED);
-        var tb = tradeName((index[b].trades || [])[0] || UNASSIGNED);
-        if (ta !== tb) { return ta < tb ? -1 : 1; }
-        return (index[a].action || "") < (index[b].action || "") ? -1 : 1;
-      });
-      var open = 0;
-      var rooms = {};
-      var roomCount = 0;
-      var rows = "";
-      for (var r = 0; r < ids.length; r++) {
-        var jid = ids[r];
-        var rec = effective(jid);
-        if (rec.done !== true) { open++; }
-        var rm = index[jid].room;
-        if (!rooms[rm]) { rooms[rm] = true; roomCount++; }
-        rows += floorRowHtml(jid, index[jid], rec, notesHtml(grouped[jid] || [], confirmed, rec), gate);
+      var level = order[g];
+      var tradesHere = byLevel[level] || {};
+      var isLevel = level !== "0" && level !== "";
+      var keys = [];
+      for (var d = 0; d < drawn.length; d++) {
+        if (tradesHere[drawn[d].key]) { keys.push(drawn[d].key); }
       }
-      shownTotal += ids.length;
-      if (ids.length) { floorsWithRows++; }
-      var title = lv === "" ? "No floor" : (lv === "0" ? "Ground floor" : "Level " + lv);
-      var count = ids.length
-        ? ids.length + (ids.length === 1 ? " ticket" : " tickets") + " in " +
-          roomCount + (roomCount === 1 ? " room" : " rooms") +
+      if (!keys.length && !isLevel) { continue; }
+      var rows = "";
+      var total = 0;
+      var open = 0;
+      var levelRooms = {};
+      for (var ki = 0; ki < keys.length; ki++) {
+        var k = keys[ki];
+        var bucket = tradesHere[k];
+        var roomList = Object.keys(bucket.rooms).sort(byLabel);
+        var chips = "";
+        var tradeClear = true;
+        for (var r = 0; r < roomList.length; r++) {
+          var ids = bucket.rooms[roomList[r]];
+          var clear = true;
+          for (var q = 0; q < ids.length; q++) {
+            if (effective(ids[q]).done !== true) { clear = false; open++; }
+          }
+          if (!clear) { tradeClear = false; }
+          levelRooms[roomList[r]] = true;
+          chips += '<span class="sum-room' + (clear ? " done" : "") + '" data-key="' + esc(k) +
+            '" data-room="' + esc(roomList[r]) + '">' + esc(roomLabel(roomList[r])) + "</span>";
+        }
+        total += bucket.ids.length;
+        rows += '<tr data-key="' + esc(k) + '"' + (tradeClear ? ' class="trade-done"' : "") + ">" +
+          '<td class="room t-trade">' + esc(tradeName(k)) + "</td>" +
+          '<td class="t-who">' + (ASSIGNED[k] ? esc(ASSIGNED[k]) : '<span class="unassigned">\u2014</span>') + "</td>" +
+          '<td class="num t-issues">' + bucket.ids.length + "</td>" +
+          '<td class="num t-rooms">' + roomList.length + "</td>" +
+          '<td class="t-nums">' + chips + "</td></tr>";
+      }
+      var roomCount = Object.keys(levelRooms).length;
+      rows += '<tr class="total"><td class="t-trade">Total</td><td class="t-who"></td>' +
+        '<td class="num t-issues">' + total + '</td><td class="num t-rooms">' + roomCount + "</td>" +
+        '<td class="t-nums"></td></tr>';
+      grand += total;
+      grandOpen += open;
+      if (total) { floorsWithRows++; }
+      var title = level === "" ? "No floor" : (level === "0" ? "Ground floor" : "Level " + level);
+      var count = total
+        ? total + (total === 1 ? " issue in " : " issues in ") + roomCount + (roomCount === 1 ? " room" : " rooms") +
           (open ? " \u00b7 " + open + " outstanding" : " \u00b7 all ticked")
-        : "nothing" + (hideDone ? " left" : "");
-      var isOpen = Object.prototype.hasOwnProperty.call(floorOpen, lv) ? floorOpen[lv] === true : true;
-      html += '<details class="date-group floor-group" data-level="' + lv + '"' + (isOpen ? " open" : "") + ">" +
+        : "nothing";
+      var isOpen = Object.prototype.hasOwnProperty.call(floorOpen, level) ? floorOpen[level] === true : true;
+      html += '<details class="date-group floor-group" data-level="' + level + '"' + (isOpen ? " open" : "") + ">" +
         '<summary><span class="group-when">' + title + '</span><span class="group-count">' + count + "</span></summary>" +
         '<div class="group-body">' +
-        (ids.length
-          ? '<div class="scroller"><table><thead><tr><th>Room</th><th>Trade</th><th>Move-in</th>' +
-            "<th>Source</th><th>Action</th>" + '<th class="done-h">Done</th></tr></thead><tbody>' +
-            rows + "</tbody></table></div>"
-          : '<p class="note-line">Nothing on this floor' + (hideDone ? " still to do" : "") + ".</p>") +
+        (keys.length
+          ? '<div class="scroller"><table class="floor-summary"><thead><tr><th>Trade</th><th>Assigned</th>' +
+            "<th>Issues</th><th>Rooms</th><th>Room numbers</th></tr></thead><tbody>" + rows + "</tbody></table></div>"
+          : '<p class="note-line">Nothing on this floor.</p>') +
         "</div></details>";
     }
     floorListEl.innerHTML = html;
-    floorCountsEl.textContent = shownTotal + (shownTotal === 1 ? " ticket" : " tickets") +
-      " across " + floorsWithRows + (floorsWithRows === 1 ? " floor" : " floors") +
-      (hideDone ? ", completed hidden" : "");
+    floorCountsEl.textContent = grand + (grand === 1 ? " issue" : " issues") + " across " +
+      floorsWithRows + (floorsWithRows === 1 ? " floor" : " floors") +
+      (grandOpen ? " \u00b7 " + grandOpen + " outstanding" : (grand ? " \u00b7 all ticked" : ""));
   }
 
-  floorListEl.addEventListener("change", function (ev) {
-    var el = ev.target;
-    if (!el || !el.classList) { return; }
-    if (el.classList.contains("move-to")) { moveJob(el.getAttribute("data-id"), el.value); return; }
-    if (el.type === "checkbox" && el.classList.contains("studio-tick")) {
-      tickWithUndo(el.getAttribute("data-id"), el.checked);
-    }
-  });
-  floorListEl.addEventListener("click", function (ev) {
-    var btn = ev.target;
-    if (!btn || !btn.classList || !btn.classList.contains("note-btn")) { return; }
-    var field = btn.parentNode.querySelector(".note-field");
-    if (field) { submitNote(btn.getAttribute("data-id"), field); }
-  });
-  floorListEl.addEventListener("keydown", function (ev) {
-    var field = ev.target;
-    if (!field || !field.classList || !field.classList.contains("note-field")) { return; }
-    if (ev.key !== "Enter") { return; }
-    ev.preventDefault();
-    submitNote(field.getAttribute("data-id"), field);
-  });
   // A fold opened or shut is remembered per floor and per tower.
   floorListEl.addEventListener("toggle", function (ev) {
     var d = ev.target;
