@@ -3195,6 +3195,12 @@
   }
   tradeKeyByTitle["Unassigned"] = UNASSIGNED;   // its summary row; not a trade title
 
+  // Room numbers in the summaries drop the CW: every room has it, so it
+  // says nothing (Lewis, 21 Sep). A corridor keeps its name.
+  function shortRoom(room) {
+    return roomLabel(room).replace(/^CW/, "");
+  }
+
   function roomCells(tradeTitle, rooms) {
     var key = tradeKeyByTitle[tradeTitle] || "";
 
@@ -3208,7 +3214,7 @@
     for (var r = 0; r < rooms.length; r++) {
       cells.push(
         '<span class="sum-room" data-key="' + esc(key) +
-        '" data-room="' + esc(rooms[r]) + '">' + esc(roomLabel(rooms[r])) + "</span>"
+        '" data-room="' + esc(rooms[r]) + '">' + esc(shortRoom(rooms[r])) + "</span>"
       );
     }
     return cells.join(", ");
@@ -5635,7 +5641,7 @@
         var k = keys[ki];
         var bucket = tradesHere[k];
         var roomList = Object.keys(bucket.rooms).sort(byLabel);
-        var chips = "";
+        var chips = [];
         var tradeClear = true;
         for (var r = 0; r < roomList.length; r++) {
           var ids = bucket.rooms[roomList[r]];
@@ -5645,8 +5651,8 @@
           }
           if (!clear) { tradeClear = false; }
           levelRooms[roomList[r]] = true;
-          chips += '<span class="sum-room' + (clear ? " done" : "") + '" data-key="' + esc(k) +
-            '" data-room="' + esc(roomList[r]) + '">' + esc(roomLabel(roomList[r])) + "</span>";
+          chips.push('<span class="sum-room' + (clear ? " done" : "") + '" data-key="' + esc(k) +
+            '" data-room="' + esc(roomList[r]) + '">' + esc(shortRoom(roomList[r])) + "</span>");
         }
         total += bucket.ids.length;
         rows += '<tr data-key="' + esc(k) + '"' + (tradeClear ? ' class="trade-done"' : "") + ">" +
@@ -5654,7 +5660,7 @@
           '<td class="t-who">' + (ASSIGNED[k] ? esc(ASSIGNED[k]) : '<span class="unassigned">\u2014</span>') + "</td>" +
           '<td class="num t-issues">' + bucket.ids.length + "</td>" +
           '<td class="num t-rooms">' + roomList.length + "</td>" +
-          '<td class="t-nums">' + chips + "</td></tr>";
+          '<td class="t-nums">' + chips.join(", ") + "</td></tr>";
       }
       var roomCount = Object.keys(levelRooms).length;
       rows += '<tr class="total"><td class="t-trade">Total</td><td class="t-who"></td>' +
