@@ -417,6 +417,28 @@ but nothing verifies it.
 - **Ticks cannot be deleted** by anyone using the page — the access rules
   allow read, insert and update only.
 
+## The Tower 2 inspection
+
+Tower 2 was inspected room by room on 21 Sep, north and south, and every
+item is a row on the trade lists with the source **Tower 2 inspection**:
+the solo rooms on the north side, the twodio bedrooms on the south, and
+each twodio's shared living area. The rows are in `T2_ROWS` in
+`site/index.html`, keyed by trade; the inspection's own columns were paint,
+mastic, vinyl, MEP boxing, and snags and parts, and each item carries the
+trade the work is for (paint and mastic to Decorating / Sealant, vinyl to
+Flooring Repairs, MEP boxing to Joinery / Carpentry, sprinkler caps to
+Sprinklers, heat sensors to iKew, doors to Doors, furniture to Room Setup /
+Removals, and so on). Anything filed under the wrong trade can be moved.
+Rooms that passed everything have no rows. 215 and 217 were mid-rework and
+not yet inspected, and shared area 240 was still in progress across the
+board, so those carry only what the report itemised.
+
+A twodio's shared living area is a common area of Tower 2, like a corridor:
+`T2-TWODIO-524` is "Twodio 524 shared area", one per twodio on floors 1 to
+5, shown on the south side and on the whole-tower view, with a card on By
+studio and an entry on the audit picker under "Corridors, stairs and shared
+areas", and audited with the same checks as a corridor.
+
 ## Corridors and the stair core
 
 Each tower's audit log also carries one corridor per floor the tower has
