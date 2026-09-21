@@ -44,8 +44,8 @@ Then open the page on two devices — the bar at the top should read
 
 ## The audit log
 
-Three views, one URL: **By trade** (the snagging list), **By studio**, and
-**Audit log**. The first two are public; the audit log asks for a username
+Four views, one URL: **By trade** (the snagging list), **By studio**, **By
+floor**, and **Audit log**. The first two are public; the audit log asks for a username
 and password. The sign-ins are in `AUDIT_USERS` in `site/index.html` (JBA,
 JCA, Steve, Bal, Nycole, Sam and Ryan at the time of writing; the username is not
 case-sensitive). That is a guard on the view, not a lock on the data: the
@@ -420,24 +420,43 @@ but nothing verifies it.
 ## The Tower 2 inspection
 
 Tower 2 was inspected room by room on 21 Sep, north and south, and every
-item is a row on the trade lists with the source **Tower 2 inspection**:
-the solo rooms on the north side, the twodio bedrooms on the south, and
-each twodio's shared living area. The rows are in `T2_ROWS` in
-`site/index.html`, keyed by trade; the inspection's own columns were paint,
-mastic, vinyl, MEP boxing, and snags and parts, and each item carries the
-trade the work is for (paint and mastic to Decorating / Sealant, vinyl to
-Flooring Repairs, MEP boxing to Joinery / Carpentry, sprinkler caps to
-Sprinklers, heat sensors to iKew, doors to Doors, furniture to Room Setup /
-Removals, and so on). Anything filed under the wrong trade can be moved.
-Rooms that passed everything have no rows. 215 and 217 were mid-rework and
-not yet inspected, and shared area 240 was still in progress across the
-board, so those carry only what the report itemised.
+item is a row on the list with the source **Tower 2 inspection**: the solo
+rooms on the north side, the twodio bedrooms on the south, and each twodio's
+shared living area. All 288 rows sit under **Unassigned**, to be placed on
+their trade by hand with the Trade control on each row (Lewis: "we'll
+manually reassign"); a row keeps its key when it is moved, so a tick or a
+note made while it is unassigned goes with it. The rows are in `T2_ROWS` in
+`site/index.html`. Rooms that passed everything have no rows. 215 and 217
+were mid-rework and not yet inspected, and shared area 240 was still in
+progress across the board, so those carry only what the report itemised.
 
-A twodio's shared living area is a common area of Tower 2, like a corridor:
-`T2-TWODIO-524` is "Twodio 524 shared area", one per twodio on floors 1 to
-5, shown on the south side and on the whole-tower view, with a card on By
-studio and an entry on the audit picker under "Corridors, stairs and shared
-areas", and audited with the same checks as a corridor.
+Unassigned is drawn and counted like a trade: its own section at the end of
+By trade, hidden while it is empty, and a row on the summary table, so the
+totals include what has not been placed yet. It is not a trade: it is not on
+the Filter by trade boxes, and the Trade control's list of trades ends with
+it rather than containing it.
+
+A twodio is three places on the page: its two private rooms, CW524A and
+CW524B, and the twodio itself, **CW524** with no letter, the part shared
+between them. CW524 is a common area of Tower 2 like a corridor (its id is
+`T2-TWODIO-524`, which is what its records are keyed on), one per twodio on
+floors 1 to 5, shown on the south side and on the whole-tower view, with a
+card on By studio and an entry on the audit picker under "Corridors, stairs
+and twodios", and audited with the same checks as a corridor.
+
+## By floor
+
+The fourth view lists every ticket floor by floor from the top down: a fold
+for Level 5, Level 4, Level 3, Level 2 and Level 1, always listed, then the
+ground floor and the stair core when they have rows. The rows are the same
+tickets as By trade, with the trade against each in place of the floor
+column, and the same tick box, note field and Trade control: a tick, a note
+or a move made here is the one record, and shows on By trade and By studio
+the same. The list controls apply here too (Hide completed, the ground
+floor, 15M, habitable, the trade and source filters), and each fold's header
+counts its tickets, rooms and what is outstanding. A fold shut is remembered
+per floor and per tower on the device. Within a floor the rows run in room
+order, a twodio (CW524) before its rooms (CW524A, CW524B), then by trade.
 
 ## Corridors and the stair core
 

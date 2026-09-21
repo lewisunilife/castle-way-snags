@@ -677,6 +677,8 @@
   }
 
   .date-group .group-body { padding-top: 12px; }
+  .floor-group .group-body .scroller { margin-top: 0; }
+  #floor-list tbody tr.ticked td.action .action-text { text-decoration: line-through; color: var(--muted); }
 
   tr.date-row td {
     padding: 0;
@@ -1439,6 +1441,7 @@
   <nav class="views" id="views">
     <button type="button" class="view-btn is-on" data-view="trade">By trade</button>
     <button type="button" class="view-btn" data-view="studio">By studio</button>
+    <button type="button" class="view-btn" data-view="floors">By floor</button>
     <button type="button" class="view-btn" data-view="audit">Audit log</button>
   </nav>
 
@@ -1559,6 +1562,16 @@
     <div id="studio-list"></div>
     <p class="all-clear" id="studio-empty" hidden>No studios have been set up for
       auditing yet.</p>
+  </div>
+
+  <div id="view-floors" hidden>
+    <h2>By floor</h2>
+    <p class="note-line">Every ticket on the list, floor by floor from the top
+      down: the same rows as By trade, with the trade against each, and the
+      same ticks, notes and Trade control. The list controls above apply here
+      too.</p>
+    <p class="studio-counts" id="floor-counts"></p>
+    <div id="floor-list"></div>
   </div>
 
   <div id="view-audit" hidden>
@@ -2049,333 +2062,304 @@
   });
 
   /* Tower 2, inspected room by room (Lewis, 21 Sep): the solo rooms on the
-     north side, the twodio bedrooms on the south, and each twodio's shared
-     living area (T2-TWODIO-140 and so on: a common area, like a corridor).
-     The inspection's own columns were paint, mastic, vinyl, MEP boxing,
-     and snags and parts; each item here carries the trade the work is
-     for. Rooms that passed everything have no rows. 215 and 217 were
-     mid-rework and not yet inspected, and shared area 240 was still in
-     progress across the board, so those have only what was itemised. */
-  var T2_ROWS = {
-    cleaning: [
-      ["CW441A", T2I, "Jumper left in bathroom sink."],
-      ["CW341B", T2I, "Insulation left in riser."],
-      ["CW342A", T2I, "Insulation left in module."],
-      ["CW142A", T2I, "Insulation left in shower."],
-      ["T2-TWODIO-442", T2I, "Remove large amounts of dust."]
-    ],
-    electrical: [
-      ["CW511", T2I, "4 ceiling lights missing."],
-      ["CW511", T2I, "3 socket face plates missing."],
-      ["CW316", T2I, "Cables need removing from window."],
-      ["CW315", T2I, "Lots of cable coming out of window."],
-      ["CW314", T2I, "Lots of cable coming out of window."],
-      ["CW440B", T2I, "Temp lights left in module."],
-      ["CW441B", T2I, "2 ceiling lights missing."],
-      ["CW442B", T2I, "Headboard light sits proud in middle."],
-      ["T2-TWODIO-340", T2I, "Heater needs hanging onto bracket."],
-      ["T2-TWODIO-141", T2I, "Hang heater onto bracket."]
-    ],
-    ikew: [
-      ["CW522A", T2I, "Heat sensor missing."],
-      ["CW522B", T2I, "Heat sensor missing."],
-      ["CW523A", T2I, "Heat sensor missing."],
-      ["CW440A", T2I, "Heat sensor missing."],
-      ["CW440B", T2I, "Heat sensor missing."],
-      ["CW340A", T2I, "Heat sensor missing."],
-      ["CW340B", T2I, "Heat sensor missing."],
-      ["CW341A", T2I, "Heat sensor needs finishing."],
-      ["CW240B", T2I, "Heat sensor missing."],
-      ["CW140A", T2I, "Heat sensor missing."],
-      ["CW141A", T2I, "Heat sensor missing."],
-      ["CW141B", T2I, "Heat sensor needs finishing."],
-      ["CW142A", T2I, "Heat sensor outstanding."],
-      ["CW142B", T2I, "Heat sensor not finished."]
-    ],
-    plumbing: [
-      ["CW342A", T2I, "Toilet screw cap broken."],
-      ["CW140B", T2I, "Toilet seat missing."]
-    ],
-    sprinklers: [
-      ["CW511", T2I, "4 grey sprinkler heads missing."],
-      ["CW522A", T2I, "3 oak sprinkler caps missing."],
-      ["CW522B", T2I, "3 oak sprinkler caps missing."],
-      ["CW523A", T2I, "3 oak sprinkler caps missing."],
-      ["CW523B", T2I, "3 oak sprinkler caps missing."],
-      ["CW524A", T2I, "3 oak sprinkler caps missing."],
-      ["CW524B", T2I, "3 oak sprinkler caps missing."],
-      ["CW441A", T2I, "3 oak sprinkler caps missing."],
-      ["CW442A", T2I, "3 oak sprinkler caps missing."],
-      ["CW341B", T2I, "3 oak sprinkler caps missing."],
-      ["CW342A", T2I, "3 oak sprinkler caps missing."],
-      ["T2-TWODIO-441", T2I, "Sprinkler cap missing."],
-      ["T2-TWODIO-342", T2I, "2 sprinkler caps missing."],
-      ["T2-TWODIO-242", T2I, "Sprinkler cap missing."],
-      ["T2-TWODIO-140", T2I, "Adjust sprinkler cap to be flush."]
-    ],
-    appliances: [
-      ["T2-TWODIO-242", T2I, "Oven needs fitting."]
-    ],
-    flooring: [
-      ["CW418", T2I, "Vinyl damage in front of wardrobe."],
-      ["CW219", T2I, "Vinyl gap by studio door."],
-      ["CW218", T2I, "Vinyl rippling."],
-      ["CW119", T2I, "Vinyl rippling by wardrobe."],
-      ["CW118", T2I, "Vinyl rippling in front of plinth heater."],
-      ["CW116", T2I, "Vinyl ripple under wardrobe and by studio door."],
-      ["CW115", T2I, "Cut to vinyl by plinth heater."],
-      ["CW522A", T2I, "Full vinyl floor missing."],
-      ["CW523A", T2I, "Vinyl rippling in bathroom."],
-      ["CW523B", T2I, "Vinyl rippling."],
-      ["CW524A", T2I, "Vinyl rip by communal door."],
-      ["CW441B", T2I, "Vinyl rippling along long wall."],
-      ["CW442A", T2I, "Vinyl rippling along long wall."],
-      ["CW340A", T2I, "Small cut to vinyl by communal door."],
-      ["CW340B", T2I, "Vinyl dent by hallway mirror."],
-      ["CW341B", T2I, "Multiple vinyl nicks by studio door and in hallway."],
-      ["CW240B", T2I, "Vinyl floor missing."],
-      ["CW140A", T2I, "Vinyl floor rippling."],
-      ["CW140B", T2I, "Vinyl floor missing."],
-      ["T2-TWODIO-141", T2I, "Vinyl to be stitched along the centre join."],
-      ["T2-TWODIO-142", T2I, "Vinyl to be stitched along the centre join."],
-      ["T2-TWODIO-240", T2I, "Vinyl to be stitched along the centre join."],
-      ["T2-TWODIO-241", T2I, "Vinyl to be stitched along the centre join."],
-      ["T2-TWODIO-242", T2I, "Vinyl to be stitched along the centre join."],
-      ["T2-TWODIO-340", T2I, "Vinyl to be stitched along the centre join."],
-      ["T2-TWODIO-341", T2I, "Vinyl to be stitched along the centre join."],
-      ["T2-TWODIO-342", T2I, "Vinyl to be stitched along the centre join."],
-      ["T2-TWODIO-440", T2I, "Vinyl to be stitched along the centre join."],
-      ["T2-TWODIO-441", T2I, "Vinyl to be stitched along the centre join (piece required)."],
-      ["T2-TWODIO-442", T2I, "Vinyl to be stitched along the centre join."],
-      ["T2-TWODIO-523", T2I, "Vinyl to be stitched along the centre join."],
-      ["T2-TWODIO-524", T2I, "Vinyl to be stitched along the centre join."],
-      ["T2-TWODIO-522", T2I, "Vinyl missing in module; stitch once fitted."],
-      ["T2-TWODIO-340", T2I, "Vinyl gap under kitchen oven."],
-      ["T2-TWODIO-242", T2I, "Vinyl gapping by kitchen."],
-      ["T2-TWODIO-140", T2I, "Full vinyl floor missing."]
-    ],
-    blinds: [
-      ["T2-TWODIO-524", T2I, "Window blind chain clips need fitting."],
-      ["T2-TWODIO-523", T2I, "Window blind chain clips need fitting."],
-      ["T2-TWODIO-522", T2I, "Window blind chain clips need fitting."],
-      ["T2-TWODIO-440", T2I, "Fit window blind."],
-      ["T2-TWODIO-440", T2I, "Fix window blind chain clips."],
-      ["T2-TWODIO-341", T2I, "Front window blind needs fitting."],
-      ["T2-TWODIO-340", T2I, "Window blind needs hanging."],
-      ["T2-TWODIO-242", T2I, "Back blind missing."],
-      ["T2-TWODIO-241", T2I, "Window blind chain clips need fitting."],
-      ["T2-TWODIO-141", T2I, "Window blind chain clips need fitting."]
-    ],
-    joinery: [
-      ["CW511", T2I, "Bathroom MEP box needs fixing."],
-      ["CW511", T2I, "Bathroom cabinet needs hanging."],
-      ["CW511", T2I, "Egger panel missing above shower."],
-      ["CW511", T2I, "Holes drilled into top kitchen cabinet."],
-      ["CW509", T2I, "Cracked DGU."],
-      ["CW315", T2I, "Kitchen larder top cabinet door missing."],
-      ["CW219", T2I, "Dogleg egger panel missing above wardrobe."],
-      ["CW219", T2I, "Kitchen extractor cabinet missing screw caps."],
-      ["CW119", T2I, "Screw caps missing in top kitchen cabinets."],
-      ["CW522A", T2I, "Back right corner of bedroom MEP box needs refitting."],
-      ["CW522B", T2I, "Hallway mirror missing."],
-      ["CW440A", T2I, "Hallway mirror needs hanging."],
-      ["CW440B", T2I, "Toilet roll holder needs refitting."],
-      ["CW440B", T2I, "Hallway mirror needs hanging."],
-      ["CW441A", T2I, "Hallway mirror needs hanging."],
-      ["CW442B", T2I, "Bathroom cabinet missing."],
-      ["CW442B", T2I, "Hallway mirror needs hanging."],
-      ["CW340B", T2I, "Bedroom MEP box needs refixing on back left corner."],
-      ["CW341B", T2I, "Bedroom MEP box drooping on back left corner."],
-      ["CW342A", T2I, "Bathroom mirror missing."],
-      ["CW240A", T2I, "Shower ceiling trim needs correcting."],
-      ["CW241A", T2I, "Bedroom MEP box needs finishing."],
-      ["CW140B", T2I, "Hallway mirror missing."],
-      ["CW140B", T2I, "Skirting by studio door missing."],
-      ["CW140B", T2I, "Bedroom MEP box needs refixing."],
-      ["CW141A", T2I, "Bedroom MEP box needs refixing."],
-      ["CW141A", T2I, "Nail needs removing from shower ceiling."],
-      ["CW142A", T2I, "Bedroom MEP box needs refixing."],
-      ["CW142B", T2I, "Skirting in bathroom needs refitting."],
-      ["CW142B", T2I, "Nail in shower ceiling needs removing."],
-      ["T2-TWODIO-524", T2I, "Left side pelmet not plumb."],
-      ["T2-TWODIO-524", T2I, "Skirting not fitted on door wall centre."],
-      ["T2-TWODIO-441", T2I, "Left pelmet needs fitting."],
-      ["T2-TWODIO-441", T2I, "Kitchen MEP cap not fitted."],
-      ["T2-TWODIO-340", T2I, "Correct MEP cutout above kitchen cabinet."],
-      ["T2-TWODIO-142", T2I, "Correct large hole in ceiling for repaint."],
-      ["T2-TWODIO-140", T2I, "Fit remaining skirting."]
-    ],
-    doors: [
-      ["CW509", T2I, "Studio door architrave missing internally."],
-      ["CW417", T2I, "Studio door doesn't close from outside."],
-      ["CW216", T2I, "Door handle not level internally."],
-      ["CW119", T2I, "Door handle not level internally."],
-      ["CW114", T2I, "Studio door architrave needs correcting."],
-      ["CW522A", T2I, "Bathroom door adjustment."],
-      ["CW522A", T2I, "Communal door needs fitting."],
-      ["CW522B", T2I, "Bathroom door adjustment."],
-      ["CW522B", T2I, "Communal door needs fitting."],
-      ["CW523A", T2I, "Bathroom and shower door adjustment."],
-      ["CW523A", T2I, "Communal door needs fitting."],
-      ["CW523B", T2I, "Bathroom door adjustment."],
-      ["CW523B", T2I, "Communal door needs fitting."],
-      ["CW524A", T2I, "Communal door needs fitting."],
-      ["CW524B", T2I, "Communal door needs fitting."],
-      ["CW440A", T2I, "Communal door needs finishing and missing handle."],
-      ["CW441A", T2I, "Communal door not fitted."],
-      ["CW441B", T2I, "Shower door adjustment."],
-      ["CW441B", T2I, "Studio door doesn't close smoothly."],
-      ["CW442A", T2I, "Shower door adjustment."],
-      ["CW442A", T2I, "Communal door needs fitting."],
-      ["CW442A", T2I, "Studio door doesn't close smoothly."],
-      ["CW442B", T2I, "Communal door needs finishing."],
-      ["CW340A", T2I, "Shower door adjustment."],
-      ["CW340A", T2I, "Communal door not fitted."],
-      ["CW340B", T2I, "Shower door adjustment."],
-      ["CW341A", T2I, "Communal door missing."],
-      ["CW341B", T2I, "Communal door not fitted."],
-      ["CW342A", T2I, "Bathroom door adjustment."],
-      ["CW342A", T2I, "Communal door not fitted."],
-      ["CW240A", T2I, "Bathroom door adjustment."],
-      ["CW240B", T2I, "Shower door needs adjusting."],
-      ["CW241B", T2I, "Shower door needs adjusting."],
-      ["CW241B", T2I, "Communal door needs fitting."],
-      ["CW242B", T2I, "Communal door needs fitting."],
-      ["CW140A", T2I, "Bathroom door needs adjusting."],
-      ["CW140A", T2I, "Shower door needs adjusting."],
-      ["CW141B", T2I, "Shower door adjustment."],
-      ["CW141B", T2I, "Communal door handles missing."],
-      ["CW142A", T2I, "Communal door needs finishing."],
-      ["CW142B", T2I, "Studio door handle missing."],
-      ["T2-TWODIO-524", T2I, "Door architraves not fitted."],
-      ["T2-TWODIO-140", T2I, "Fit handle and lock to communal door (B)."]
-    ],
-    decorating: [
-      ["CW509", T2I, "Mastic bead needed left of bedroom MEP box (to be reworked later)."],
-      ["CW507", T2I, "Skirting by door needs painting."],
-      ["CW417", T2I, "Mastic bead needed left of bedroom MEP box (to be reworked later)."],
-      ["CW317", T2I, "Mastic bead needed left of bedroom wall MEP (to be reworked later)."],
-      ["CW315", T2I, "No mastic."],
-      ["CW314", T2I, "No mastic."],
-      ["CW219", T2I, "Paint needed left of studio door and skirting."],
-      ["CW219", T2I, "Mastic bead needed under bedroom MEP left side (to be reworked later)."],
-      ["CW216", T2I, "Paint needed around right of studio door and skirting."],
-      ["CW118", T2I, "Big gap between kitchen splashback and top cabinets needs mastic."],
-      ["CW522A", T2I, "Painting in progress, re-inspect once done."],
-      ["CW522B", T2I, "Painting in progress, re-inspect once done."],
-      ["CW523A", T2I, "Painting in progress, re-inspect once done."],
-      ["CW523B", T2I, "Painting in progress, re-inspect once done."],
-      ["CW524A", T2I, "Painting in progress, re-inspect once done."],
-      ["CW524B", T2I, "Painting in progress, re-inspect once done."],
-      ["CW441B", T2I, "Paint snag above toilet splashback."],
-      ["CW441B", T2I, "Repaint around studio door and bottom right section."],
-      ["CW442A", T2I, "Paint touch ups above studio door, shower ceiling front edge and around mirror."],
-      ["CW340A", T2I, "Module needs full repaint."],
-      ["CW340B", T2I, "Paint touch up above door."],
-      ["CW340B", T2I, "Repaint hairline cracks."],
-      ["CW340B", T2I, "Repaint bottom of left riser wall."],
-      ["CW341A", T2I, "Minor paint snags."],
-      ["CW341B", T2I, "Minor paint snags."],
-      ["CW342A", T2I, "Minor paint snags."],
-      ["CW342A", T2I, "Vinyl gap in bathroom skirting (mastic to cover)."],
-      ["CW342B", T2I, "Minor paint snags only."],
-      ["CW240A", T2I, "Minor paint touch up on bathroom MEP box."],
-      ["CW240B", T2I, "Paint snags still in module."],
-      ["CW241A", T2I, "Minor paint snags."],
-      ["CW241B", T2I, "Paint snags."],
-      ["CW242A", T2I, "Small paint touch up at bottom of studio door."],
-      ["CW242B", T2I, "Paint snags marked out."],
-      ["CW140A", T2I, "Repaint around studio door."],
-      ["CW142B", T2I, "Repaint around studio door."],
-      ["T2-TWODIO-140", T2I, "Skirting repainting."],
-      ["T2-TWODIO-140", T2I, "Door architrave painting."],
-      ["T2-TWODIO-140", T2I, "Window pelmet painting."],
-      ["T2-TWODIO-141", T2I, "Skirting repainting."],
-      ["T2-TWODIO-141", T2I, "Door architrave painting."],
-      ["T2-TWODIO-141", T2I, "Window pelmet painting."],
-      ["T2-TWODIO-142", T2I, "Skirting repainting."],
-      ["T2-TWODIO-142", T2I, "Door architrave painting."],
-      ["T2-TWODIO-142", T2I, "Window pelmet painting."],
-      ["T2-TWODIO-241", T2I, "Skirting repainting."],
-      ["T2-TWODIO-241", T2I, "Door architrave painting."],
-      ["T2-TWODIO-241", T2I, "Window pelmet painting."],
-      ["T2-TWODIO-242", T2I, "Skirting repainting."],
-      ["T2-TWODIO-242", T2I, "Door architrave painting."],
-      ["T2-TWODIO-242", T2I, "Window pelmet painting."],
-      ["T2-TWODIO-340", T2I, "Skirting repainting."],
-      ["T2-TWODIO-340", T2I, "Door architrave painting."],
-      ["T2-TWODIO-340", T2I, "Window pelmet painting."],
-      ["T2-TWODIO-341", T2I, "Skirting repainting."],
-      ["T2-TWODIO-341", T2I, "Door architrave painting."],
-      ["T2-TWODIO-341", T2I, "Window pelmet painting."],
-      ["T2-TWODIO-342", T2I, "Skirting repainting."],
-      ["T2-TWODIO-342", T2I, "Door architrave painting."],
-      ["T2-TWODIO-342", T2I, "Window pelmet painting."],
-      ["T2-TWODIO-440", T2I, "Skirting repainting."],
-      ["T2-TWODIO-440", T2I, "Door architrave painting."],
-      ["T2-TWODIO-440", T2I, "Window pelmet painting."],
-      ["T2-TWODIO-441", T2I, "Skirting repainting."],
-      ["T2-TWODIO-441", T2I, "Door architrave painting."],
-      ["T2-TWODIO-441", T2I, "Window pelmet painting."],
-      ["T2-TWODIO-442", T2I, "Skirting repainting."],
-      ["T2-TWODIO-442", T2I, "Door architrave painting."],
-      ["T2-TWODIO-442", T2I, "Window pelmet painting."],
-      ["T2-TWODIO-522", T2I, "Skirting repainting."],
-      ["T2-TWODIO-522", T2I, "Door architrave painting."],
-      ["T2-TWODIO-522", T2I, "Window pelmet painting."],
-      ["T2-TWODIO-523", T2I, "Skirting repainting."],
-      ["T2-TWODIO-523", T2I, "Door architrave painting."],
-      ["T2-TWODIO-523", T2I, "Window pelmet painting."],
-      ["T2-TWODIO-524", T2I, "Skirting repainting."],
-      ["T2-TWODIO-524", T2I, "Door architrave painting."],
-      ["T2-TWODIO-524", T2I, "Window pelmet painting."],
-      ["T2-TWODIO-522", T2I, "Fill gap above 522A door."],
-      ["T2-TWODIO-442", T2I, "Fill vertical gap between walls."],
-      ["T2-TWODIO-342", T2I, "Fill vertical gap between walls."],
-      ["T2-TWODIO-340", T2I, "Main wall repaint."],
-      ["T2-TWODIO-340", T2I, "Fill small gap above bookshelf."],
-      ["T2-TWODIO-241", T2I, "Fill vertical gap between walls."],
-      ["T2-TWODIO-142", T2I, "Repaint ceiling hole rework."],
-      ["T2-TWODIO-140", T2I, "Fill gap above communal door."]
-    ],
-    setup: [
-      ["CW522A", T2I, "Lots of furniture missing."],
-      ["CW522B", T2I, "Furniture needs laying out."],
-      ["CW523B", T2I, "Furniture needs laying out."],
-      ["CW524A", T2I, "Furniture needs laying out."],
-      ["CW524A", T2I, "TV clashes with bookshelf."],
-      ["CW524B", T2I, "Furniture needs laying out."],
-      ["CW440A", T2I, "Furniture needs laying out."],
-      ["CW440B", T2I, "Furniture needs laying out."],
-      ["CW441A", T2I, "Furniture needs laying out."],
-      ["CW441B", T2I, "Furniture needs laying out."],
-      ["CW442A", T2I, "Furniture needs laying out."],
-      ["CW442B", T2I, "Furniture needs laying out."],
-      ["CW340A", T2I, "Furniture needs laying out."],
-      ["CW240A", T2I, "Furniture needs laying out."],
-      ["CW241A", T2I, "Furniture needs laying out."],
-      ["CW241B", T2I, "Furniture needs laying out."],
-      ["CW242A", T2I, "Furniture needs laying out."],
-      ["CW242B", T2I, "Communal coffee table broken."],
-      ["CW140A", T2I, "Furniture needs laying out."],
-      ["CW140B", T2I, "Furniture needs laying out."],
-      ["CW141A", T2I, "Furniture needs laying out."],
-      ["CW141A", T2I, "Bedside drawers too tall."],
-      ["CW141B", T2I, "Desk drawers need wheels fitted."],
-      ["CW142A", T2I, "Furniture needs laying out."],
-      ["CW142B", T2I, "Furniture needs laying out."]
-    ],
-    mvhr: [
-      ["CW241A", T2I, "MVHR cover needs fitting."],
-      ["T2-TWODIO-441", T2I, "MVHR not connected (no cable out of kitchen MEP box)."],
-      ["T2-TWODIO-142", T2I, "Connect MVHR cables."],
-      ["T2-TWODIO-140", T2I, "Connect MVHR cables."]
-    ]
-  };
-  for (var t2s = 0; t2s < ALL_SECTIONS.length; t2s++) {
-    var t2x = T2_ROWS[ALL_SECTIONS[t2s].key];
-    if (t2x) { ALL_SECTIONS[t2s].rows = ALL_SECTIONS[t2s].rows.concat(t2x); }
-  }
+     north side, the twodio private rooms on the south, and each twodio
+     itself (CW140, the part shared between 140A and 140B: id T2-TWODIO-140,
+     a common area like a corridor).
+     Every item is a row under Unassigned, to be placed on its trade by hand
+     with the Trade control (Lewis, 21 Sep: "we'll manually reassign").
+     Rooms that passed everything have no rows. 215 and 217 were mid-rework
+     and not yet inspected, and shared area 240 was still in progress across
+     the board, so those have only what was itemised. */
+  var T2_ROWS = [
+    ["CW511", T2I, "Bathroom MEP box needs fixing."],
+    ["CW511", T2I, "Bathroom cabinet needs hanging."],
+    ["CW511", T2I, "4 grey sprinkler heads missing."],
+    ["CW511", T2I, "Egger panel missing above shower."],
+    ["CW511", T2I, "4 ceiling lights missing."],
+    ["CW511", T2I, "Holes drilled into top kitchen cabinet."],
+    ["CW511", T2I, "3 socket face plates missing."],
+    ["CW509", T2I, "Mastic bead needed left of bedroom MEP box (to be reworked later)."],
+    ["CW509", T2I, "Cracked DGU."],
+    ["CW509", T2I, "Studio door architrave missing internally."],
+    ["CW507", T2I, "Skirting by door needs painting."],
+    ["CW418", T2I, "Vinyl damage in front of wardrobe."],
+    ["CW417", T2I, "Mastic bead needed left of bedroom MEP box (to be reworked later)."],
+    ["CW417", T2I, "Studio door doesn't close from outside."],
+    ["CW317", T2I, "Mastic bead needed left of bedroom wall MEP (to be reworked later)."],
+    ["CW316", T2I, "Cables need removing from window."],
+    ["CW315", T2I, "No mastic."],
+    ["CW315", T2I, "Kitchen larder top cabinet door missing."],
+    ["CW315", T2I, "Lots of cable coming out of window."],
+    ["CW314", T2I, "No mastic."],
+    ["CW314", T2I, "Lots of cable coming out of window."],
+    ["CW219", T2I, "Paint needed left of studio door and skirting."],
+    ["CW219", T2I, "Dogleg egger panel missing above wardrobe."],
+    ["CW219", T2I, "Kitchen extractor cabinet missing screw caps."],
+    ["CW219", T2I, "Mastic bead needed under bedroom MEP left side (to be reworked later)."],
+    ["CW219", T2I, "Vinyl gap by studio door."],
+    ["CW218", T2I, "Vinyl rippling."],
+    ["CW216", T2I, "Paint needed around right of studio door and skirting."],
+    ["CW216", T2I, "Door handle not level internally."],
+    ["CW119", T2I, "Vinyl rippling by wardrobe."],
+    ["CW119", T2I, "Screw caps missing in top kitchen cabinets."],
+    ["CW119", T2I, "Door handle not level internally."],
+    ["CW118", T2I, "Vinyl rippling in front of plinth heater."],
+    ["CW118", T2I, "Big gap between kitchen splashback and top cabinets needs mastic."],
+    ["CW116", T2I, "Vinyl ripple under wardrobe and by studio door."],
+    ["CW115", T2I, "Cut to vinyl by plinth heater."],
+    ["CW114", T2I, "Studio door architrave needs correcting."],
+    ["CW522A", T2I, "Painting in progress, re-inspect once done."],
+    ["CW522A", T2I, "Full vinyl floor missing."],
+    ["CW522A", T2I, "Bathroom door adjustment."],
+    ["CW522A", T2I, "3 oak sprinkler caps missing."],
+    ["CW522A", T2I, "Lots of furniture missing."],
+    ["CW522A", T2I, "Heat sensor missing."],
+    ["CW522A", T2I, "Back right corner of bedroom MEP box needs refitting."],
+    ["CW522A", T2I, "Communal door needs fitting."],
+    ["CW522B", T2I, "Painting in progress, re-inspect once done."],
+    ["CW522B", T2I, "Bathroom door adjustment."],
+    ["CW522B", T2I, "3 oak sprinkler caps missing."],
+    ["CW522B", T2I, "Heat sensor missing."],
+    ["CW522B", T2I, "Furniture needs laying out."],
+    ["CW522B", T2I, "Communal door needs fitting."],
+    ["CW522B", T2I, "Hallway mirror missing."],
+    ["CW523A", T2I, "Painting in progress, re-inspect once done."],
+    ["CW523A", T2I, "Bathroom and shower door adjustment."],
+    ["CW523A", T2I, "3 oak sprinkler caps missing."],
+    ["CW523A", T2I, "Vinyl rippling in bathroom."],
+    ["CW523A", T2I, "Communal door needs fitting."],
+    ["CW523A", T2I, "Heat sensor missing."],
+    ["CW523B", T2I, "Painting in progress, re-inspect once done."],
+    ["CW523B", T2I, "Vinyl rippling."],
+    ["CW523B", T2I, "Bathroom door adjustment."],
+    ["CW523B", T2I, "3 oak sprinkler caps missing."],
+    ["CW523B", T2I, "Furniture needs laying out."],
+    ["CW523B", T2I, "Communal door needs fitting."],
+    ["CW524A", T2I, "Painting in progress, re-inspect once done."],
+    ["CW524A", T2I, "3 oak sprinkler caps missing."],
+    ["CW524A", T2I, "Furniture needs laying out."],
+    ["CW524A", T2I, "Vinyl rip by communal door."],
+    ["CW524A", T2I, "Communal door needs fitting."],
+    ["CW524A", T2I, "TV clashes with bookshelf."],
+    ["CW524B", T2I, "Painting in progress, re-inspect once done."],
+    ["CW524B", T2I, "3 oak sprinkler caps missing."],
+    ["CW524B", T2I, "Furniture needs laying out."],
+    ["CW524B", T2I, "Communal door needs fitting."],
+    ["CW440A", T2I, "Hallway mirror needs hanging."],
+    ["CW440A", T2I, "Furniture needs laying out."],
+    ["CW440A", T2I, "Communal door needs finishing and missing handle."],
+    ["CW440A", T2I, "Heat sensor missing."],
+    ["CW440B", T2I, "Toilet roll holder needs refitting."],
+    ["CW440B", T2I, "Hallway mirror needs hanging."],
+    ["CW440B", T2I, "Furniture needs laying out."],
+    ["CW440B", T2I, "Heat sensor missing."],
+    ["CW440B", T2I, "Temp lights left in module."],
+    ["CW441A", T2I, "Jumper left in bathroom sink."],
+    ["CW441A", T2I, "3 oak sprinkler caps missing."],
+    ["CW441A", T2I, "Hallway mirror needs hanging."],
+    ["CW441A", T2I, "Furniture needs laying out."],
+    ["CW441A", T2I, "Communal door not fitted."],
+    ["CW441B", T2I, "Paint snag above toilet splashback."],
+    ["CW441B", T2I, "Vinyl rippling along long wall."],
+    ["CW441B", T2I, "Repaint around studio door and bottom right section."],
+    ["CW441B", T2I, "Shower door adjustment."],
+    ["CW441B", T2I, "Furniture needs laying out."],
+    ["CW441B", T2I, "2 ceiling lights missing."],
+    ["CW441B", T2I, "Studio door doesn't close smoothly."],
+    ["CW442A", T2I, "Paint touch ups above studio door, shower ceiling front edge and around mirror."],
+    ["CW442A", T2I, "Shower door adjustment."],
+    ["CW442A", T2I, "3 oak sprinkler caps missing."],
+    ["CW442A", T2I, "Furniture needs laying out."],
+    ["CW442A", T2I, "Communal door needs fitting."],
+    ["CW442A", T2I, "Vinyl rippling along long wall."],
+    ["CW442A", T2I, "Studio door doesn't close smoothly."],
+    ["CW442B", T2I, "Bathroom cabinet missing."],
+    ["CW442B", T2I, "Hallway mirror needs hanging."],
+    ["CW442B", T2I, "Headboard light sits proud in middle."],
+    ["CW442B", T2I, "Communal door needs finishing."],
+    ["CW442B", T2I, "Furniture needs laying out."],
+    ["CW340A", T2I, "Module needs full repaint."],
+    ["CW340A", T2I, "Shower door adjustment."],
+    ["CW340A", T2I, "Heat sensor missing."],
+    ["CW340A", T2I, "Furniture needs laying out."],
+    ["CW340A", T2I, "Communal door not fitted."],
+    ["CW340A", T2I, "Small cut to vinyl by communal door."],
+    ["CW340B", T2I, "Paint touch up above door."],
+    ["CW340B", T2I, "Repaint hairline cracks."],
+    ["CW340B", T2I, "Heat sensor missing."],
+    ["CW340B", T2I, "Bedroom MEP box needs refixing on back left corner."],
+    ["CW340B", T2I, "Repaint bottom of left riser wall."],
+    ["CW340B", T2I, "Shower door adjustment."],
+    ["CW340B", T2I, "Vinyl dent by hallway mirror."],
+    ["CW341A", T2I, "Minor paint snags."],
+    ["CW341A", T2I, "Communal door missing."],
+    ["CW341A", T2I, "Heat sensor needs finishing."],
+    ["CW341B", T2I, "Minor paint snags."],
+    ["CW341B", T2I, "Bedroom MEP box drooping on back left corner."],
+    ["CW341B", T2I, "3 oak sprinkler caps missing."],
+    ["CW341B", T2I, "Multiple vinyl nicks by studio door and in hallway."],
+    ["CW341B", T2I, "Insulation left in riser."],
+    ["CW341B", T2I, "Communal door not fitted."],
+    ["CW342A", T2I, "Minor paint snags."],
+    ["CW342A", T2I, "Bathroom mirror missing."],
+    ["CW342A", T2I, "Bathroom door adjustment."],
+    ["CW342A", T2I, "Vinyl gap in bathroom skirting (mastic to cover)."],
+    ["CW342A", T2I, "Insulation left in module."],
+    ["CW342A", T2I, "3 oak sprinkler caps missing."],
+    ["CW342A", T2I, "Toilet screw cap broken."],
+    ["CW342A", T2I, "Communal door not fitted."],
+    ["CW342B", T2I, "Minor paint snags only."],
+    ["CW240A", T2I, "Minor paint touch up on bathroom MEP box."],
+    ["CW240A", T2I, "Bathroom door adjustment."],
+    ["CW240A", T2I, "Shower ceiling trim needs correcting."],
+    ["CW240A", T2I, "Furniture needs laying out."],
+    ["CW240B", T2I, "Paint snags still in module."],
+    ["CW240B", T2I, "Vinyl floor missing."],
+    ["CW240B", T2I, "Shower door needs adjusting."],
+    ["CW240B", T2I, "Heat sensor missing."],
+    ["CW241A", T2I, "Minor paint snags."],
+    ["CW241A", T2I, "Furniture needs laying out."],
+    ["CW241A", T2I, "Bedroom MEP box needs finishing."],
+    ["CW241A", T2I, "MVHR cover needs fitting."],
+    ["CW241B", T2I, "Paint snags."],
+    ["CW241B", T2I, "Shower door needs adjusting."],
+    ["CW241B", T2I, "Furniture needs laying out."],
+    ["CW241B", T2I, "Communal door needs fitting."],
+    ["CW242A", T2I, "Small paint touch up at bottom of studio door."],
+    ["CW242A", T2I, "Furniture needs laying out."],
+    ["CW242B", T2I, "Paint snags marked out."],
+    ["CW242B", T2I, "Communal coffee table broken."],
+    ["CW242B", T2I, "Communal door needs fitting."],
+    ["CW140A", T2I, "Bathroom door needs adjusting."],
+    ["CW140A", T2I, "Repaint around studio door."],
+    ["CW140A", T2I, "Shower door needs adjusting."],
+    ["CW140A", T2I, "Vinyl floor rippling."],
+    ["CW140A", T2I, "Furniture needs laying out."],
+    ["CW140A", T2I, "Heat sensor missing."],
+    ["CW140B", T2I, "Vinyl floor missing."],
+    ["CW140B", T2I, "Hallway mirror missing."],
+    ["CW140B", T2I, "Furniture needs laying out."],
+    ["CW140B", T2I, "Toilet seat missing."],
+    ["CW140B", T2I, "Skirting by studio door missing."],
+    ["CW140B", T2I, "Bedroom MEP box needs refixing."],
+    ["CW141A", T2I, "Bedroom MEP box needs refixing."],
+    ["CW141A", T2I, "Nail needs removing from shower ceiling."],
+    ["CW141A", T2I, "Furniture needs laying out."],
+    ["CW141A", T2I, "Heat sensor missing."],
+    ["CW141A", T2I, "Bedside drawers too tall."],
+    ["CW141B", T2I, "Shower door adjustment."],
+    ["CW141B", T2I, "Desk drawers need wheels fitted."],
+    ["CW141B", T2I, "Communal door handles missing."],
+    ["CW141B", T2I, "Heat sensor needs finishing."],
+    ["CW142A", T2I, "Insulation left in shower."],
+    ["CW142A", T2I, "Communal door needs finishing."],
+    ["CW142A", T2I, "Furniture needs laying out."],
+    ["CW142A", T2I, "Bedroom MEP box needs refixing."],
+    ["CW142A", T2I, "Heat sensor outstanding."],
+    ["CW142B", T2I, "Skirting in bathroom needs refitting."],
+    ["CW142B", T2I, "Repaint around studio door."],
+    ["CW142B", T2I, "Nail in shower ceiling needs removing."],
+    ["CW142B", T2I, "Furniture needs laying out."],
+    ["CW142B", T2I, "Studio door handle missing."],
+    ["CW142B", T2I, "Heat sensor not finished."],
+    ["T2-TWODIO-140", T2I, "Skirting repainting."],
+    ["T2-TWODIO-140", T2I, "Door architrave painting."],
+    ["T2-TWODIO-140", T2I, "Window pelmet painting."],
+    ["T2-TWODIO-141", T2I, "Skirting repainting."],
+    ["T2-TWODIO-141", T2I, "Door architrave painting."],
+    ["T2-TWODIO-141", T2I, "Window pelmet painting."],
+    ["T2-TWODIO-141", T2I, "Vinyl to be stitched along the centre join."],
+    ["T2-TWODIO-142", T2I, "Skirting repainting."],
+    ["T2-TWODIO-142", T2I, "Door architrave painting."],
+    ["T2-TWODIO-142", T2I, "Window pelmet painting."],
+    ["T2-TWODIO-142", T2I, "Vinyl to be stitched along the centre join."],
+    ["T2-TWODIO-240", T2I, "Vinyl to be stitched along the centre join."],
+    ["T2-TWODIO-241", T2I, "Skirting repainting."],
+    ["T2-TWODIO-241", T2I, "Door architrave painting."],
+    ["T2-TWODIO-241", T2I, "Window pelmet painting."],
+    ["T2-TWODIO-241", T2I, "Vinyl to be stitched along the centre join."],
+    ["T2-TWODIO-242", T2I, "Skirting repainting."],
+    ["T2-TWODIO-242", T2I, "Door architrave painting."],
+    ["T2-TWODIO-242", T2I, "Window pelmet painting."],
+    ["T2-TWODIO-242", T2I, "Vinyl to be stitched along the centre join."],
+    ["T2-TWODIO-340", T2I, "Skirting repainting."],
+    ["T2-TWODIO-340", T2I, "Door architrave painting."],
+    ["T2-TWODIO-340", T2I, "Window pelmet painting."],
+    ["T2-TWODIO-340", T2I, "Vinyl to be stitched along the centre join."],
+    ["T2-TWODIO-341", T2I, "Skirting repainting."],
+    ["T2-TWODIO-341", T2I, "Door architrave painting."],
+    ["T2-TWODIO-341", T2I, "Window pelmet painting."],
+    ["T2-TWODIO-341", T2I, "Vinyl to be stitched along the centre join."],
+    ["T2-TWODIO-342", T2I, "Skirting repainting."],
+    ["T2-TWODIO-342", T2I, "Door architrave painting."],
+    ["T2-TWODIO-342", T2I, "Window pelmet painting."],
+    ["T2-TWODIO-342", T2I, "Vinyl to be stitched along the centre join."],
+    ["T2-TWODIO-440", T2I, "Skirting repainting."],
+    ["T2-TWODIO-440", T2I, "Door architrave painting."],
+    ["T2-TWODIO-440", T2I, "Window pelmet painting."],
+    ["T2-TWODIO-440", T2I, "Vinyl to be stitched along the centre join."],
+    ["T2-TWODIO-441", T2I, "Skirting repainting."],
+    ["T2-TWODIO-441", T2I, "Door architrave painting."],
+    ["T2-TWODIO-441", T2I, "Window pelmet painting."],
+    ["T2-TWODIO-441", T2I, "Vinyl to be stitched along the centre join (piece required)."],
+    ["T2-TWODIO-442", T2I, "Skirting repainting."],
+    ["T2-TWODIO-442", T2I, "Door architrave painting."],
+    ["T2-TWODIO-442", T2I, "Window pelmet painting."],
+    ["T2-TWODIO-442", T2I, "Vinyl to be stitched along the centre join."],
+    ["T2-TWODIO-522", T2I, "Skirting repainting."],
+    ["T2-TWODIO-522", T2I, "Door architrave painting."],
+    ["T2-TWODIO-522", T2I, "Window pelmet painting."],
+    ["T2-TWODIO-523", T2I, "Skirting repainting."],
+    ["T2-TWODIO-523", T2I, "Door architrave painting."],
+    ["T2-TWODIO-523", T2I, "Window pelmet painting."],
+    ["T2-TWODIO-523", T2I, "Vinyl to be stitched along the centre join."],
+    ["T2-TWODIO-524", T2I, "Skirting repainting."],
+    ["T2-TWODIO-524", T2I, "Door architrave painting."],
+    ["T2-TWODIO-524", T2I, "Window pelmet painting."],
+    ["T2-TWODIO-524", T2I, "Vinyl to be stitched along the centre join."],
+    ["T2-TWODIO-524", T2I, "Left side pelmet not plumb."],
+    ["T2-TWODIO-524", T2I, "Skirting not fitted on door wall centre."],
+    ["T2-TWODIO-524", T2I, "Door architraves not fitted."],
+    ["T2-TWODIO-524", T2I, "Window blind chain clips need fitting."],
+    ["T2-TWODIO-523", T2I, "Window blind chain clips need fitting."],
+    ["T2-TWODIO-522", T2I, "Fill gap above 522A door."],
+    ["T2-TWODIO-522", T2I, "Vinyl missing in module; stitch once fitted."],
+    ["T2-TWODIO-522", T2I, "Window blind chain clips need fitting."],
+    ["T2-TWODIO-442", T2I, "Fill vertical gap between walls."],
+    ["T2-TWODIO-442", T2I, "Remove large amounts of dust."],
+    ["T2-TWODIO-441", T2I, "Left pelmet needs fitting."],
+    ["T2-TWODIO-441", T2I, "MVHR not connected (no cable out of kitchen MEP box)."],
+    ["T2-TWODIO-441", T2I, "Kitchen MEP cap not fitted."],
+    ["T2-TWODIO-441", T2I, "Sprinkler cap missing."],
+    ["T2-TWODIO-440", T2I, "Fit window blind."],
+    ["T2-TWODIO-440", T2I, "Fix window blind chain clips."],
+    ["T2-TWODIO-342", T2I, "Fill vertical gap between walls."],
+    ["T2-TWODIO-342", T2I, "2 sprinkler caps missing."],
+    ["T2-TWODIO-341", T2I, "Front window blind needs fitting."],
+    ["T2-TWODIO-340", T2I, "Main wall repaint."],
+    ["T2-TWODIO-340", T2I, "Fill small gap above bookshelf."],
+    ["T2-TWODIO-340", T2I, "Correct MEP cutout above kitchen cabinet."],
+    ["T2-TWODIO-340", T2I, "Vinyl gap under kitchen oven."],
+    ["T2-TWODIO-340", T2I, "Window blind needs hanging."],
+    ["T2-TWODIO-340", T2I, "Heater needs hanging onto bracket."],
+    ["T2-TWODIO-242", T2I, "Vinyl gapping by kitchen."],
+    ["T2-TWODIO-242", T2I, "Sprinkler cap missing."],
+    ["T2-TWODIO-242", T2I, "Oven needs fitting."],
+    ["T2-TWODIO-242", T2I, "Back blind missing."],
+    ["T2-TWODIO-241", T2I, "Fill vertical gap between walls."],
+    ["T2-TWODIO-241", T2I, "Window blind chain clips need fitting."],
+    ["T2-TWODIO-142", T2I, "Repaint ceiling hole rework."],
+    ["T2-TWODIO-142", T2I, "Correct large hole in ceiling for repaint."],
+    ["T2-TWODIO-142", T2I, "Connect MVHR cables."],
+    ["T2-TWODIO-141", T2I, "Hang heater onto bracket."],
+    ["T2-TWODIO-141", T2I, "Window blind chain clips need fitting."],
+    ["T2-TWODIO-140", T2I, "Fill gap above communal door."],
+    ["T2-TWODIO-140", T2I, "Full vinyl floor missing."],
+    ["T2-TWODIO-140", T2I, "Fit handle and lock to communal door (B)."],
+    ["T2-TWODIO-140", T2I, "Adjust sprinkler cap to be flush."],
+    ["T2-TWODIO-140", T2I, "Fit remaining skirting."],
+    ["T2-TWODIO-140", T2I, "Connect MVHR cables."]
+  ];
 
   var TOWER_N = (function () {
     var m = /[?&]tower=([1-4])(?![0-9])/.exec(window.location.search || "");
@@ -2428,6 +2412,7 @@
   // This tower's share of every trade list. A row keeps its key whichever
   // tower shows it, so the split touches nothing that is ticked.
   var sections = [];
+  var drawn = [];   // the sections plus Unassigned, in the order they are drawn
   for (var ts = 0; ts < ALL_SECTIONS.length; ts++) {
     var kept = [];
     for (var trw = 0; trw < ALL_SECTIONS[ts].rows.length; trw++) {
@@ -2442,6 +2427,18 @@
     });
   }
 
+  /* Unassigned is drawn and counted like a trade, though it is not one: it
+     is not on the trade filter, and the Trade control's list of trades ends
+     with it rather than containing it. It holds audit fails parked with no
+     trade, tickets moved off a trade, and the Tower 2 inspection rows until
+     they are placed. */
+  var unassignedRows = [];
+  for (var ur = 0; ur < T2_ROWS.length; ur++) {
+    if (roomInTower(ROOM_ALIAS[T2_ROWS[ur][0]] || T2_ROWS[ur][0])) { unassignedRows.push(T2_ROWS[ur]); }
+  }
+  var UNASSIGNED_SECTION = { key: UNASSIGNED, title: "Unassigned", col3: "Source", rows: unassignedRows };
+  drawn = sections.concat([UNASSIGNED_SECTION]);
+
   /* The summary and the per-trade counts are worked out from the list
      itself. They used to be typed in alongside it, which meant adding a job
      was two edits and the totals could drift out of step with the rows. */
@@ -2450,8 +2447,8 @@
   var allRooms = {};
   var totalRooms = 0;
 
-  for (var si = 0; si < sections.length; si++) {
-    var sc = sections[si];
+  for (var si = 0; si < drawn.length; si++) {
+    var sc = drawn[si];
     var secRooms = [];
     var secSeen = {};
 
@@ -2721,9 +2718,10 @@
       label: "Stair core",
       type: "", movein: "", listed: true, common: true
     });
-    // Tower 2's twodios share a living area between their A and B rooms,
-    // inspected as a unit (Lewis, 21 Sep): one shared area per twodio on
-    // floors 1 to 5, on the south side with the twodios themselves.
+    // Tower 2's twodios: CW524 is the twodio itself, the part shared between
+    // its private rooms CW524A and CW524B, inspected as a unit (Lewis, 21
+    // Sep): one per twodio on floors 1 to 5, on the south side with them.
+    // Its id stays T2-TWODIO-524, so nothing keyed on it moves.
     if (TOWER_N === 2 && SIDE !== "north") {
       var seenMod = {};
       for (var tw = 0; tw < EVERY_ROOM.length; tw++) {
@@ -2733,7 +2731,7 @@
         COMMON_AREAS.push({
           room: "T2-TWODIO-" + mod[1],
           floor: FLOORS[mod[1].charAt(0)],
-          label: "Twodio " + mod[1] + " shared area",
+          label: "CW" + mod[1],
           type: "", movein: "", listed: true, common: true
         });
       }
@@ -2742,7 +2740,7 @@
   }());
 
   function isCommon(room) { return !!COMMON_BY_ID[room]; }
-  var AREA_LABEL = TOWER_N === 2 ? "Corridors, stairs and shared areas" : "Corridors and stairs";
+  var AREA_LABEL = TOWER_N === 2 ? "Corridors, stairs and twodios" : "Corridors and stairs";
 
   // The name a room goes by on the page: its number, or a corridor's label.
   function roomLabel(room) {
@@ -3104,6 +3102,7 @@
       gatedInputs[g].disabled = !open;
     }
     if (typeof renderStudios === "function") { renderStudios(); }
+    if (typeof renderFloors === "function") { renderFloors(); }
 
     // A disabled box that refuses to type looks broken unless it says
     // why, and the notice at the top is off screen by the time someone
@@ -3157,6 +3156,7 @@
     tradeKeyByTitle[sections[t].title] = sections[t].key;
     sectionTitles[sections[t].key] = sections[t].title;
   }
+  tradeKeyByTitle["Unassigned"] = UNASSIGNED;   // its summary row; not a trade title
 
   function roomCells(tradeTitle, rooms) {
     var key = tradeKeyByTitle[tradeTitle] || "";
@@ -3212,8 +3212,8 @@
 
   var out = "";
 
-  for (var j = 0; j < sections.length; j++) {
-    var sec = sections[j];
+  for (var j = 0; j < drawn.length; j++) {
+    var sec = drawn[j];
     out +=
       '<div class="section" id="sec-' + sec.key + '">' +
       "<h2>" + esc(sec.title) + " " +
@@ -3283,16 +3283,8 @@
     out += "</tbody></table></div></div>";
   }
 
-  /* Built in here rather than beside it: ticking, notes and Tick all are
-     all delegated from #sections, so a section outside it would be dead. */
-  out += '<div class="section" id="sec-unassigned" hidden>' +
-    "<h2>Unassigned " +
-    '<span class="head-count" id="head-unassigned"></span> ' +
-    '<span class="sec-count" id="count-unassigned"></span></h2>' +
-    '<div class="scroller"><table><thead><tr>' +
-    "<th>Room</th><th>Floor</th><th>Move-in</th><th>Source</th><th>Action</th>" +
-    '<th class="done-h">Done</th>' +
-    '</tr></thead><tbody id="tbody-unassigned"></tbody></table></div></div>';
+  // Unassigned was drawn above with the trades: it is in #sections, where
+  // ticking, notes and Tick all are delegated from, and hidden while empty.
 
   var sectionsEl = document.getElementById("sections");
   sectionsEl.innerHTML = out;
@@ -4024,6 +4016,7 @@
     if (srcBoxesEl) { fillSrcBoxes(); }
     renderFiltered();
     renderStudios();
+    renderFloors();
     renderSummary();
     progressEl.textContent = doneCount + " of " + total + " items ticked";
     renderUnsaved();
@@ -5536,6 +5529,173 @@
     }
   }
 
+  /* ---- By floor ---- */
+
+  /* The same tickets as By trade, gathered by floor from the top down
+     (Lewis, 21 Sep): Level 5 to Level 1 always listed, then the ground
+     floor and the stair core when they have rows. Each floor is a fold that
+     remembers whether it is open. The rows are drawn from the index, like
+     the studio cards, so a tick, a note or a move made here is the same
+     record as one made on By trade, and the list controls apply. */
+  var floorListEl = document.getElementById("floor-list");
+  var floorCountsEl = document.getElementById("floor-counts");
+  var FLOOR_OPEN_KEY = "cw-tower" + TOWER_N + "-floor-open";
+  var floorOpen = load(FLOOR_OPEN_KEY, {}) || {};
+
+  // The floor digit a job's room is on: "5" to "1", "0" for the ground
+  // floor, "" for the stair core.
+  function levelOf(room) {
+    var cm = COMMON_BY_ID[room];
+    var label = cm ? cm.floor : (FLOORS[(room || "").charAt(2)] || "");
+    for (var d in FLOORS) {
+      if (Object.prototype.hasOwnProperty.call(FLOORS, d) && FLOORS[d] === label) { return d; }
+    }
+    return "";
+  }
+
+  function floorRowHtml(id, job, rec, thread, gate) {
+    var done = rec.done === true;
+    var isPending = Object.prototype.hasOwnProperty.call(queued, id);
+    var names = [];
+    for (var t = 0; t < (job.trades || []).length; t++) { names.push(tradeName(job.trades[t])); }
+    var shown = roomLabel(job.room);
+    var stamp = "";
+    var by = rec.updated_by || "";
+    var note = typeof rec.note === "string" ? rec.note : "";
+    if (by && (done || note)) {
+      stamp = (done ? "Ticked by " : "Updated by ") + esc(by);
+      var when = shortDate(rec.updated_at);
+      if (when) { stamp += " \u00b7 " + esc(when); }
+      if (isPending && live) { stamp += " \u00b7 saving\u2026"; }
+    }
+    return '<tr id="row-fl-' + id + '" class="' + (done ? "ticked" : "") +
+      (job.fromAudit ? " audit-row" : "") + (isPending && live ? " unsaved" : "") + '">' +
+      '<td class="room">' + esc(shown) + "</td>" +
+      '<td class="floor">' + esc(names.join(" / ")) + "</td>" +
+      '<td class="movein' + moveinClass(job.room) + '">' + moveinCell(job.room) + "</td>" +
+      '<td class="src">' + esc(job.src || "") + "</td>" +
+      '<td class="action"><span class="action-text">' + esc(job.action || "") + "</span>" +
+      (job.fromAudit && job.kind !== "issue"
+        ? '<span class="fail-why">' + esc(job.why || "no reason given") + "</span>" : "") +
+      '<span class="tag-nh hab-flag">' + (job.hab === "nh" ? "Not habitable" : "") + "</span>" +
+      '<ul class="notes">' + thread + "</ul>" +
+      '<div class="note-add">' +
+      '<input class="note-field" type="text" data-id="' + esc(id) + '"' + gate +
+      ' placeholder="' + (gate ? "Add your name and company at the top first" : "Add a note") + '"' +
+      ' aria-label="Note for ' + esc(shown) + " " + esc(job.action || "") + '">' +
+      '<button type="button" class="note-btn" data-id="' + esc(id) + '"' + gate +
+      ' aria-label="Submit note for ' + esc(shown) + '">Submit</button>' +
+      "</div>" +
+      moveSelect(id, (job.trades || [])[0] || UNASSIGNED, shown, job.action || "", !!gate) +
+      '<span class="by">' + stamp + "</span></td>" +
+      '<td class="done"><label>' +
+      '<input type="checkbox" class="studio-tick" data-id="' + esc(id) + '"' +
+      (done ? " checked" : "") + gate +
+      ' aria-label="Mark ' + esc(shown) + " " + esc(job.action || "") + ' as done">' +
+      "</label></td></tr>";
+  }
+
+  function renderFloors() {
+    if (!floorViewOn) { return; }
+    var grouped = groupNotes();
+    var confirmed = grouped.__confirmed;
+    var gate = identified() ? "" : " disabled";
+    var groups = {};
+    var id;
+    for (id in index) {
+      if (!Object.prototype.hasOwnProperty.call(index, id)) { continue; }
+      var job = index[id];
+      if (!jobVisible(job)) { continue; }
+      if (hideGround && (job.room || "").charAt(2) === "0") { continue; }
+      if (fireHidden(job.room) || habHidden(job.room)) { continue; }
+      if (hideDone && effective(id).done === true) { continue; }
+      var lv = levelOf(job.room);
+      if (!groups[lv]) { groups[lv] = []; }
+      groups[lv].push(id);
+    }
+    var order = ["5", "4", "3", "2", "1", "0", ""];
+    var html = "";
+    var shownTotal = 0;
+    var floorsWithRows = 0;
+    for (var g = 0; g < order.length; g++) {
+      var lv = order[g];
+      var ids = groups[lv] || [];
+      var isLevel = lv !== "0" && lv !== "";
+      if (!ids.length && !isLevel) { continue; }
+      ids.sort(function (a, b) {
+        var ra = roomLabel(index[a].room), rb = roomLabel(index[b].room);
+        if (ra !== rb) { return ra < rb ? -1 : 1; }
+        var ta = tradeName((index[a].trades || [])[0] || UNASSIGNED);
+        var tb = tradeName((index[b].trades || [])[0] || UNASSIGNED);
+        if (ta !== tb) { return ta < tb ? -1 : 1; }
+        return (index[a].action || "") < (index[b].action || "") ? -1 : 1;
+      });
+      var open = 0;
+      var rooms = {};
+      var roomCount = 0;
+      var rows = "";
+      for (var r = 0; r < ids.length; r++) {
+        var jid = ids[r];
+        var rec = effective(jid);
+        if (rec.done !== true) { open++; }
+        var rm = index[jid].room;
+        if (!rooms[rm]) { rooms[rm] = true; roomCount++; }
+        rows += floorRowHtml(jid, index[jid], rec, notesHtml(grouped[jid] || [], confirmed, rec), gate);
+      }
+      shownTotal += ids.length;
+      if (ids.length) { floorsWithRows++; }
+      var title = lv === "" ? "No floor" : (lv === "0" ? "Ground floor" : "Level " + lv);
+      var count = ids.length
+        ? ids.length + (ids.length === 1 ? " ticket" : " tickets") + " in " +
+          roomCount + (roomCount === 1 ? " room" : " rooms") +
+          (open ? " \u00b7 " + open + " outstanding" : " \u00b7 all ticked")
+        : "nothing" + (hideDone ? " left" : "");
+      var isOpen = Object.prototype.hasOwnProperty.call(floorOpen, lv) ? floorOpen[lv] === true : true;
+      html += '<details class="date-group floor-group" data-level="' + lv + '"' + (isOpen ? " open" : "") + ">" +
+        '<summary><span class="group-when">' + title + '</span><span class="group-count">' + count + "</span></summary>" +
+        '<div class="group-body">' +
+        (ids.length
+          ? '<div class="scroller"><table><thead><tr><th>Room</th><th>Trade</th><th>Move-in</th>' +
+            "<th>Source</th><th>Action</th>" + '<th class="done-h">Done</th></tr></thead><tbody>' +
+            rows + "</tbody></table></div>"
+          : '<p class="note-line">Nothing on this floor' + (hideDone ? " still to do" : "") + ".</p>") +
+        "</div></details>";
+    }
+    floorListEl.innerHTML = html;
+    floorCountsEl.textContent = shownTotal + (shownTotal === 1 ? " ticket" : " tickets") +
+      " across " + floorsWithRows + (floorsWithRows === 1 ? " floor" : " floors") +
+      (hideDone ? ", completed hidden" : "");
+  }
+
+  floorListEl.addEventListener("change", function (ev) {
+    var el = ev.target;
+    if (!el || !el.classList) { return; }
+    if (el.classList.contains("move-to")) { moveJob(el.getAttribute("data-id"), el.value); return; }
+    if (el.type === "checkbox" && el.classList.contains("studio-tick")) {
+      tickWithUndo(el.getAttribute("data-id"), el.checked);
+    }
+  });
+  floorListEl.addEventListener("click", function (ev) {
+    var btn = ev.target;
+    if (!btn || !btn.classList || !btn.classList.contains("note-btn")) { return; }
+    var field = btn.parentNode.querySelector(".note-field");
+    if (field) { submitNote(btn.getAttribute("data-id"), field); }
+  });
+  floorListEl.addEventListener("keydown", function (ev) {
+    var field = ev.target;
+    if (!field || !field.classList || !field.classList.contains("note-field")) { return; }
+    if (ev.key !== "Enter") { return; }
+    ev.preventDefault();
+    submitNote(field.getAttribute("data-id"), field);
+  });
+  // A fold opened or shut is remembered per floor and per tower.
+  floorListEl.addEventListener("toggle", function (ev) {
+    var d = ev.target;
+    if (!d || !d.classList || !d.classList.contains("floor-group")) { return; }
+    floorOpen[d.getAttribute("data-level")] = d.open;
+    store(FLOOR_OPEN_KEY, floorOpen);
+  }, true);
+
   /* ---- The public by-studio view ---- */
 
   var studioListEl = document.getElementById("studio-list");
@@ -5690,6 +5850,7 @@
   var activeView = "trade";
   var controlsEl = document.getElementById("controls");
   var studioViewOn = false;
+  var floorViewOn = false;
   var hideGround = false;
   var studioSort = "room";
   var dateOpen = {};   // date key -> open, where it differs from the default
@@ -5884,6 +6045,7 @@
     }
     document.getElementById("view-trade").hidden = name !== "trade";
     document.getElementById("view-studio").hidden = name !== "studio";
+    document.getElementById("view-floors").hidden = name !== "floors";
     document.getElementById("view-audit").hidden = name !== "audit";
 
     // The audit log is a checklist for one studio, so the list controls
@@ -5891,8 +6053,10 @@
     activeView = name;
     controlsEl.hidden = name === "audit";
     studioViewOn = name === "studio";
+    floorViewOn = name === "floors";
     renderFiltered();
     if (name === "studio") { renderStudios(); }
+    if (name === "floors") { renderFloors(); }
     if (name === "audit") {
       if (auditIn) { fillStudios(); }
       renderAudit();
