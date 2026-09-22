@@ -1918,6 +1918,14 @@
       ]
     },
     {
+      // Mastic is a trade of its own (Lewis, 22 Sep): the mastic check fails
+      // into here, and its earlier fails read as Mastic's too.
+      key: "mastic",
+      title: "Mastic",
+      col3: "Source",
+      rows: []
+    },
+    {
       key: "setup",
       title: SETUP,
       col3: "Source",
@@ -2083,9 +2091,9 @@
      itself (CW140, the part shared between 140A and 140B: id T2-TWODIO-140,
      a common area like a corridor). A row with a fourth field is filed
      under that trade by Lewis's rules of 21 Sep, the first rule to match
-     winning: any mention of paint, mastic or sealant to Decorating /
-     Sealant (first, because a painting or sealing job is the decorator's
-     whatever it is on); vinyl to Flooring Repairs; heat sensors to iKew;
+     winning: mastic or sealant to Mastic and any mention of paint to
+     Decorating / Sealant (first, because a sealing or painting job is that
+     trade's whatever it is on); vinyl to Flooring Repairs; heat sensors to iKew;
      sprinkler caps and heads to Sprinklers; blinds to Blinds; door handles
      to Doors; bathroom and shower door adjustments, mirrors, architraves,
      skirting, MEP boxes and boxing, kitchen and bathroom cabinets, and
@@ -2105,24 +2113,24 @@
     ["CW511", T2I, "4 ceiling lights missing.", "electrical"],
     ["CW511", T2I, "Holes drilled into top kitchen cabinet.", "joinery"],
     ["CW511", T2I, "3 socket face plates missing.", "electrical"],
-    ["CW509", T2I, "Mastic bead needed left of bedroom MEP box (to be reworked later).", "decorating"],
+    ["CW509", T2I, "Mastic bead needed left of bedroom MEP box (to be reworked later).", "mastic"],
     ["CW509", T2I, "Cracked DGU."],
     ["CW509", T2I, "Studio door architrave missing internally.", "joinery"],
     ["CW507", T2I, "Skirting by door needs painting.", "decorating"],
     ["CW418", T2I, "Vinyl damage in front of wardrobe.", "flooring"],
-    ["CW417", T2I, "Mastic bead needed left of bedroom MEP box (to be reworked later).", "decorating"],
+    ["CW417", T2I, "Mastic bead needed left of bedroom MEP box (to be reworked later).", "mastic"],
     ["CW417", T2I, "Studio door doesn't close from outside."],
-    ["CW317", T2I, "Mastic bead needed left of bedroom wall MEP (to be reworked later).", "decorating"],
+    ["CW317", T2I, "Mastic bead needed left of bedroom wall MEP (to be reworked later).", "mastic"],
     ["CW316", T2I, "Cables need removing from window."],
-    ["CW315", T2I, "No mastic.", "decorating"],
+    ["CW315", T2I, "No mastic.", "mastic"],
     ["CW315", T2I, "Kitchen larder top cabinet door missing.", "joinery"],
     ["CW315", T2I, "Lots of cable coming out of window."],
-    ["CW314", T2I, "No mastic.", "decorating"],
+    ["CW314", T2I, "No mastic.", "mastic"],
     ["CW314", T2I, "Lots of cable coming out of window."],
     ["CW219", T2I, "Paint needed left of studio door and skirting.", "decorating"],
     ["CW219", T2I, "Dogleg egger panel missing above wardrobe."],
     ["CW219", T2I, "Kitchen extractor cabinet missing screw caps.", "joinery"],
-    ["CW219", T2I, "Mastic bead needed under bedroom MEP left side (to be reworked later).", "decorating"],
+    ["CW219", T2I, "Mastic bead needed under bedroom MEP left side (to be reworked later).", "mastic"],
     ["CW219", T2I, "Vinyl gap by studio door.", "flooring"],
     ["CW218", T2I, "Vinyl rippling.", "flooring"],
     ["CW216", T2I, "Paint needed around right of studio door and skirting.", "decorating"],
@@ -2131,7 +2139,7 @@
     ["CW119", T2I, "Screw caps missing in top kitchen cabinets.", "joinery"],
     ["CW119", T2I, "Door handle not level internally.", "doors"],
     ["CW118", T2I, "Vinyl rippling in front of plinth heater.", "flooring"],
-    ["CW118", T2I, "Big gap between kitchen splashback and top cabinets needs mastic.", "decorating"],
+    ["CW118", T2I, "Big gap between kitchen splashback and top cabinets needs mastic.", "mastic"],
     ["CW116", T2I, "Vinyl ripple under wardrobe and by studio door.", "flooring"],
     ["CW115", T2I, "Cut to vinyl by plinth heater.", "flooring"],
     ["CW114", T2I, "Studio door architrave needs correcting.", "joinery"],
@@ -2230,7 +2238,7 @@
     ["CW342A", T2I, "Minor paint snags.", "decorating"],
     ["CW342A", T2I, "Bathroom mirror missing.", "joinery"],
     ["CW342A", T2I, "Bathroom door adjustment.", "joinery"],
-    ["CW342A", T2I, "Vinyl gap in bathroom skirting (mastic to cover).", "decorating"],
+    ["CW342A", T2I, "Vinyl gap in bathroom skirting (mastic to cover).", "mastic"],
     ["CW342A", T2I, "Insulation left in module."],
     ["CW342A", T2I, "3 oak sprinkler caps missing.", "sprinklers"],
     ["CW342A", T2I, "Toilet screw cap broken."],
@@ -4837,7 +4845,9 @@
       label: "Skirting" },
     { id: "architraves", trade: "joinery",
       label: "Architraves" },
-    { id: "mastic", trade: "decorating",
+    { id: "mastic", trade: "mastic",
+      // Decorating's until 22 Sep: a fail recorded before then reads as Mastic's.
+      was: { trade: "decorating", until: "2026-09-22T18:00:00Z" },
       label: "Mastic" },
     { id: "sprinkler", trade: "sprinklers",
       // Plumbing's until 17 Sep: a fail recorded before then reads as Sprinklers'.
@@ -5254,87 +5264,87 @@
       auditStudioEl.disabled = true;
       return;
     }
-    // Only the rooms Stelling are auditing. The rest of the building has
-    // been audited already, so putting it here would be two hundred rooms
-    // to scroll past on the way to the one they are standing in.
+    /* Every room of the tower is on the picker (Lewis, 22 Sep): the rooms
+       Stelling are working through, the reopened ones, the corridors and
+       stair core, and, on Tower 1, the other rooms too, audited before the
+       list was drawn up or never on it. Finished rooms drop into their
+       own group rather than off the list, so a room can always be found
+       and re-audited. With the list narrowed to rooms not audited yet,
+       everything else sits in a group below rather than out of reach. */
     var state = auditState();
     var issues = studioIssues();
     var todo = "";
     var done = "";
     var fresh = "";
+    var started = "";   // narrowed list: everything with a record against it
     var freshCount = 0;
+
+    function optFor(st) {
+      return '<option value="' + esc(st.room) + '">' + esc(studioLabel(st)) + "</option>";
+    }
+    // Not audited yet: nothing recorded against it. The room in hand stays
+    // on the narrowed list whatever its state, so recording its first check
+    // does not pull it out from under the auditor.
+    function sortFresh(st, sum) {
+      var opt = optFor(st);
+      if (sum.checked === 0 && !sum.complete) { fresh += opt; freshCount++; }
+      else if (st.room === auditStudio) { fresh += opt; }
+      else { started += opt; }
+    }
 
     for (var i = 0; i < STELLING_LIST.length; i++) {
       var st = STELLING_LIST[i];
       var sum = studioSummary(st.room, state, issues, false);
-      var opt = '<option value="' + esc(st.room) + '">' +
-        esc(studioLabel(st)) + "</option>";
-      // Not audited yet: nothing recorded against it. The room in hand
-      // stays on the list whatever its state, so recording its first check
-      // does not pull it out from under the auditor.
-      if (sum.checked === 0 && !sum.complete) { fresh += opt; freshCount++; }
-      else if (st.room === auditStudio) { fresh += opt; }
-      if (sum.complete) { done += opt; } else { todo += opt; }
+      sortFresh(st, sum);
+      if (sum.complete) { done += optFor(st); } else { todo += optFor(st); }
     }
 
-    // Corridors and the stair core, their own group, and on the narrowed
-    // list while nothing is recorded against them.
+    // Corridors and the stair core, their own group.
     var common = "";
     for (var ca = 0; ca < COMMON_AREAS.length; ca++) {
       var area = COMMON_AREAS[ca];
-      var aSum = studioSummary(area.room, state, issues, false);
-      var aOpt = '<option value="' + esc(area.room) + '">' + esc(studioLabel(area)) + "</option>";
-      common += aOpt;
-      if (aSum.checked === 0 && !aSum.complete) { fresh += aOpt; freshCount++; }
-      else if (area.room === auditStudio) { fresh += aOpt; }
-    }
-
-    if (auditOnlyNew) {
-      // A reopened room in hand stays too; it is not on Stelling's list.
-      var held = STUDIO_BY_ROOM[auditStudio];
-      if (held && held.reopened) {
-        fresh = '<option value="' + esc(held.room) + '">' + esc(studioLabel(held)) +
-          "</option>" + fresh;
-      }
-      auditStudioEl.innerHTML = fresh
-        ? '<optgroup label="Not audited yet \u00b7 ' + freshCount +
-          " left" + '">' + fresh + "</optgroup>"
-        : '<option value="">Every room has been started</option>';
-      auditStudioEl.disabled = !fresh;
-      if (fresh && !auditStudioEl.querySelector('option[value="' + auditStudio + '"]')) {
-        auditStudio = auditStudioEl.querySelector("option").value;
-      }
-      auditStudioEl.value = auditStudio;
-      return;
+      sortFresh(area, studioSummary(area.room, state, issues, false));
+      common += optFor(area);
     }
 
     // Rooms reopened for amendment sit in their own group, whatever their
     // state, so they are there to pick until the reopening is taken off.
     var reopened = "";
     for (var r = 0; r < REOPENED_ROOMS.length; r++) {
-      reopened += '<option value="' + esc(REOPENED_ROOMS[r].room) + '">' +
-        esc(studioLabel(REOPENED_ROOMS[r])) + "</option>";
+      sortFresh(REOPENED_ROOMS[r], studioSummary(REOPENED_ROOMS[r].room, state, issues, false));
+      reopened += optFor(REOPENED_ROOMS[r]);
     }
 
-    // Finished studios drop out of the working list into their own group,
-    // still reachable so a studio can be re-audited.
+    // The rest of the tower's rooms: on Tower 1, the ones not on Stelling's
+    // list (the other towers list every room already).
+    var others = "";
+    for (var o = 0; o < AUDIT_STUDIOS.length; o++) {
+      var ost = AUDIT_STUDIOS[o];
+      if (ost.listed || ost.reopened || ost.common) { continue; }
+      sortFresh(ost, studioSummary(ost.room, state, issues, false));
+      others += optFor(ost);
+    }
+
     var html = "";
-    if (todo) {
-      html += '<optgroup label="Still to audit">' + todo + "</optgroup>";
-    }
-    if (reopened) {
-      html += '<optgroup label="' + esc(REOPENED.label) + '">' + reopened + "</optgroup>";
-    }
-    if (common) {
-      html += '<optgroup label="' + AREA_LABEL + '">' + common + "</optgroup>";
-    }
-    if (done) {
-      html += '<optgroup label="Completed">' + done + "</optgroup>";
+    if (auditOnlyNew) {
+      html += fresh
+        ? '<optgroup label="Not audited yet \u00b7 ' + freshCount + " left" + '">' + fresh + "</optgroup>"
+        : '<optgroup label="Not audited yet"><option value="" disabled>Every room has been started</option></optgroup>';
+      if (started) { html += '<optgroup label="Audited already">' + started + "</optgroup>"; }
+    } else {
+      if (todo) { html += '<optgroup label="Still to audit">' + todo + "</optgroup>"; }
+      if (reopened) { html += '<optgroup label="' + esc(REOPENED.label) + '">' + reopened + "</optgroup>"; }
+      if (common) { html += '<optgroup label="' + AREA_LABEL + '">' + common + "</optgroup>"; }
+      if (done) { html += '<optgroup label="Completed">' + done + "</optgroup>"; }
+      if (others) { html += '<optgroup label="Other rooms">' + others + "</optgroup>"; }
     }
     auditStudioEl.innerHTML = html;
     auditStudioEl.disabled = false;
-    var chosen = STUDIO_BY_ROOM[auditStudio];
-    if (!chosen || !(chosen.listed || chosen.reopened)) { auditStudio = STELLING_LIST[0].room; }
+    if (!STUDIO_BY_ROOM[auditStudio] ||
+        !auditStudioEl.querySelector('option[value="' + auditStudio + '"]')) {
+      var first = auditStudioEl.querySelector("option:not([disabled])");
+      auditStudio = first ? first.value : STELLING_LIST[0].room;
+    }
     auditStudioEl.value = auditStudio;
   }
 

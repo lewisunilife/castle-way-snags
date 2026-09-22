@@ -51,6 +51,15 @@ JCA, Steve, Bal, Nycole, Sam and Ryan at the time of writing; the username is no
 case-sensitive). That is a guard on the view, not a lock on the data: the
 page and its source are public, and so is that list.
 
+Every room of the tower is on the audit picker (22 Sep): **Still to audit**
+(the rooms Stelling are working through), the reopened rooms, **Corridors
+and stairs** (on Tower 2, **Corridors, stairs and twodios**), **Completed**
+(finished rooms, still there to re-audit), and on Tower 1 **Other rooms**,
+the ones not on Stelling's list, audited before it was drawn up or never on
+it, such as CW113, CW209 and CW104. With **Only rooms not audited yet** on,
+the picker narrows to rooms with nothing recorded, and everything else sits
+in an **Audited already** group below rather than out of reach.
+
 **That sign-in guards the view, not the data.** This is a public page and its
 source carries the credentials, so anyone who opens developer tools or reads
 this repository can see them and get in, and the audit records are reachable
@@ -236,9 +245,9 @@ shows against the section heading and in the summary; a trade with nobody
 against it shows a dash rather than a blank, so an unassigned one is visible
 rather than just quiet.
 
-## iKew, Doors, Sprinklers and Marius
+## iKew, Doors, Sprinklers, Marius and Mastic
 
-Four trades were added on 17 Sep. **iKew** carries fire detection: the audit
+Four trades were added on 17 Sep and a fifth, Mastic, on 22 Sep. **iKew** carries fire detection: the audit
 check "Fire detection operational, protective covers removed" fails into
 iKew rather than Electrical, and a fail recorded while the check was still
 Electrical's (before 18:00 on 17 Sep, so a phone still holding the old page
@@ -255,7 +264,10 @@ earlier fails reading as Sprinklers' in the same way. **Marius** is a list of
 his own with nothing on it to start with: a ticket reaches it by being moved
 there, or by a fail being sent to it from the audit log. A trade with
 nothing on it is hidden until something arrives, so an empty Marius or
-Sprinklers is not a heading over an empty table. Wherever a trade is picked
+Sprinklers is not a heading over an empty table. **Mastic** takes the "Mastic"
+check, which failed into Decorating / Sealant before, its earlier fails
+reading as Mastic's in the same way, and the inspection rows that mention
+mastic or sealant. Wherever a trade is picked
 from or filtered on, the trades read A to Z: the Filter by trade boxes, the
 Trade control on every ticket and the audit log's Send to, with Unassigned
 last. The lists on By trade keep their own order.
@@ -424,10 +436,11 @@ item is a row on the list with the source **Tower 2 inspection**: the solo
 rooms on the north side, the twodio bedrooms on the south, and each twodio's
 shared living area. The rows are in `T2_ROWS` in `site/index.html`.
 Lewis's rules of 21 Sep place 237 of the 288, the first rule to match
-winning: any mention of paint, mastic or sealant to Decorating / Sealant (81
-rows; the painting or sealing is the decorator's whatever it is on, so
-"Skirting repainting", "Door architrave painting" and the vinyl gap that
-needs mastic are decorating), vinyl to Flooring Repairs (36), heat sensors
+winning: mastic or sealant to Mastic (8 rows) and any mention of paint to
+Decorating / Sealant (73; the sealing or painting is that trade's whatever it
+is on, so "Skirting repainting" and "Door architrave painting" are
+decorating and the vinyl gap that needs mastic is Mastic), vinyl to Flooring
+Repairs (36), heat sensors
 to iKew (14), sprinkler caps and heads to Sprinklers (15), blinds to Blinds
 (10), door handles to Doors (6), lights and sockets to Electrical (5),
 bathroom and shower door adjustments, mirrors, architraves, skirting, MEP
