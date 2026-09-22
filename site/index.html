@@ -1091,6 +1091,12 @@
   .note-btn:hover { border-color: var(--tick); opacity: 1; }
 
   .panel { border: 1px solid var(--rule); padding: 18px; }
+  #log-fold { margin-top: 24px; }
+  .log-panel { margin-top: 12px; }
+  .log-fields { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-bottom: 12px; }
+  .log-fields .field { min-width: 220px; flex: 1 1 220px; }
+  .log-panel select, .log-panel textarea { width: 100%; box-sizing: border-box; }
+  .log-panel .panel-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
   .panel label {
     display: block;
@@ -1461,6 +1467,29 @@
     <button type="button" class="view-btn" data-view="floors">By floor</button>
     <button type="button" class="view-btn" data-view="audit">Audit log</button>
   </nav>
+
+  <details class="fold" id="log-fold">
+    <summary><h2>Log a ticket</h2>
+      <span class="fold-hint">Any room, any trade, from anyone with their name at the top</span></summary>
+    <div class="panel log-panel">
+      <div class="log-fields">
+        <div class="field">
+          <label for="log-room">Room</label>
+          <select id="log-room"></select>
+        </div>
+        <div class="field">
+          <label for="log-trade">Send to</label>
+          <select id="log-trade"></select>
+        </div>
+      </div>
+      <label for="log-text">What needs doing</label>
+      <textarea id="log-text" placeholder="e.g. Bathroom door drags on the frame"></textarea>
+      <div class="panel-actions">
+        <button type="button" id="log-add">Log it</button>
+        <span class="note-line" id="log-note"></span>
+      </div>
+    </div>
+  </details>
 
   <div id="controls">
     <div class="studio-controls">
@@ -3177,6 +3206,7 @@
 
     commentText.disabled = !open;
     commentBtn.disabled = !open;
+    if (typeof logGate === "function") { logGate(); }
     gateNotice.hidden = open;
   }
 
@@ -5881,6 +5911,67 @@
 
   var activeView = "trade";
   var controlsEl = document.getElementById("controls");
+
+  /* ---- Log a ticket, from any view (Lewis, 22 Sep) ---- */
+
+  /* The same record the audit log's "Log an issue" makes, issue:<room>
+     with the trade in the body, so a ticket logged here is a ticket
+     everywhere at once: a row under its trade on By trade, a line on the
+     room's card, an entry on the room's audit log, a count on By floor.
+     Any room of the tower, the corridors, stair core and twodios included;
+     gated like the ticks, by a name and company at the top. */
+  var logFoldEl = document.getElementById("log-fold");
+  var logRoomEl = document.getElementById("log-room");
+  var logTradeEl = document.getElementById("log-trade");
+  var logTextEl = document.getElementById("log-text");
+  var logAddEl = document.getElementById("log-add");
+  var logNoteEl = document.getElementById("log-note");
+  var LOG_ROOM_KEY = "cw-tower" + TOWER_N + "-log-room";
+
+  function fillLogRooms() {
+    var list = AUDIT_STUDIOS.slice();
+    list.sort(function (a, b) {
+      if (!!a.common !== !!b.common) { return a.common ? 1 : -1; }
+      var la = roomLabel(a.room), lb = roomLabel(b.room);
+      return la < lb ? -1 : (la > lb ? 1 : 0);
+    });
+    var rooms = "", areas = "";
+    for (var i = 0; i < list.length; i++) {
+      var st = list[i];
+      var opt = '<option value="' + esc(st.room) + '">' + esc(roomLabel(st.room)) +
+        (st.floor ? " \u2014 " + esc(st.floor) : "") + "</option>";
+      if (st.common) { areas += opt; } else { rooms += opt; }
+    }
+    logRoomEl.innerHTML = '<optgroup label="Rooms">' + rooms + "</optgroup>" +
+      (areas ? '<optgroup label="' + AREA_LABEL + '">' + areas + "</optgroup>" : "");
+    var kept = load(LOG_ROOM_KEY, "");
+    if (kept && logRoomEl.querySelector('option[value="' + kept + '"]')) { logRoomEl.value = kept; }
+  }
+  fillLogRooms();
+  logTradeEl.innerHTML = tradeOptions(UNASSIGNED);
+  logRoomEl.addEventListener("change", function () { store(LOG_ROOM_KEY, logRoomEl.value); });
+
+  function logGate() {
+    var open = identified();
+    logAddEl.disabled = !open;
+    logTextEl.disabled = !open;
+    logTextEl.placeholder = open
+      ? "e.g. Bathroom door drags on the frame"
+      : "Add your name and company at the top first";
+  }
+
+  logAddEl.addEventListener("click", function () {
+    var room = logRoomEl.value;
+    var body = logTextEl.value.trim();
+    if (!identified()) { logNoteEl.textContent = "Add your name and company at the top first."; return; }
+    if (!room) { logNoteEl.textContent = "Pick the room."; logRoomEl.focus(); return; }
+    if (!body) { logNoteEl.textContent = "Say what needs doing."; logTextEl.focus(); return; }
+    var to = knownTrade(logTradeEl.value) ? logTradeEl.value : UNASSIGNED;
+    logTextEl.value = "";
+    postEntry("issue:" + room, body + (to === UNASSIGNED ? "" : " [to:" + to + "]"));
+    logNoteEl.textContent = "Logged against " + roomLabel(room) + " under " + tradeName(to) +
+      ", with your name on it. It is on the list now.";
+  });
   var studioViewOn = false;
   var floorViewOn = false;
   var hideGround = false;
@@ -6084,6 +6175,7 @@
     // have nothing to say there.
     activeView = name;
     controlsEl.hidden = name === "audit";
+    logFoldEl.hidden = name === "audit";
     studioViewOn = name === "studio";
     floorViewOn = name === "floors";
     renderFiltered();
