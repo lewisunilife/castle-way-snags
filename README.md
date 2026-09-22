@@ -338,18 +338,20 @@ says **Moves in** before the day and **Moved in** once it has passed, in the
 card, the column and the date headers. When the sheet changes, replace the
 map: it is grouped by date, so a new date is one comment line and its rooms.
 
-## Logging a ticket from any view
+## Logging a ticket for any room
 
-A **Log a ticket** fold sits above the list controls on By trade, By studio
-and By floor (22 Sep): pick the room (every room of the tower, with the
-corridors, stair core and twodios under their own group), the trade to send
-it to (or Unassigned), say what needs doing, and log it. It is the same
-record the audit log's "Log an issue" makes, `issue:<room>` with the trade in
-the body, so it is a ticket everywhere at once: a row under its trade on By
-trade with "Logged by" and the name against it, a line on the room's card, an
-entry on the room's audit log, and a count on By floor, and every other device
-sees it as it arrives. It is gated like the ticks: a name and company at the
-top first. The room picked is remembered on the device for the next one.
+At the top of the signed-in audit log, above the studio picker, is **Log a
+ticket for any room** (22 Sep): pick the room (every room of the tower, with
+the corridors, stair core and twodios under their own group), the trade to
+send it to (or Unassigned), say what needs doing, and log it. It sits behind
+the audit sign-in so that who can add a ticket is who has an audit login;
+the name and company at the top of the page go on the ticket, so they are
+asked for first. It is the same record the per-studio "Log an issue" at the
+bottom of the audit log makes, `issue:<room>` with the trade in the body, so
+it is a ticket everywhere at once: a row under its trade on By trade with
+"Logged by" and the name against it, a line on the room's card, an entry on
+the room's audit log, and a count on By floor, and every other device sees
+it as it arrives. The room picked is remembered on the device.
 
 ## Ticking, everywhere
 

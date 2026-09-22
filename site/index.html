@@ -1091,8 +1091,8 @@
   .note-btn:hover { border-color: var(--tick); opacity: 1; }
 
   .panel { border: 1px solid var(--rule); padding: 18px; }
-  #log-fold { margin-top: 24px; }
-  .log-panel { margin-top: 12px; }
+  #log-panel { border-width: 2px; border-color: var(--ink); margin: 12px 0 28px; }
+  .log-head { margin: 0 0 6px; font-size: 18px; }
   .log-fields { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-bottom: 12px; }
   .log-fields .field { min-width: 220px; flex: 1 1 220px; }
   .log-panel select, .log-panel textarea { width: 100%; box-sizing: border-box; }
@@ -1468,29 +1468,6 @@
     <button type="button" class="view-btn" data-view="audit">Audit log</button>
   </nav>
 
-  <details class="fold" id="log-fold">
-    <summary><h2>Log a ticket</h2>
-      <span class="fold-hint">Any room, any trade, from anyone with their name at the top</span></summary>
-    <div class="panel log-panel">
-      <div class="log-fields">
-        <div class="field">
-          <label for="log-room">Room</label>
-          <select id="log-room"></select>
-        </div>
-        <div class="field">
-          <label for="log-trade">Send to</label>
-          <select id="log-trade"></select>
-        </div>
-      </div>
-      <label for="log-text">What needs doing</label>
-      <textarea id="log-text" placeholder="e.g. Bathroom door drags on the frame"></textarea>
-      <div class="panel-actions">
-        <button type="button" id="log-add">Log it</button>
-        <span class="note-line" id="log-note"></span>
-      </div>
-    </div>
-  </details>
-
   <div id="controls">
     <div class="studio-controls">
       <div class="field">
@@ -1637,6 +1614,28 @@
 
     <div id="audit-body" hidden>
       <h2>Audit log <span class="sec-count" id="audit-progress"></span></h2>
+
+      <section class="panel log-panel" id="log-panel">
+        <h2 class="log-head">Log a ticket for any room</h2>
+        <p class="note-line">Pick the room and the trade, say what needs doing, and it
+          is a ticket at once, with your name on it. Only audit users can do this.</p>
+        <div class="log-fields">
+          <div class="field">
+            <label for="log-room">Room</label>
+            <select id="log-room"></select>
+          </div>
+          <div class="field">
+            <label for="log-trade">Send to</label>
+            <select id="log-trade"></select>
+          </div>
+        </div>
+        <label for="log-text">What needs doing</label>
+        <textarea id="log-text" placeholder="e.g. Bathroom door drags on the frame"></textarea>
+        <div class="panel-actions">
+          <button type="button" id="log-add">Log it</button>
+          <span class="note-line" id="log-note"></span>
+        </div>
+      </section>
 
       <div class="panel">
         <label class="filter audit-new" for="audit-new">
@@ -5912,15 +5911,17 @@
   var activeView = "trade";
   var controlsEl = document.getElementById("controls");
 
-  /* ---- Log a ticket, from any view (Lewis, 22 Sep) ---- */
+  /* ---- Log a ticket, from the audit log (Lewis, 22 Sep) ---- */
 
-  /* The same record the audit log's "Log an issue" makes, issue:<room>
-     with the trade in the body, so a ticket logged here is a ticket
-     everywhere at once: a row under its trade on By trade, a line on the
-     room's card, an entry on the room's audit log, a count on By floor.
-     Any room of the tower, the corridors, stair core and twodios included;
-     gated like the ticks, by a name and company at the top. */
-  var logFoldEl = document.getElementById("log-fold");
+  /* At the top of the audit log, behind its sign-in, so who can add a
+     ticket is who has an audit login (Lewis, 22 Sep). The same record the
+     per-studio "Log an issue" makes, issue:<room> with the trade in the
+     body, so a ticket logged here is a ticket everywhere at once: a row
+     under its trade on By trade, a line on the room's card, an entry on
+     the room's audit log, a count on By floor. Any room of the tower, the
+     corridors, stair core and twodios included; the name and company at
+     the top are what goes on it, so they are asked for first. */
+  var logPanelEl = document.getElementById("log-panel");
   var logRoomEl = document.getElementById("log-room");
   var logTradeEl = document.getElementById("log-trade");
   var logTextEl = document.getElementById("log-text");
@@ -6175,7 +6176,6 @@
     // have nothing to say there.
     activeView = name;
     controlsEl.hidden = name === "audit";
-    logFoldEl.hidden = name === "audit";
     studioViewOn = name === "studio";
     floorViewOn = name === "floors";
     renderFiltered();
