@@ -451,9 +451,10 @@ other 51 sit under
 **Unassigned**, to be placed on their trade by hand with the Trade control on
 each row; a row keeps its key when it is moved, so a tick or a note made
 while it is unassigned goes with it, and a move made by hand wins over the
-rule. Rooms that passed everything have no rows. 215 and 217
-were mid-rework and not yet inspected, and shared area 240 was still in
-progress across the board, so those carry only what the report itemised.
+rule. Rooms that passed everything have no rows. 215 and 217 were mid-rework on the first pass and were inspected on
+22 Sep, their twelve items filed under the trades Lewis gave them; shared
+area 240 was still in progress across the board, so it carries only what
+the report itemised.
 
 Unassigned is drawn and counted like a trade: its own section at the end of
 By trade, hidden while it is empty, and a row on the summary table, so the

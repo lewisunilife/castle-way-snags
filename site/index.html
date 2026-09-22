@@ -2103,8 +2103,8 @@
      Unassigned, to be placed by hand with the Trade control; a move made
      by hand wins over the field either way.
      Rooms that passed everything have no rows. 215 and 217 were mid-rework
-     and not yet inspected, and shared area 240 was still in progress across
-     the board, so those have only what was itemised. */
+     on the first pass and were inspected on 22 Sep; shared area 240 was
+     still in progress across the board, so it has only what was itemised. */
   var T2_ROWS = [
     ["CW511", T2I, "Bathroom MEP box needs fixing.", "joinery"],
     ["CW511", T2I, "Bathroom cabinet needs hanging.", "joinery"],
@@ -2393,7 +2393,21 @@
     ["T2-TWODIO-140", T2I, "Fit handle and lock to communal door (B).", "doors"],
     ["T2-TWODIO-140", T2I, "Adjust sprinkler cap to be flush.", "sprinklers"],
     ["T2-TWODIO-140", T2I, "Fit remaining skirting.", "joinery"],
-    ["T2-TWODIO-140", T2I, "Connect MVHR cables."]
+    ["T2-TWODIO-140", T2I, "Connect MVHR cables."],
+    // 215 and 217, inspected on 22 Sep once their reworks were done, each
+    // item under the trade Lewis gave it.
+    ["CW215", T2I, "Vinyl rippling.", "flooring"],
+    ["CW215", T2I, "MEP bathroom box needs painting.", "decorating"],
+    ["CW215", T2I, "Electrics missing on intercom panel.", "electrical"],
+    ["CW215", T2I, "Crack in bedroom MEP box.", "decorating"],
+    ["CW215", T2I, "Kitchen cabinet screw caps missing.", "joinery"],
+    ["CW217", T2I, "Bathroom MEP box needs painting.", "decorating"],
+    ["CW217", T2I, "Studio door architrave needs repainting.", "decorating"],
+    ["CW217", T2I, "MEP vent in shower needs refixing.", "joinery"],
+    ["CW217", T2I, "Studio door closer needs fitting.", "joinery"],
+    ["CW217", T2I, "2x Socket boxes missing.", "electrical"],
+    ["CW217", T2I, "Kitchen cabinet screw caps missing.", "joinery"],
+    ["CW217", T2I, "Panel above bathroom door needs painting.", "decorating"]
   ];
   var T2_UNPLACED = [];
   for (var t2r = 0; t2r < T2_ROWS.length; t2r++) {
