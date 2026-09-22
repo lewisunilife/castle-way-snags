@@ -3210,7 +3210,13 @@
   }
 
   function roomCells(tradeTitle, rooms) {
-    var key = tradeKeyByTitle[tradeTitle] || "";
+    return roomCellsByKey(tradeKeyByTitle[tradeTitle] || "", rooms);
+  }
+
+  // Chips carry the section key, so a redraw keeps them tickable off:
+  // Unassigned has no trade title to look up, and a chip drawn without its
+  // key could never be struck through (Lewis, 22 Sep).
+  function roomCellsByKey(key, rooms) {
 
     // A sweep covering the whole building would print hundreds of room
     // numbers here and bury every other trade. The count says it better.
@@ -4110,7 +4116,7 @@
       summaryRoomsShown[cKey] = joined;
       var numsEl = summaryRowEls[c].querySelector(".t-nums");
       if (numsEl) {
-        numsEl.innerHTML = roomCells(sectionTitles[cKey] || "", rooms);
+        numsEl.innerHTML = roomCellsByKey(cKey, rooms);
         chipsChanged = true;
       }
     }
