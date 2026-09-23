@@ -783,6 +783,25 @@
   #cost-list li.unsent { border-left-style: dashed; }
   #cost-list .note-who { display: block; }
   .cost-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .cost-edit { display: block; margin-top: 4px; }
+  button.cost-edit {
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 3px 10px;
+    min-height: 0;
+    width: auto;
+  }
+  button.cost-edit:hover { border-color: var(--tick); }
+  button.cost-edit:disabled { opacity: 0.5; }
+  #cost-list li.editing { border-left-color: var(--tick); }
+  .cost-edit-text { width: 100%; box-sizing: border-box; min-height: 72px; margin: 6px 0; }
+  #cost-list .panel-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  #cost-list .panel-actions .note-line { margin: 0; }
   #costs-locked .note-line { margin-top: 0; }
   #issue-list li.is-done .note-body { text-decoration: line-through; color: var(--muted); }
   #issue-list .note-btn { margin-top: 4px; }
@@ -6184,6 +6203,12 @@
      The tag names no tower: one list, the same on every tower's page. Not
      a job, so it is on no trade list, no card and no summary. */
   var COST_TAG = "cost:ikew";
+  // An edit is its own record, cost:ikew:edit:<id of the entry> with the new
+  // text as its body (Lewis, 23 Sep): the newest edit is what the list
+  // shows, and the original stays in the record, since nothing here is
+  // ever overwritten or taken away.
+  var COST_EDIT = COST_TAG + ":edit:";
+  var costEdit = null;   // { id, text, note } while an entry is being edited
   var costsLockedEl = document.getElementById("costs-locked");
   var costsBodyEl = document.getElementById("costs-body");
   var costTextEl = document.getElementById("cost-text");
@@ -6202,42 +6227,120 @@
     }
     var all = comments.concat(queuedComments);
     var out = [];
+    var edits = {};
     for (i = 0; i < all.length; i++) {
       var c = all[i];
-      if (!c || c.snag_id !== COST_TAG) { continue; }
-      out.push({ id: c.id, body: c.body || "", author: c.author || "", at: c.created_at || "",
-        unsent: !confirmed[c.id] });
+      if (!c || !c.snag_id) { continue; }
+      if (c.snag_id === COST_TAG) {
+        out.push({ id: c.id, body: c.body || "", author: c.author || "", at: c.created_at || "",
+          unsent: !confirmed[c.id], edited: null });
+      } else if (c.snag_id.indexOf(COST_EDIT) === 0) {
+        var of = c.snag_id.slice(COST_EDIT.length);
+        var prior = edits[of];
+        if (prior && String(prior.at || "") > String(c.created_at || "")) { continue; }
+        edits[of] = { body: c.body || "", by: c.author || "", at: c.created_at || "", unsent: !confirmed[c.id] };
+      }
+    }
+    for (i = 0; i < out.length; i++) {
+      var e = edits[out[i].id];
+      if (!e) { continue; }
+      out[i].body = e.body;
+      out[i].edited = e;
+      if (e.unsent) { out[i].unsent = true; }
     }
     out.sort(function (x, y) { return String(y.at).localeCompare(String(x.at)); });
     return out;
+  }
+
+  // What is in the editor now, before the list is redrawn under it.
+  function captureCostEdit() {
+    if (!costEdit) { return; }
+    var ta = costListEl.querySelector(".cost-edit-text");
+    if (ta && ta.getAttribute("data-id") === costEdit.id) { costEdit.text = ta.value; }
   }
 
   function renderCosts() {
     costsLockedEl.hidden = auditIn;
     costsBodyEl.hidden = !auditIn;
     if (!auditIn) { return; }
+    captureCostEdit();
     var list = costEntries();
     costCountsEl.textContent = list.length
       ? list.length + (list.length === 1 ? " cost logged" : " costs logged") + ", newest first"
       : "";
     var html = "";
+    var open = identified();
     for (var i = 0; i < list.length; i++) {
       var e = list[i];
       var meta = esc(e.author || "Someone");
       var when = shortDate(e.at);
       if (when) { meta += " \u00b7 " + esc(when); }
+      if (e.edited) {
+        meta += " \u00b7 edited" + (e.edited.by && e.edited.by !== e.author ? " by " + esc(e.edited.by) : "");
+        var ew = shortDate(e.edited.at);
+        if (ew) { meta += " \u00b7 " + esc(ew); }
+      }
       if (e.unsent && live) { meta += " \u00b7 sending\u2026"; }
+      var id = esc(e.id);
+      if (costEdit && costEdit.id === e.id) {
+        html += '<li class="editing"><span class="note-who">' + meta + "</span>" +
+          '<textarea class="cost-edit-text" data-id="' + id + '" aria-label="Edit this cost">' +
+          esc(costEdit.text) + "</textarea>" +
+          '<div class="panel-actions">' +
+          '<button type="button" class="cost-save" data-id="' + id + '">Save</button>' +
+          '<button type="button" class="cost-cancel secondary" data-id="' + id + '">Cancel</button>' +
+          '<span class="note-line cost-edit-note">' + esc(costEdit.note || "") + "</span></div></li>";
+        continue;
+      }
       html += "<li" + (e.unsent ? ' class="unsent"' : "") + '><span class="note-who">' + meta +
-        '</span><span class="cost-body">' + esc(e.body) + "</span></li>";
+        '</span><span class="cost-body">' + esc(e.body) + "</span>" +
+        '<span class="cost-edit"><button type="button" class="cost-edit" data-id="' + id + '"' +
+        (open ? "" : " disabled") + ">Edit</button></span></li>";
     }
     costListEl.innerHTML = html;
     costEmptyEl.hidden = list.length > 0;
   }
 
+  costListEl.addEventListener("click", function (ev) {
+    var btn = ev.target;
+    if (!btn || !btn.classList || !btn.getAttribute) { return; }
+    var id = btn.getAttribute("data-id");
+    if (!id) { return; }
+    var list, i, cur = null;
+    if (btn.classList.contains("cost-edit")) {
+      if (!identified()) { return; }
+      list = costEntries();
+      for (i = 0; i < list.length; i++) { if (list[i].id === id) { cur = list[i]; } }
+      if (!cur) { return; }
+      costEdit = { id: id, text: cur.body, note: "" };
+      renderCosts();
+      var ta = costListEl.querySelector(".cost-edit-text");
+      if (ta) { ta.focus(); }
+      return;
+    }
+    if (btn.classList.contains("cost-cancel")) {
+      costEdit = null;
+      renderCosts();
+      return;
+    }
+    if (!btn.classList.contains("cost-save")) { return; }
+    captureCostEdit();
+    if (!costEdit || costEdit.id !== id) { return; }
+    var text = (costEdit.text || "").trim();
+    if (!identified()) { costEdit.note = "Add your name and company at the top first."; renderCosts(); return; }
+    if (!text) { costEdit.note = "Say what the cost is, or cancel."; renderCosts(); return; }
+    list = costEntries();
+    for (i = 0; i < list.length; i++) { if (list[i].id === id) { cur = list[i]; } }
+    costEdit = null;
+    if (!cur || cur.body === text) { renderCosts(); return; }
+    postEntry(COST_EDIT + id, text);
+  });
+
   function costGate() {
     var open = identified();
     costAddEl.disabled = !open;
     costTextEl.disabled = !open;
+    if (activeView === "costs") { renderCosts(); }
     costTextEl.placeholder = open
       ? "e.g. CW215 heat sensor cover missing, replaced by Stelling"
       : "Add your name and company at the top first";
@@ -6496,7 +6599,7 @@
     auditLoginEl.hidden = on;
     auditBodyEl.hidden = !on;
     if (on) { lastChecksHtml = null; fillStudios(); loadDrafts(); renderAudit(); }
-    else { cardLog = {}; }
+    else { cardLog = {}; costEdit = null; }
     renderStudios();
     renderCosts();
   }

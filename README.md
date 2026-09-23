@@ -377,6 +377,13 @@ and the tag names no tower, so it is one list, the same on every tower's
 page, and every device sees it as it lands. It is not a job: nothing from
 it appears on a trade list, a card or a summary.
 
+Each entry has an **Edit** button under it: the edit is a new record,
+`cost:ikew:edit:<id of the entry>` with the new text as its body, and the
+newest edit is what the list shows, with "edited" and who and when against
+it. The original text stays in the record, since nothing here is ever
+overwritten or taken away. Text typed into the editor survives the list
+being redrawn under it by an entry landing from another phone.
+
 ## Ticking, everywhere
 
 Every job can be ticked and unticked from wherever it is shown: its row in
