@@ -972,6 +972,8 @@
   tr.unsaved .by { color: var(--warn); }
 
   /* Summary: a room clears once that trade has nothing left in it. */
+  #summary-table tr.empty td, .floor-summary tr.empty td { color: var(--muted); }
+
   .sum-room.done {
     color: var(--muted);
     text-decoration: line-through;
@@ -1755,6 +1757,14 @@
       ]
     },
     {
+      // Screw caps are a trade of their own (Lewis, 23 Sep): the screw-cap
+      // rows from the Tower 2 inspection are filed here, whatever they cap.
+      key: "screwcaps",
+      title: "Screw caps",
+      col3: "Source",
+      rows: []
+    },
+    {
       // Fire detection is iKew's: the check that was Electrical's until 17
       // Sep fails into here now, and its earlier fails read as iKew's too.
       key: "ikew",
@@ -2119,9 +2129,9 @@
      itself (CW140, the part shared between 140A and 140B: id T2-TWODIO-140,
      a common area like a corridor). A row with a fourth field is filed
      under that trade by Lewis's rules of 21 Sep, the first rule to match
-     winning: mastic or sealant to Mastic and any mention of paint to
-     Decorating / Sealant (first, because a sealing or painting job is that
-     trade's whatever it is on); vinyl to Flooring Repairs; heat sensors to iKew;
+     winning: screw caps to Screw caps; mastic or sealant to Mastic and any
+     mention of paint to Decorating / Sealant (a sealing or painting job is
+     that trade's whatever it is on); vinyl to Flooring Repairs; heat sensors to iKew;
      sprinkler caps and heads to Sprinklers; blinds to Blinds; door handles
      to Doors; bathroom and shower door adjustments, mirrors, architraves,
      skirting, MEP boxes and boxing, kitchen and bathroom cabinets, and
@@ -2157,14 +2167,14 @@
     ["CW314", T2I, "Lots of cable coming out of window."],
     ["CW219", T2I, "Paint needed left of studio door and skirting.", "decorating"],
     ["CW219", T2I, "Dogleg egger panel missing above wardrobe."],
-    ["CW219", T2I, "Kitchen extractor cabinet missing screw caps.", "joinery"],
+    ["CW219", T2I, "Kitchen extractor cabinet missing screw caps.", "screwcaps"],
     ["CW219", T2I, "Mastic bead needed under bedroom MEP left side (to be reworked later).", "mastic"],
     ["CW219", T2I, "Vinyl gap by studio door.", "flooring"],
     ["CW218", T2I, "Vinyl rippling.", "flooring"],
     ["CW216", T2I, "Paint needed around right of studio door and skirting.", "decorating"],
     ["CW216", T2I, "Door handle not level internally.", "doors"],
     ["CW119", T2I, "Vinyl rippling by wardrobe.", "flooring"],
-    ["CW119", T2I, "Screw caps missing in top kitchen cabinets.", "joinery"],
+    ["CW119", T2I, "Screw caps missing in top kitchen cabinets.", "screwcaps"],
     ["CW119", T2I, "Door handle not level internally.", "doors"],
     ["CW118", T2I, "Vinyl rippling in front of plinth heater.", "flooring"],
     ["CW118", T2I, "Big gap between kitchen splashback and top cabinets needs mastic.", "mastic"],
@@ -2269,7 +2279,7 @@
     ["CW342A", T2I, "Vinyl gap in bathroom skirting (mastic to cover).", "mastic"],
     ["CW342A", T2I, "Insulation left in module."],
     ["CW342A", T2I, "3 oak sprinkler caps missing.", "sprinklers"],
-    ["CW342A", T2I, "Toilet screw cap broken."],
+    ["CW342A", T2I, "Toilet screw cap broken.", "screwcaps"],
     ["CW342A", T2I, "Communal door not fitted."],
     ["CW342B", T2I, "Minor paint snags only.", "decorating"],
     ["CW240A", T2I, "Minor paint touch up on bathroom MEP box.", "decorating"],
@@ -2423,18 +2433,18 @@
     ["T2-TWODIO-140", T2I, "Fit remaining skirting.", "joinery"],
     ["T2-TWODIO-140", T2I, "Connect MVHR cables."],
     // 215 and 217, inspected on 22 Sep once their reworks were done, each
-    // item under the trade Lewis gave it.
+    // item under the trade Lewis gave it (screw caps to Screw caps).
     ["CW215", T2I, "Vinyl rippling.", "flooring"],
     ["CW215", T2I, "MEP bathroom box needs painting.", "decorating"],
     ["CW215", T2I, "Electrics missing on intercom panel.", "electrical"],
     ["CW215", T2I, "Crack in bedroom MEP box.", "decorating"],
-    ["CW215", T2I, "Kitchen cabinet screw caps missing.", "joinery"],
+    ["CW215", T2I, "Kitchen cabinet screw caps missing.", "screwcaps"],
     ["CW217", T2I, "Bathroom MEP box needs painting.", "decorating"],
     ["CW217", T2I, "Studio door architrave needs repainting.", "decorating"],
     ["CW217", T2I, "MEP vent in shower needs refixing.", "joinery"],
     ["CW217", T2I, "Studio door closer needs fitting.", "joinery"],
     ["CW217", T2I, "2x Socket boxes missing.", "electrical"],
-    ["CW217", T2I, "Kitchen cabinet screw caps missing.", "joinery"],
+    ["CW217", T2I, "Kitchen cabinet screw caps missing.", "screwcaps"],
     ["CW217", T2I, "Panel above bathroom door needs painting.", "decorating"]
   ];
   var T2_UNPLACED = [];
@@ -4212,9 +4222,12 @@
       var roomsEl = rowEl.querySelector(".t-rooms");
       if (issuesEl) { issuesEl.textContent = rowIds.length; }
       if (roomsEl) { roomsEl.textContent = rRooms; }
-      // A trade with nothing on it is a line of zeros, so it waits off the
-      // summary until something is sent to it.
-      if (rowEl.hidden !== (rowIds.length === 0)) { rowEl.hidden = rowIds.length === 0; }
+      // Every trade is listed, a line of zeros where it has nothing, so the
+      // summary is the whole picture (Lewis, 23 Sep). Unassigned is not a
+      // trade: it waits off the summary until something is parked there.
+      var hideRow = rowKeyAttr === UNASSIGNED && rowIds.length === 0;
+      if (rowEl.hidden !== hideRow) { rowEl.hidden = hideRow; }
+      rowEl.classList.toggle("empty", rowIds.length === 0);
     }
 
     if (!summaryTotalEls) {
@@ -5689,16 +5702,20 @@
       var isLevel = level !== "0" && level !== "";
       var keys = [];
       for (var d = 0; d < drawn.length; d++) {
-        if (tradesHere[drawn[d].key]) { keys.push(drawn[d].key); }
+        // Every trade on every level, a zero where it has nothing there;
+        // Unassigned only when something is parked there.
+        if (tradesHere[drawn[d].key] || drawn[d].key !== UNASSIGNED) { keys.push(drawn[d].key); }
       }
-      if (!keys.length && !isLevel) { continue; }
+      var anyHere = false;
+      for (var kh = 0; kh < keys.length; kh++) { if (tradesHere[keys[kh]]) { anyHere = true; } }
+      if (!anyHere && !isLevel) { continue; }
       var rows = "";
       var total = 0;
       var open = 0;
       var levelRooms = {};
       for (var ki = 0; ki < keys.length; ki++) {
         var k = keys[ki];
-        var bucket = tradesHere[k];
+        var bucket = tradesHere[k] || { ids: [], rooms: {} };
         var roomList = Object.keys(bucket.rooms).sort(byLabel);
         var chips = [];
         var tradeClear = true;
@@ -5714,7 +5731,8 @@
             '" data-room="' + esc(roomList[r]) + '">' + esc(shortRoom(roomList[r])) + "</span>");
         }
         total += bucket.ids.length;
-        rows += '<tr data-key="' + esc(k) + '"' + (tradeClear ? ' class="trade-done"' : "") + ">" +
+        rows += '<tr data-key="' + esc(k) + '"' +
+          (bucket.ids.length ? (tradeClear ? ' class="trade-done"' : "") : ' class="empty"') + ">" +
           '<td class="room t-trade">' + esc(tradeName(k)) + "</td>" +
           '<td class="t-who">' + (ASSIGNED[k] ? esc(ASSIGNED[k]) : '<span class="unassigned">\u2014</span>') + "</td>" +
           '<td class="num t-issues">' + bucket.ids.length + "</td>" +
@@ -5737,7 +5755,7 @@
       html += '<details class="date-group floor-group" data-level="' + level + '"' + (isOpen ? " open" : "") + ">" +
         '<summary><span class="group-when">' + title + '</span><span class="group-count">' + count + "</span></summary>" +
         '<div class="group-body">' +
-        (keys.length
+        (anyHere
           ? '<div class="scroller"><table class="floor-summary"><thead><tr><th>Trade</th><th>Assigned</th>' +
             "<th>Issues</th><th>Rooms</th><th>Room numbers</th></tr></thead><tbody>" + rows + "</tbody></table></div>"
           : '<p class="note-line">Nothing on this floor.</p>') +

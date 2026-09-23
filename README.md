@@ -245,9 +245,9 @@ shows against the section heading and in the summary; a trade with nobody
 against it shows a dash rather than a blank, so an unassigned one is visible
 rather than just quiet.
 
-## iKew, Doors, Sprinklers, Marius and Mastic
+## iKew, Doors, Sprinklers, Marius, Mastic and Screw caps
 
-Four trades were added on 17 Sep and a fifth, Mastic, on 22 Sep. **iKew** carries fire detection: the audit
+Four trades were added on 17 Sep, Mastic on 22 Sep and Screw caps on 23 Sep. **iKew** carries fire detection: the audit
 check "Fire detection operational, protective covers removed" fails into
 iKew rather than Electrical, and a fail recorded while the check was still
 Electrical's (before 18:00 on 17 Sep, so a phone still holding the old page
@@ -267,7 +267,9 @@ nothing on it is hidden until something arrives, so an empty Marius or
 Sprinklers is not a heading over an empty table. **Mastic** takes the "Mastic"
 check, which failed into Decorating / Sealant before, its earlier fails
 reading as Mastic's in the same way, and the inspection rows that mention
-mastic or sealant. Wherever a trade is picked
+mastic or sealant. **Screw caps** takes every inspection row that mentions a
+screw cap, whatever it caps: kitchen cabinets, the toilet on CW342A, and the
+two on CW215 and CW217. Wherever a trade is picked
 from or filtered on, the trades read A to Z: the Filter by trade boxes, the
 Trade control on every ticket and the audit log's Send to, with Unassigned
 last. The lists on By trade keep their own order.
@@ -410,6 +412,12 @@ heading: tap the heading to shut or open it. The totals stay on the heading
 ("236 issues in 89 rooms") so the table can be left shut. Open or shut is
 remembered on that device.
 
+Every trade is listed on the summary, a line of zeros where it has nothing
+(23 Sep), so the table is the whole picture rather than only the trades with
+something on them; a trade with nothing is shown muted. Unassigned is not a
+trade and waits off the summary until something is parked there. The
+per-level summaries on By floor do the same.
+
 ## Undo
 
 With **Hide completed** on, a ticked line leaves the page the moment it is
@@ -451,7 +459,8 @@ item is a row on the list with the source **Tower 2 inspection**: the solo
 rooms on the north side, the twodio bedrooms on the south, and each twodio's
 shared living area. The rows are in `T2_ROWS` in `site/index.html`.
 Lewis's rules of 21 Sep place 237 of the 288, the first rule to match
-winning: mastic or sealant to Mastic (8 rows) and any mention of paint to
+winning: screw caps to Screw caps (5 rows), mastic or sealant to Mastic (8)
+and any mention of paint to
 Decorating / Sealant (73; the sealing or painting is that trade's whatever it
 is on, so "Skirting repainting" and "Door architrave painting" are
 decorating and the vinyl gap that needs mastic is Mastic), vinyl to Flooring
