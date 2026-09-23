@@ -385,7 +385,8 @@ another phone.
 
 The audit log's picker has a **Floor** filter (23 Sep): every group keeps
 only that floor's rooms and its corridor, the stair core waiting for All
-floors; remembered on the device. The tower is the page's own Tower
+floors; its last choice is the corridors, stairs and twodios on their own,
+whatever floor they are on; remembered on the device. The tower is the page's own Tower
 buttons at the top, as on every view.
 
 At the bottom of the signed-in audit log, **Entered by** lists everything
@@ -399,13 +400,20 @@ only a gate; the person picker lists everyone on the records, with the
 name at the top picked first. The Floor filter narrows this list too. The
 fold shows the count while shut and is remembered open or shut.
 
+Above the picker, **Rooms I've logged** (23 Sep) lists every room the
+person named at the top has entered anything against on this tower, from
+the same records, with how many entries against each; each room is a
+button that opens it in the audit log. It follows the Floor filter, and
+widens the picker if the room it is asked for is hidden.
+
 ## Comments, about a room and by floor
 
 The Comments panel at the bottom of By trade is the tower's own (Tower 2's
 comments carry `tower:2` and so on; Tower 1's carry no tag, from before
 there were other towers). From 23 Sep a comment can be **About** one room
 or area, recorded as `note:<room>`, and the list has a **Show** filter:
-all, the tower-wide ones, or one floor, remembered on the device. Each
+all, the tower-wide ones, one floor, or the corridors, stairs and twodios,
+remembered on the device. Each
 comment has an **Edit** button, the same `edit:<id>` record as a ticket's
 edit, with the original kept and the edit marked with who and when.
 

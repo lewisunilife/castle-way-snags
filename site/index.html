@@ -807,6 +807,25 @@
   #comment-list .panel-actions .note-line { margin: 0; }
   .comment-filter { margin-bottom: 4px; }
   #entered-fold { margin-top: 32px; }
+  .my-rooms-row { margin: 12px 0 8px; }
+  #my-rooms { margin-bottom: 14px; }
+  #my-rooms .note-line { margin: 0 0 8px; }
+  .room-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  button.room-chip {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 6px 10px;
+    min-height: 36px;
+    width: auto;
+  }
+  button.room-chip:hover { border-color: var(--tick); }
+  button.room-chip.is-on { color: var(--on-ink); background: var(--ink); border-color: var(--ink); }
+  .room-chip .chip-n { font-weight: 400; margin-left: 6px; opacity: 0.75; }
   #entered-list { list-style: none; margin: 14px 0 0; padding: 0; }
   #entered-list li {
     border-left: 3px solid var(--rule);
@@ -1455,7 +1474,7 @@
 
     .panel { padding: 14px; }
     button { width: 100%; }
-    button.card-log-open, button.why-save, button.issue-edit, button.cost-edit, button.comment-edit { width: auto; }
+    button.card-log-open, button.why-save, button.issue-edit, button.cost-edit, button.comment-edit, button.room-chip { width: auto; }
 
     /* ...except the note Submit, which sits beside its field and would
        otherwise squeeze it to nothing. */
@@ -1744,6 +1763,14 @@
         </label>
         <label for="audit-floor">Floor</label>
         <select id="audit-floor"></select>
+        <div class="panel-actions my-rooms-row">
+          <button type="button" class="secondary" id="my-rooms-btn">Rooms I&rsquo;ve logged</button>
+          <span class="note-line" id="my-rooms-note"></span>
+        </div>
+        <div id="my-rooms" hidden>
+          <p class="note-line" id="my-rooms-head"></p>
+          <div class="room-chips" id="my-rooms-list"></div>
+        </div>
         <label for="audit-studio">Studio</label>
         <select id="audit-studio"></select>
         <div class="panel-actions">
@@ -3363,6 +3390,8 @@
     commentBtn.disabled = !open;
     if (typeof logGate === "function") { logGate(); }
     if (typeof costGate === "function") { costGate(); }
+    if (typeof renderMyRooms === "function" && auditIn) { renderMyRooms(); }
+    if (typeof renderMyRooms === "function" && auditIn) { renderMyRooms(); }
     if (typeof renderComments === "function" && listEl) { renderComments(); }
     gateNotice.hidden = open;
   }
@@ -4453,6 +4482,7 @@
   function commentShown(room) {
     if (!commentFloor) { return true; }
     if (commentFloor === "tower") { return !room; }
+    if (commentFloor === "areas") { return !!room && isCommon(room); }
     return !!room && levelOf(room) === commentFloor;
   }
 
@@ -4513,7 +4543,8 @@
       var others = all.length;
       emptyEl.textContent = commentFloor === "tower"
         ? "Every comment so far is about a room; none is about the tower as a whole."
-        : others + (others === 1 ? " comment" : " comments") + " elsewhere in the tower, none on this floor yet.";
+        : others + (others === 1 ? " comment" : " comments") + " elsewhere in the tower, none " +
+          (commentFloor === "areas" ? "about the " + AREA_LABEL.toLowerCase() : "on this floor") + " yet.";
       emptyEl.hidden = false;
     } else {
       emptyEl.hidden = true;
@@ -4562,7 +4593,7 @@
   });
 
   commentFloor = String(load(COMMENT_FLOOR_KEY, "") || "");
-  if (commentFloor !== "tower" && !FLOORS[commentFloor]) { commentFloor = ""; }
+  if (commentFloor !== "tower" && commentFloor !== "areas" && !FLOORS[commentFloor]) { commentFloor = ""; }
   commentFloorEl.innerHTML = '<option value=""' + (commentFloor === "" ? " selected" : "") + ">All comments</option>" +
     '<option value="tower"' + (commentFloor === "tower" ? " selected" : "") + ">About the tower as a whole</option>";
   (function () {
@@ -4571,10 +4602,12 @@
       commentFloorEl.innerHTML += '<option value="' + digits[i] + '"' +
         (commentFloor === digits[i] ? " selected" : "") + ">" + esc(FLOORS[digits[i]]) + "</option>";
     }
+    commentFloorEl.innerHTML += '<option value="areas"' + (commentFloor === "areas" ? " selected" : "") +
+      ">" + esc(AREA_LABEL) + "</option>";
   })();
   commentFloorEl.addEventListener("change", function () {
     var v = commentFloorEl.value;
-    commentFloor = v === "tower" || FLOORS[v] ? v : "";
+    commentFloor = v === "tower" || v === "areas" || FLOORS[v] ? v : "";
     store(COMMENT_FLOOR_KEY, commentFloor);
     renderComments();
   });
@@ -6015,6 +6048,7 @@
       issueListEl.innerHTML = ih;
     }
     renderEntered();
+    renderMyRooms();
   }
 
   /* ---- Entered by (Lewis, 23 Sep) ---- */
@@ -6182,8 +6216,7 @@
       return;
     }
     var list = enteredBy(pick);
-    enteredCountEl.textContent = list.length + (list.length === 1 ? " entry" : " entries") +
-      (auditFloor && FLOORS[auditFloor] ? " on the " + FLOORS[auditFloor].toLowerCase() : "");
+    enteredCountEl.textContent = list.length + (list.length === 1 ? " entry" : " entries") + auditFloorPhrase();
     // While shut, the count on the heading is enough.
     if (!enteredFoldEl.open) { enteredListEl.innerHTML = ""; return; }
     var h = "";
@@ -6201,6 +6234,92 @@
   enteredWhoEl.addEventListener("change", function () {
     enteredWho = enteredWhoEl.value;
     renderEntered();
+  });
+
+  /* ---- Rooms I've logged (Lewis, 23 Sep) ---- */
+
+  /* A button above the picker: pressed, it lists every room the person
+     named at the top has entered anything against on this tower, from the
+     same records as Entered by, with how many entries and when the last
+     was; each room is a button that opens it in the audit log. Follows the
+     Floor filter. */
+  var myRoomsBtn = document.getElementById("my-rooms-btn");
+  var myRoomsEl = document.getElementById("my-rooms");
+  var myRoomsHeadEl = document.getElementById("my-rooms-head");
+  var myRoomsListEl = document.getElementById("my-rooms-list");
+  var myRoomsNoteEl = document.getElementById("my-rooms-note");
+  var myRoomsOpen = false;
+
+  function myRooms(name) {
+    var list = enteredBy(name);
+    var by = {};
+    var rooms = [];
+    for (var i = 0; i < list.length; i++) {
+      var room = list[i].room;
+      if (!room) { continue; }
+      if (!by[room]) { by[room] = { room: room, n: 0, at: "" }; rooms.push(by[room]); }
+      by[room].n++;
+      if (String(list[i].at || "") > by[room].at) { by[room].at = list[i].at || ""; }
+    }
+    rooms.sort(function (a, b) {
+      if (!!isCommon(a.room) !== !!isCommon(b.room)) { return isCommon(a.room) ? 1 : -1; }
+      var la = roomLabel(a.room), lb = roomLabel(b.room);
+      return la < lb ? -1 : (la > lb ? 1 : 0);
+    });
+    return rooms;
+  }
+
+  function renderMyRooms() {
+    if (!auditIn || !myRoomsEl) { return; }
+    myRoomsEl.hidden = !myRoomsOpen;
+    myRoomsBtn.textContent = myRoomsOpen ? "Hide the rooms I\u2019ve logged" : "Rooms I\u2019ve logged";
+    if (!myRoomsOpen) { myRoomsNoteEl.textContent = ""; return; }
+    if (!identified()) {
+      myRoomsNoteEl.textContent = "Add your name and company at the top first.";
+      myRoomsHeadEl.textContent = "";
+      myRoomsListEl.innerHTML = "";
+      return;
+    }
+    myRoomsNoteEl.textContent = "";
+    var name = who();
+    var rooms = myRooms(name);
+    myRoomsHeadEl.textContent = rooms.length
+      ? rooms.length + (rooms.length === 1 ? " room" : " rooms") + " with something entered by " + name +
+        auditFloorPhrase() + ". Press one to open it."
+      : "Nothing entered by " + name + auditFloorPhrase() + " on this tower yet.";
+    var html = "";
+    for (var i = 0; i < rooms.length; i++) {
+      var r = rooms[i];
+      html += '<button type="button" class="room-chip' + (r.room === auditStudio ? " is-on" : "") +
+        '" data-room="' + esc(r.room) + '" title="Last entry ' + esc(shortDate(r.at)) + '">' +
+        esc(roomLabel(r.room)) + '<span class="chip-n">' + r.n + "</span></button>";
+    }
+    myRoomsListEl.innerHTML = html;
+  }
+
+  myRoomsBtn.addEventListener("click", function () {
+    myRoomsOpen = !myRoomsOpen;
+    renderMyRooms();
+  });
+
+  myRoomsListEl.addEventListener("click", function (ev) {
+    var btn = ev.target && ev.target.closest ? ev.target.closest(".room-chip") : null;
+    if (!btn) { return; }
+    var room = btn.getAttribute("data-room");
+    if (!room || !STUDIO_BY_ROOM[room]) { return; }
+    if (!auditStudioEl.querySelector('option[value="' + room + '"]')) {
+      // Hidden by the floor filter or the narrowed list: widen and refill.
+      auditFloor = "";
+      auditFloorEl.value = "";
+      store(AUDIT_FLOOR_KEY, auditFloor);
+      fillStudios();
+    }
+    if (!auditStudioEl.querySelector('option[value="' + room + '"]')) { return; }
+    auditStudioEl.value = room;
+    studioChanged();
+    renderMyRooms();
+    var checks = document.getElementById("audit-checks");
+    if (checks && checks.scrollIntoView) { checks.scrollIntoView({ block: "start", behavior: "smooth" }); }
   });
 
   enteredFoldEl.open = load(ENTERED_OPEN_KEY, false) === true;
@@ -7190,6 +7309,8 @@
   var AUDIT_FLOOR_KEY = "cw-tower" + TOWER_N + "-audit-floor";
   var auditFloor = "";
 
+  // The floors, and then the corridors, stairs and twodios as a group of
+  // their own (Lewis, 23 Sep), whatever floor they are on.
   function floorOptions(sel, first) {
     var html = '<option value=""' + (sel === "" ? " selected" : "") + ">" + esc(first) + "</option>";
     var digits = Object.keys(FLOORS).sort();
@@ -7197,19 +7318,33 @@
       html += '<option value="' + digits[i] + '"' + (sel === digits[i] ? " selected" : "") + ">" +
         esc(FLOORS[digits[i]]) + "</option>";
     }
+    html += '<option value="areas"' + (sel === "areas" ? " selected" : "") + ">" + esc(AREA_LABEL) + "</option>";
     return html;
   }
 
+  function floorChoiceOk(v) {
+    return v === "areas" || !!FLOORS[v];
+  }
+
   function onAuditFloor(room) {
-    return !auditFloor || levelOf(room) === auditFloor;
+    if (!auditFloor) { return true; }
+    if (auditFloor === "areas") { return isCommon(room); }
+    return levelOf(room) === auditFloor;
+  }
+
+  // "on the 2nd floor", "in the corridors, stairs and twodios", or nothing.
+  function auditFloorPhrase() {
+    if (!auditFloor) { return ""; }
+    if (auditFloor === "areas") { return " in the " + AREA_LABEL.toLowerCase(); }
+    return " on the " + FLOORS[auditFloor].toLowerCase();
   }
 
   auditFloor = String(load(AUDIT_FLOOR_KEY, "") || "");
-  if (!FLOORS[auditFloor]) { auditFloor = ""; }
+  if (!floorChoiceOk(auditFloor)) { auditFloor = ""; }
   auditFloorEl.innerHTML = floorOptions(auditFloor, "All floors");
 
   auditFloorEl.addEventListener("change", function () {
-    auditFloor = FLOORS[auditFloorEl.value] ? auditFloorEl.value : "";
+    auditFloor = floorChoiceOk(auditFloorEl.value) ? auditFloorEl.value : "";
     store(AUDIT_FLOOR_KEY, auditFloor);
     if (!auditIn) { return; }
     var before = auditStudio;
