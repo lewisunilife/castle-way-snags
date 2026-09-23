@@ -1100,6 +1100,31 @@
   .log-panel select, .log-panel textarea { width: 100%; box-sizing: border-box; }
   .log-panel .panel-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
+  /* Log a ticket from a studio card (23 Sep): a button on each card while
+     signed in to the audit log, opening to the same fields as the form
+     there. */
+  .card-log { margin-top: 10px; }
+  .studio-card ul + .card-log { margin-top: 4px; }
+  .card-log-open {
+    font: inherit;
+    font-size: 13px;
+    color: var(--text);
+    background: transparent;
+    border: 1px dashed var(--rule);
+    border-radius: 4px;
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+  .card-log-open:hover { border-color: var(--tick); }
+  .card-log-form { border: 1px solid var(--ink); padding: 10px 12px; margin-top: 4px; }
+  .card-log-form label { display: block; font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+  .card-log-form textarea, .card-log-form select { width: 100%; box-sizing: border-box; }
+  .card-log-form textarea { min-height: 56px; }
+  .card-log-form .log-fields { margin: 8px 0; }
+  .card-log-form .panel-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .card-log-form .note-line { margin: 0; }
+  #studio-log-hint { margin-top: -4px; }
+
   .panel label {
     display: block;
     font-weight: 700;
@@ -1373,6 +1398,7 @@
 
     .panel { padding: 14px; }
     button { width: 100%; }
+    button.card-log-open { width: auto; }
 
     /* ...except the note Submit, which sits beside its field and would
        otherwise squeeze it to nothing. */
@@ -1584,6 +1610,9 @@
       Stelling&rsquo;s rooms, once all <span id="studio-check-total">18</span>
       checks have passed as well.</p>
     <p class="studio-counts" id="studio-counts"></p>
+    <p class="note-line" id="studio-log-hint" hidden>To log a ticket against a room from
+      here, sign in on the Audit log first: each card then has a <strong>Log a
+      ticket</strong> button.</p>
     <div id="studio-list"></div>
     <p class="all-clear" id="studio-empty" hidden>No studios have been set up for
       auditing yet.</p>
@@ -5304,6 +5333,7 @@
   var auditProgressEl = document.getElementById("audit-progress");
   var auditStateEl = document.getElementById("audit-studio-state");
   var issueListEl = document.getElementById("issue-list");
+  var studioLogHintEl = document.getElementById("studio-log-hint");
   var issueEmptyEl = document.getElementById("issue-empty");
 
   // Stelling's rooms lead with their priority; the rest of the building is
@@ -5852,13 +5882,120 @@
       ? sum.checked + " of " + checksFor(room).length + " checks done"
       : "audited";
 
+    // Logging a ticket from the card itself, for whoever is signed in to
+    // the audit log (Lewis, 23 Sep): the same record as the form at the
+    // top of the audit log, so it is a ticket everywhere at once.
+    var logHtml = auditIn ? cardLogHtml(room, !!gate) : "";
+
     return '<div class="studio-card' + cls + (sm && sm.common ? " area-card" : "") +
       '" data-room="' + esc(room) + '">' +
       "<h3>" + esc(roomLabel(room)) + " \u2014 " + esc(head) +
       (sum.notHabitable ? ' <span class="tag-nh">Not habitable</span>' : "") + "</h3>" +
       '<p class="studio-meta">' + meta + progress + "</p>" +
-      (items ? "<ul>" + items + "</ul>" : "") + "</div>";
+      (items ? "<ul>" + items + "</ul>" : "") + logHtml + "</div>";
   }
+
+  /* ---- Log a ticket from a studio card (Lewis, 23 Sep) ---- */
+
+  /* While signed in to the audit log every card carries a Log a ticket
+     button; pressed, it opens to the same fields as the form on the audit
+     log, for that room. The cards are rebuilt on every tick and on every
+     record that lands from anyone's phone, so what is typed on a card is
+     read back before each rebuild and put back after it: room -> { text,
+     trade, note }, for the cards with a form open. Signing out shuts them
+     all. */
+  var cardLog = {};
+
+  function cardLogHtml(room, shut) {
+    var st = cardLog[room];
+    var r = esc(room);
+    if (!st) {
+      return '<div class="card-log"><button type="button" class="card-log-open" data-room="' +
+        r + '">Log a ticket</button></div>';
+    }
+    var off = shut ? " disabled" : "";
+    return '<div class="card-log"><div class="card-log-form" data-room="' + r + '">' +
+      '<label for="card-log-text-' + r + '">Log a ticket for ' + esc(roomLabel(room)) + "</label>" +
+      '<textarea class="card-log-text" id="card-log-text-' + r + '" placeholder="' +
+      (shut ? "Add your name and company at the top first" : "e.g. Bathroom door drags on the frame") +
+      '"' + off + ">" + esc(st.text || "") + "</textarea>" +
+      '<div class="log-fields"><div class="field">' +
+      '<label for="card-log-trade-' + r + '">Send to</label>' +
+      '<select class="card-log-trade" id="card-log-trade-' + r + '"' + off + ">" +
+      tradeOptions(knownTrade(st.trade) ? st.trade : UNASSIGNED) + "</select></div></div>" +
+      '<div class="panel-actions">' +
+      '<button type="button" class="card-log-add" data-room="' + r + '"' + off + ">Log it</button>" +
+      '<button type="button" class="card-log-cancel secondary" data-room="' + r + '">Close</button>' +
+      '<span class="note-line card-log-note">' + esc(st.note || "") + "</span></div></div></div>";
+  }
+
+  // What is on the open forms now, before the cards are rebuilt.
+  function captureCardLogs() {
+    var forms = studioListEl.querySelectorAll(".card-log-form");
+    for (var i = 0; i < forms.length; i++) {
+      var room = forms[i].getAttribute("data-room");
+      var st = cardLog[room];
+      if (!st) { continue; }
+      var ta = forms[i].querySelector(".card-log-text");
+      var sel = forms[i].querySelector(".card-log-trade");
+      if (ta) { st.text = ta.value; }
+      if (sel) { st.trade = sel.value; }
+    }
+  }
+
+  function focusCardLog(room) {
+    var ta = studioListEl.querySelector('.card-log-form[data-room="' + room + '"] .card-log-text');
+    if (ta && !ta.disabled) { ta.focus(); }
+  }
+
+  studioListEl.addEventListener("click", function (ev) {
+    var btn = ev.target;
+    if (!btn || !btn.classList || !btn.getAttribute) { return; }
+    var room = btn.getAttribute("data-room");
+    if (!room) { return; }
+    if (btn.classList.contains("card-log-open")) {
+      captureCardLogs();
+      cardLog[room] = { text: "", trade: UNASSIGNED, note: "" };
+      renderStudios();
+      focusCardLog(room);
+      return;
+    }
+    if (btn.classList.contains("card-log-cancel")) {
+      captureCardLogs();
+      delete cardLog[room];
+      renderStudios();
+      return;
+    }
+    if (!btn.classList.contains("card-log-add")) { return; }
+    captureCardLogs();
+    var st = cardLog[room];
+    if (!st) { return; }
+    if (!identified()) {
+      st.note = "Add your name and company at the top first.";
+      renderStudios();
+      return;
+    }
+    var body = (st.text || "").trim();
+    if (!body) {
+      st.note = "Say what needs doing.";
+      renderStudios();
+      focusCardLog(room);
+      return;
+    }
+    var to = knownTrade(st.trade) ? st.trade : UNASSIGNED;
+    st.text = "";
+    st.trade = UNASSIGNED;
+    st.note = "Logged under " + tradeName(to) + ", with your name on it. It is on the list now.";
+    // The rebuild reads the form back before drawing, so the fields are
+    // cleared on the card too, not only here.
+    var form = studioListEl.querySelector('.card-log-form[data-room="' + room + '"]');
+    if (form) {
+      form.querySelector(".card-log-text").value = "";
+      form.querySelector(".card-log-trade").value = UNASSIGNED;
+    }
+    // postEntry redraws the cards: the ticket is on this one at once.
+    postEntry("issue:" + room, body + (to === UNASSIGNED ? "" : " [to:" + to + "]"));
+  });
 
   // Every studio on the audit shows here, not just the ones with something
   // against them: a studio with nothing on it is a fact worth seeing. Once
@@ -6028,6 +6165,7 @@
     // the trade list changes them all. Build them when they are being
     // looked at, not on every tick behind a hidden view.
     if (!studioViewOn) { return; }
+    captureCardLogs();
 
     var state = auditState();
     var issues = studioIssues();
@@ -6160,6 +6298,7 @@
     studioCountsEl.textContent = counts.join(" \u00b7 ");
 
     studioListEl.innerHTML = html;
+    studioLogHintEl.hidden = auditIn || !rooms.length;
 
     // A details toggle does not bubble, so each group gets its own listener.
     var boxes = studioListEl.querySelectorAll(".date-group");
@@ -6223,6 +6362,8 @@
     auditLoginEl.hidden = on;
     auditBodyEl.hidden = !on;
     if (on) { lastChecksHtml = null; fillStudios(); loadDrafts(); renderAudit(); }
+    else { cardLog = {}; }
+    renderStudios();
   }
 
   document.getElementById("audit-in").addEventListener("click", function () {

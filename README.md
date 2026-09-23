@@ -355,6 +355,16 @@ it is a ticket everywhere at once: a row under its trade on By trade with
 the room's audit log, and a count on By floor, and every other device sees
 it as it arrives. The room picked is remembered on the device.
 
+The same can be done from the room itself on By studio (23 Sep): while
+signed in to the audit log, every card there, corridors and twodios
+included, carries a **Log a ticket** button that opens to the same fields
+for that room, so a walk round the building can be logged card by card
+without going back to the audit log to pick the room each time. Signed out,
+the buttons are not there and a line under the counts says to sign in
+first. The cards are rebuilt on every tick and on every record that lands
+from anyone's phone, so what is typed on a card is read back before each
+rebuild and put back after it; signing out shuts every open form.
+
 ## Ticking, everywhere
 
 Every job can be ticked and unticked from wherever it is shown: its row in
