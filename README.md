@@ -415,7 +415,15 @@ or area, recorded as `note:<room>`, and the list has a **Show** filter:
 all, the tower-wide ones, one floor, or the corridors, stairs and twodios,
 remembered on the device. Each
 comment has an **Edit** button, the same `edit:<id>` record as a ticket's
-edit, with the original kept and the edit marked with who and when.
+edit, with the original kept and the edit marked with who and when. The
+editor also has **Tower** and **About**: a comment can be moved to another
+tower, or made about a room or area of that tower (the other towers' rooms
+and corridors are listed from the room lists), and the move is its own
+record, `retag:<id>` with `tower:2` or `note:CW215` as its body; the
+newest move says where the comment is, it leaves this tower's list for
+that one's, and it reads "moved here" with who and when where it lands.
+Entered by shows moves as such, on the tower the comment came from and
+the one it went to.
 
 ## Cost recovery from iKew
 

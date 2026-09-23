@@ -1657,6 +1657,7 @@
         <select id="comment-floor"></select>
       </div>
     </div>
+    <p class="note-line" id="comment-flash" hidden></p>
     <ul id="comment-list"></ul>
     <p class="empty" id="comment-empty">No comments yet.</p>
     <div id="comment-form">
@@ -4445,15 +4446,37 @@
   // Tower 1's, which is every comment made before there was a Tower 2.
   var TOWER_TAG = "tower:" + TOWER_N;
 
-  // A comment about one room or area carries it as note:<room> (Lewis, 23
-  // Sep), so the list can be narrowed to a floor; the rest are the
-  // tower's, as before.
+  /* A comment about one room or area carries it as note:<room> (Lewis, 23
+     Sep), so the list can be narrowed to a floor; the rest are the
+     tower's, as before. A comment moved to another tower or room keeps
+     its record and gains a retag:<id> record whose body is where it now
+     belongs, tower:2 or note:CW215; the newest move wins. */
+  function commentRetags() {
+    var all = comments.concat(queuedComments);
+    var out = {};
+    for (var i = 0; i < all.length; i++) {
+      var c = all[i];
+      if (!c || !c.snag_id || String(c.snag_id).indexOf("retag:") !== 0) { continue; }
+      var id = String(c.snag_id).slice(6);
+      var prior = out[id];
+      if (prior && String(prior.at || "") > String(c.created_at || "")) { continue; }
+      out[id] = { tag: String(c.body || "").trim(), by: c.author || "", at: c.created_at || "" };
+    }
+    return out;
+  }
+
+  function effectiveTag(c, retags) {
+    var r = retags ? retags[c.id] : null;
+    return r ? r.tag : (c.snag_id ? String(c.snag_id) : "");
+  }
+
   function generalOnly(list) {
     var out = [];
+    var retags = commentRetags();
     for (var i = 0; i < list.length; i++) {
       if (!list[i]) { continue; }
-      var tag = list[i].snag_id;
-      if (tag && tag.indexOf("note:") === 0) {
+      var tag = effectiveTag(list[i], retags);
+      if (tag.indexOf("note:") === 0) {
         if (roomInTower(tag.slice(5))) { out.push(list[i]); }
         continue;
       }
@@ -4462,9 +4485,82 @@
     return out;
   }
 
-  function commentRoomOf(c) {
-    var tag = c && c.snag_id ? String(c.snag_id) : "";
+  function commentRoomOf(c, retags) {
+    var tag = effectiveTag(c, retags || commentRetags());
     return tag.indexOf("note:") === 0 ? tag.slice(5) : "";
+  }
+
+  // What a room or area of any tower is called: this tower's from its own
+  // list, another tower's from the shape of its id.
+  function anyRoomLabel(room) {
+    if (COMMON_BY_ID[room]) { return roomLabel(room); }
+    var m;
+    if ((m = /^T[1-4]-CORRIDOR-(\d)$/.exec(room))) { return "Floor " + m[1] + " corridor"; }
+    if (/^T[1-4]-STAIRS$/.test(room)) { return "Stair core"; }
+    if ((m = /^T2-TWODIO-(\d+)$/.exec(room))) { return "CW" + m[1]; }
+    return room;
+  }
+
+  // The rooms and areas of a tower a comment can be about, as options.
+  function commentAboutOptions(tower, sel) {
+    var html = '<option value=""' + (!sel ? " selected" : "") + ">Tower " + tower + " as a whole</option>";
+    var rooms = "", areas = "";
+    var i;
+    if (tower === TOWER_N) {
+      var list = AUDIT_STUDIOS.slice();
+      list.sort(function (a, b) {
+        if (!!a.common !== !!b.common) { return a.common ? 1 : -1; }
+        var la = roomLabel(a.room), lb = roomLabel(b.room);
+        return la < lb ? -1 : (la > lb ? 1 : 0);
+      });
+      for (i = 0; i < list.length; i++) {
+        var st = list[i];
+        var opt = '<option value="' + esc(st.room) + '"' + (st.room === sel ? " selected" : "") + ">" +
+          esc(roomLabel(st.room)) + (st.floor ? " \u2014 " + esc(st.floor) : "") + "</option>";
+        if (st.common) { areas += opt; } else { rooms += opt; }
+      }
+    } else {
+      var nums = (TOWER_ROOMS[tower] || []).slice().sort();
+      var floors = {};
+      var twodios = {};
+      for (i = 0; i < nums.length; i++) {
+        rooms += '<option value="' + esc(nums[i]) + '"' + (nums[i] === sel ? " selected" : "") + ">" + esc(nums[i]) + "</option>";
+        var d = nums[i].charAt(2);
+        if (d !== "0") { floors[d] = true; }
+        var tw = /^CW(\d{3})[AB]$/.exec(nums[i]);
+        if (tw && tower === 2) { twodios[tw[1]] = true; }
+      }
+      var ids = [];
+      for (var f = 1; f <= 5; f++) { if (floors[String(f)]) { ids.push("T" + tower + "-CORRIDOR-" + f); } }
+      ids.push("T" + tower + "-STAIRS");
+      var tk = Object.keys(twodios).sort();
+      for (i = 0; i < tk.length; i++) { ids.push("T2-TWODIO-" + tk[i]); }
+      for (i = 0; i < ids.length; i++) {
+        areas += '<option value="' + esc(ids[i]) + '"' + (ids[i] === sel ? " selected" : "") + ">" + esc(anyRoomLabel(ids[i])) + "</option>";
+      }
+    }
+    return html + '<optgroup label="Rooms">' + rooms + "</optgroup>" +
+      (areas ? '<optgroup label="Corridors, stairs and twodios">' + areas + "</optgroup>" : "");
+  }
+
+  function commentTowerOptions(sel) {
+    var html = "";
+    for (var t = 1; t <= 4; t++) {
+      html += '<option value="' + t + '"' + (t === sel ? " selected" : "") + ">Tower " + t + "</option>";
+    }
+    return html;
+  }
+
+  // Where a comment is: its tower, and its room if it has one.
+  function commentWhere(c, retags) {
+    var tag = effectiveTag(c, retags);
+    if (tag.indexOf("note:") === 0) {
+      var room = tag.slice(5);
+      var cm = /^T([1-4])-/.exec(room);
+      return { tower: cm ? parseInt(cm[1], 10) : (ROOM_TOWER[room] || 1), room: room };
+    }
+    var tm = /^tower:([1-4])$/.exec(tag);
+    return { tower: tm ? parseInt(tm[1], 10) : 1, room: "" };
   }
 
   var commentEdit = null;    // { id, text, note } while a comment is being edited
@@ -4473,10 +4569,17 @@
   var commentRoomEl = document.getElementById("comment-room");
   var COMMENT_FLOOR_KEY = "cw-tower" + TOWER_N + "-comment-floor";
 
+  var commentFlash = "";
+  var commentFlashEl = document.getElementById("comment-flash");
+
   function captureCommentEdit() {
     if (!commentEdit) { return; }
     var ta = listEl.querySelector(".comment-edit-text");
     if (ta && ta.getAttribute("data-id") === commentEdit.id) { commentEdit.text = ta.value; }
+    var tw = listEl.querySelector(".comment-edit-tower");
+    if (tw && tw.getAttribute("data-id") === commentEdit.id) { commentEdit.tower = parseInt(tw.value, 10) || commentEdit.tower; }
+    var ab = listEl.querySelector(".comment-edit-about");
+    if (ab && ab.getAttribute("data-id") === commentEdit.id) { commentEdit.room = ab.value; }
   }
 
   function commentShown(room) {
@@ -4491,7 +4594,10 @@
     var confirmed = generalOnly(comments);
     var all = confirmed.concat(generalOnly(queuedComments));
     var edits = issueEdits();
+    var retags = commentRetags();
     var open = identified();
+    commentFlashEl.textContent = commentFlash;
+    commentFlashEl.hidden = !commentFlash;
     if (!all.length) {
       listEl.innerHTML = "";
       emptyEl.textContent = "No comments yet.";
@@ -4502,7 +4608,7 @@
     var shown = 0;
     for (var c = 0; c < all.length; c++) {
       var item = all[c];
-      var room = commentRoomOf(item);
+      var room = commentRoomOf(item, retags);
       if (!commentShown(room)) { continue; }
       shown++;
       var unsent = c >= confirmed.length && live;
@@ -4519,12 +4625,25 @@
         var ew = shortDate(ed.at);
         if (ew) { meta += " \u00b7 " + esc(ew); }
       }
+      var rt = retags[item.id];
+      if (rt && rt.tag !== (item.snag_id || "")) {
+        meta += " \u00b7 moved here" + (rt.by && rt.by !== item.author ? " by " + esc(rt.by) : "");
+        var rw = shortDate(rt.at);
+        if (rw) { meta += " \u00b7 " + esc(rw); }
+      }
       if (unsent) { meta += " \u00b7 sending\u2026"; }
       var id = esc(item.id);
       if (commentEdit && commentEdit.id === item.id) {
         html += '<li class="editing"><span class="c-meta">' + meta + "</span>" +
           '<textarea class="comment-edit-text" data-id="' + id + '" aria-label="Edit this comment">' +
           esc(commentEdit.text) + "</textarea>" +
+          '<div class="log-fields">' +
+          '<div class="field"><label for="comment-edit-tower-' + id + '">Tower</label>' +
+          '<select class="comment-edit-tower" id="comment-edit-tower-' + id + '" data-id="' + id + '">' +
+          commentTowerOptions(commentEdit.tower) + "</select></div>" +
+          '<div class="field"><label for="comment-edit-about-' + id + '">About</label>' +
+          '<select class="comment-edit-about" id="comment-edit-about-' + id + '" data-id="' + id + '">' +
+          commentAboutOptions(commentEdit.tower, commentEdit.room) + "</select></div></div>" +
           '<div class="panel-actions">' +
           '<button type="button" class="comment-save" data-id="' + id + '">Save</button>' +
           '<button type="button" class="comment-cancel secondary" data-id="' + id + '">Cancel</button>' +
@@ -4567,7 +4686,9 @@
       var cur = findComment(id);
       if (!cur) { return; }
       var ed = issueEdits()[id];
-      commentEdit = { id: id, text: ed ? ed.body : (cur.body || ""), note: "" };
+      var at = commentWhere(cur, commentRetags());
+      commentEdit = { id: id, text: ed ? ed.body : (cur.body || ""), tower: at.tower, room: at.room, note: "" };
+      commentFlash = "";
       renderComments();
       var ta = listEl.querySelector(".comment-edit-text");
       if (ta) { ta.focus(); }
@@ -4585,10 +4706,40 @@
     if (!identified()) { commentEdit.note = "Add your name and company at the top first."; renderComments(); return; }
     if (!text) { commentEdit.note = "Say something, or cancel."; renderComments(); return; }
     var was = findComment(id);
+    if (!was) { commentEdit = null; renderComments(); return; }
     var wasEd = issueEdits()[id];
+    var tower = commentEdit.tower >= 1 && commentEdit.tower <= 4 ? commentEdit.tower : TOWER_N;
+    var room = commentEdit.room || "";
+    // A room named must be one of that tower's.
+    if (room) {
+      var rm = /^T([1-4])-/.exec(room);
+      var rt = rm ? parseInt(rm[1], 10) : (ROOM_TOWER[room] || 0);
+      if (rt !== tower) { room = ""; }
+    }
+    var wantTag = room ? "note:" + room : "tower:" + tower;
+    var now = commentWhere(was, commentRetags());
+    var nowTag = now.room ? "note:" + now.room : "tower:" + now.tower;
     commentEdit = null;
-    if (!was || (wasEd ? wasEd.body : (was.body || "")) === text) { renderComments(); return; }
-    postEntry("edit:" + id, text);
+    var changed = false;
+    if ((wasEd ? wasEd.body : (was.body || "")) !== text) { postEntry("edit:" + id, text); changed = true; }
+    if (wantTag !== nowTag) {
+      postEntry("retag:" + id, wantTag);
+      changed = true;
+      commentFlash = tower !== TOWER_N
+        ? "Moved to Tower " + tower + (room ? ", " + anyRoomLabel(room) : "") + ". It is on that tower\u2019s page now."
+        : (room ? "Now about " + anyRoomLabel(room) + "." : "Now about the tower as a whole.");
+    }
+    if (!changed) { commentFlash = ""; }
+    renderComments();
+  });
+
+  // Picking another tower in the editor offers that tower's rooms.
+  listEl.addEventListener("change", function (ev) {
+    var sel = ev.target;
+    if (!sel || !sel.classList || !sel.classList.contains("comment-edit-tower")) { return; }
+    captureCommentEdit();
+    if (!commentEdit) { return; }
+    commentEdit.room = "";
     renderComments();
   });
 
@@ -5040,6 +5191,7 @@
     if (!body) { commentText.focus(); return; }
     var about = commentRoomEl.value;
     if (about && !STUDIO_BY_ROOM[about]) { about = ""; }
+    commentFlash = "";
 
     var entry = {
       id: uuid(),
@@ -6100,8 +6252,16 @@
     var out = [];
     var all = comments.concat(queuedComments);
     var byId = {};
+    var retags = commentRetags();
     var i, c, k;
     for (i = 0; i < all.length; i++) { c = all[i]; if (c && c.id) { byId[c.id] = c; } }
+
+    // A comment's home, after any move, on this tower or not.
+    function commentHome(src) {
+      var et = effectiveTag(src, retags);
+      if (et.indexOf("note:") === 0) { return roomInTower(et.slice(5)) ? { here: true, room: et.slice(5) } : { here: false }; }
+      return { here: et === TOWER_TAG || (!et && TOWER_N === 1), room: "" };
+    }
 
     function push(at, room, what, text) {
       if (room && !onAuditFloor(room)) { return; }
@@ -6159,23 +6319,38 @@
           room = otag.slice(6);
           if (!roomInTower(room)) { continue; }
           push(c.created_at, room, "Edited a ticket", body);
-        } else if (otag.indexOf("note:") === 0) {
-          room = otag.slice(5);
-          if (!roomInTower(room)) { continue; }
-          push(c.created_at, room, "Edited a comment", body);
-        } else if (otag === TOWER_TAG || (!otag && TOWER_N === 1)) {
-          push(c.created_at, "", "Edited a comment", body);
+        } else if (otag.indexOf("cost:") !== 0 && otag.indexOf("audit:") !== 0) {
+          var eh = commentHome(src);
+          if (!eh.here) { continue; }
+          push(c.created_at, eh.room, "Edited a comment", body);
         }
+      } else if (tag.indexOf("retag:") === 0) {
+        src = byId[tag.slice(6)];
+        if (!src) { continue; }
+        var to = body.trim();
+        var toRoom = to.indexOf("note:") === 0 ? to.slice(5) : "";
+        var toTower = toRoom ? (/^T([1-4])-/.test(toRoom) ? parseInt(/^T([1-4])-/.exec(toRoom)[1], 10) : (ROOM_TOWER[toRoom] || 1)) : (parseInt((/^tower:([1-4])$/.exec(to) || [])[1], 10) || 0);
+        var hereNow = toRoom ? roomInTower(toRoom) : toTower === TOWER_N;
+        var wasHere = (function () {
+          var ot = src.snag_id ? String(src.snag_id) : "";
+          if (ot.indexOf("note:") === 0) { return roomInTower(ot.slice(5)); }
+          return ot === TOWER_TAG || (!ot && TOWER_N === 1);
+        })();
+        if (!hereNow && !wasHere) { continue; }
+        var ed2 = issueEdits()[src.id];
+        push(c.created_at, hereNow ? toRoom : "", "Moved a comment to " +
+          (toRoom ? anyRoomLabel(toRoom) + ", Tower " + toTower : "Tower " + toTower),
+          ed2 ? ed2.body : String(src.body || ""));
       } else if (tag === COST_TAG) {
         push(c.created_at, "", "Logged a cost to recover", body);
       } else if (tag.indexOf(COST_EDIT) === 0) {
         push(c.created_at, "", "Edited a cost to recover", body);
-      } else if (tag.indexOf("note:") === 0) {
-        room = tag.slice(5);
-        if (!roomInTower(room)) { continue; }
-        push(c.created_at, room, "Commented", body);
-      } else if (tag === TOWER_TAG || (!tag && TOWER_N === 1)) {
-        push(c.created_at, "", "Commented", body);
+      } else if (!tag || tag.indexOf("note:") === 0 || tag.indexOf("tower:") === 0) {
+        // A general comment, wherever it was posted: it counts here if
+        // this tower is where it is now.
+        var ch = commentHome(c);
+        if (!ch.here) { continue; }
+        push(c.created_at, ch.room, "Commented", body);
       } else if (index[tag]) {
         push(c.created_at, index[tag].room, "Noted on " + index[tag].action, body);
       }
