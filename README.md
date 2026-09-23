@@ -395,7 +395,8 @@ At the bottom of the signed-in audit log, **Entered by** lists everything
 one person has entered or changed on this tower, newest first: checks
 passed and failed (with the trade, the reason and the habitable answer),
 tickets logged, tickets marked done or reopened, edits to tickets and
-comments, ticks and unticks, trade moves, comments and costs to recover.
+comments, ticks and unticks, trade moves and comments; costs to recover
+stay on their own tab.
 A person is the author on the records, the name and company typed at the
 top of the page when the entry was made, not the audit login, which is
 only a gate; the person picker lists everyone on the records, with the
@@ -455,7 +456,12 @@ and the time on it, newest first. Each entry is a comment record tagged
 `cost:ikew` with the text as its body, append-only like everything else,
 and the tag names no tower, so it is one list, the same on every tower's
 page, and every device sees it as it lands. It is not a job: nothing from
-it appears on a trade list, a card or a summary.
+it appears on a trade list, a card or a summary. From 23 Sep a cost is
+for one tower or the whole site: **Tower** on the form (the page's own
+tower to start) and in the editor, kept as a `retag:<id>` record whose
+body is `tower:2` or `site`, the newest winning, none meaning the whole
+site; the list has a **Show** filter by tower. Costs are on this tab
+only: Entered by does not list them (Lewis, 23 Sep).
 
 Each entry has an **Edit** button under it: the edit is a new record,
 `cost:ikew:edit:<id of the entry>` with the new text as its body, and the
@@ -463,6 +469,11 @@ newest edit is what the list shows, with "edited" and who and when against
 it. The original text stays in the record, since nothing here is ever
 overwritten or taken away. Text typed into the editor survives the list
 being redrawn under it by an entry landing from another phone.
+
+## Gladious
+
+A trade with nothing on it yet (23 Sep), like Marius: on the filter, the
+Trade control and Send to, ready for tickets to be moved or logged to it.
 
 ## Ticking, everywhere
 

@@ -1818,9 +1818,9 @@
         <div class="panel">
           <p class="note-line">Everything this person has entered or changed on this
             tower, newest first: checks passed and failed, tickets logged, edits,
-            ticks, moves and comments, and costs to recover. A person is the name
-            and company typed at the top of the page when the entry was made. The
-            Floor filter above narrows this list too.</p>
+            ticks, moves and comments. Costs to recover are on their own tab. A
+            person is the name and company typed at the top of the page when the
+            entry was made. The Floor filter above narrows this list too.</p>
           <label for="entered-who">Person</label>
           <select id="entered-who"></select>
           <div class="panel-actions entered-bulk">
@@ -1852,6 +1852,12 @@
         <p class="note-line">Free text: what it was, where, and what it has cost us.
           It goes on the list with your name and the time on it, and everyone
           signed in sees the same list on every tower&rsquo;s page.</p>
+        <div class="log-fields">
+          <div class="field">
+            <label for="cost-tower">Tower</label>
+            <select id="cost-tower"></select>
+          </div>
+        </div>
         <label for="cost-text">What we need to recover</label>
         <textarea id="cost-text" placeholder="e.g. CW215 heat sensor cover missing, replaced by Stelling"></textarea>
         <div class="panel-actions">
@@ -1859,6 +1865,12 @@
           <span class="note-line" id="cost-note"></span>
         </div>
       </section>
+      <div class="log-fields comment-filter">
+        <div class="field">
+          <label for="cost-show">Show</label>
+          <select id="cost-show"></select>
+        </div>
+      </div>
       <p class="studio-counts" id="cost-counts"></p>
       <ul id="cost-list"></ul>
       <p class="all-clear" id="cost-empty" hidden>Nothing logged yet.</p>
@@ -2317,6 +2329,14 @@
   ALL_SECTIONS.push({
     key: "marius",
     title: "Marius",
+    col3: "Source",
+    rows: []
+  });
+
+  // Gladious (Lewis, 23 Sep): the same, a list with nothing on it yet.
+  ALL_SECTIONS.push({
+    key: "gladious",
+    title: "Gladious",
     col3: "Source",
     rows: []
   });
@@ -3471,13 +3491,9 @@
   // Unassigned has no trade title to look up, and a chip drawn without its
   // key could never be struck through (Lewis, 22 Sep).
   function roomCellsByKey(key, rooms) {
-
-    // A sweep covering the whole building would print hundreds of room
-    // numbers here and bury every other trade. The count says it better.
-    if (rooms.length > 30) {
-      return esc(rooms.length + " rooms \u2014 see the section below");
-    }
-
+    // Every room, however many (Lewis, 23 Sep): the numbers are what the
+    // trades work from, and the cap that swapped them for a count hid the
+    // big trades' rooms.
     var cells = [];
     for (var r = 0; r < rooms.length; r++) {
       cells.push(
@@ -4506,6 +4522,10 @@
     var retags = commentRetags();
     for (var i = 0; i < list.length; i++) {
       if (!list[i]) { continue; }
+      // Only a comment: a cost or a ticket given a tower or room by a
+      // move record is not one, whatever its move says.
+      var orig = list[i].snag_id ? String(list[i].snag_id) : "";
+      if (orig && orig.indexOf("tower:") !== 0 && orig.indexOf("note:") !== 0) { continue; }
       var tag = effectiveTag(list[i], retags);
       if (tag.indexOf("note:") === 0) {
         if (roomInTower(tag.slice(5))) { out.push(list[i]); }
@@ -5852,6 +5872,7 @@
     renderStudios();
     renderCosts();
     render();
+    return entry;
   }
 
   function setCheck(room, checkId, pass, comment, trade, hab, opt) {
@@ -6381,10 +6402,11 @@
 
     var rid = "";      // the record each entry comes from, for the editor
     var issueId = "";  // the ticket an entry is about, where it is about one
+    var costId = "";   // the cost an entry is about, where it is about one
     function push(at, room, what, text) {
       if (room && !onAuditFloor(room)) { return; }
       if (!room && auditFloor) { return; }
-      out.push({ at: at || "", room: room || "", what: what, text: text || "", rid: rid, issue: issueId });
+      out.push({ at: at || "", room: room || "", what: what, text: text || "", rid: rid, issue: issueId, cost: costId });
     }
 
     for (i = 0; i < all.length; i++) {
@@ -6392,6 +6414,7 @@
       if (!c || canon(c.author, cmap) !== name) { continue; }
       rid = c.id || "";
       issueId = "";
+      costId = "";
       var tag = c.snag_id ? String(c.snag_id) : "";
       var body = String(c.body || "");
       var room, src, otag;
@@ -6451,6 +6474,7 @@
         src = byId[tag.slice(6)];
         if (!src) { continue; }
         var to = body.trim();
+        if (src.snag_id === COST_TAG) { continue; }
         if (to.indexOf("issue:") === 0) {
           // A ticket moved to another room or tower: on the list of the
           // tower it left and the one it went to.
@@ -6476,10 +6500,9 @@
         push(c.created_at, hereNow ? toRoom : "", "Moved a comment to " +
           (toRoom ? anyRoomLabel(toRoom) + ", Tower " + toTower : "Tower " + toTower),
           ed2 ? ed2.body : String(src.body || ""));
-      } else if (tag === COST_TAG) {
-        push(c.created_at, "", "Logged a cost to recover", body);
-      } else if (tag.indexOf(COST_EDIT) === 0) {
-        push(c.created_at, "", "Edited a cost to recover", body);
+      } else if (tag === COST_TAG || tag.indexOf(COST_EDIT) === 0) {
+        // Costs to recover are on their own tab, not here (Lewis, 23 Sep).
+        continue;
       } else if (!tag || tag.indexOf("note:") === 0 || tag.indexOf("tower:") === 0) {
         // A general comment, wherever it was posted: it counts here if
         // this tower is where it is now.
@@ -7379,6 +7402,23 @@
   var costEmptyEl = document.getElementById("cost-empty");
 
   // Newest first: the one just logged is the one being looked for.
+  /* A cost is for one tower or the whole site (Lewis, 23 Sep): a
+     retag:<id> record whose body is tower:2 says which, site says the
+     whole site, and the newest wins; none means the whole site. */
+  function costTowerOf(c, retags) {
+    var r = retags ? retags[c.id] : null;
+    var tm = r ? /^tower:([1-4])$/.exec(r.tag) : null;
+    return tm ? parseInt(tm[1], 10) : 0;
+  }
+
+  function costTowerOptions(sel) {
+    var html = '<option value="0"' + (!sel ? " selected" : "") + ">Whole site</option>";
+    for (var t = 1; t <= 4; t++) {
+      html += '<option value="' + t + '"' + (sel === t ? " selected" : "") + ">Tower " + t + "</option>";
+    }
+    return html;
+  }
+
   function costEntries() {
     var confirmed = {};
     var i;
@@ -7386,6 +7426,7 @@
       if (comments[i] && comments[i].id) { confirmed[comments[i].id] = true; }
     }
     var all = comments.concat(queuedComments);
+    var retags = commentRetags();
     var out = [];
     var edits = {};
     for (i = 0; i < all.length; i++) {
@@ -7393,7 +7434,7 @@
       if (!c || !c.snag_id) { continue; }
       if (c.snag_id === COST_TAG) {
         out.push({ id: c.id, body: c.body || "", author: c.author || "", at: c.created_at || "",
-          unsent: !confirmed[c.id], edited: null });
+          unsent: !confirmed[c.id], edited: null, tower: costTowerOf(c, retags), moved: retags[c.id] || null });
       } else if (c.snag_id.indexOf(COST_EDIT) === 0) {
         var of = c.snag_id.slice(COST_EDIT.length);
         var prior = edits[of];
@@ -7417,6 +7458,25 @@
     if (!costEdit) { return; }
     var ta = costListEl.querySelector(".cost-edit-text");
     if (ta && ta.getAttribute("data-id") === costEdit.id) { costEdit.text = ta.value; }
+    var tw = costListEl.querySelector(".cost-edit-tower");
+    if (tw && tw.getAttribute("data-id") === costEdit.id) { costEdit.tower = parseInt(tw.value, 10) || 0; }
+  }
+
+  var costTowerEl = document.getElementById("cost-tower");
+  var costShowEl = document.getElementById("cost-show");
+  var costShow = "all";   // "all", "site", or a tower number as a string
+  costTowerEl.innerHTML = costTowerOptions(TOWER_N);
+  costShowEl.innerHTML = '<option value="all">All towers</option><option value="site">Whole site only</option>' +
+    '<option value="1">Tower 1</option><option value="2">Tower 2</option><option value="3">Tower 3</option><option value="4">Tower 4</option>';
+  costShowEl.addEventListener("change", function () {
+    costShow = costShowEl.value;
+    renderCosts();
+  });
+
+  function costShown(e) {
+    if (costShow === "all") { return true; }
+    if (costShow === "site") { return !e.tower; }
+    return String(e.tower) === costShow;
   }
 
   function renderCosts() {
@@ -7424,10 +7484,13 @@
     costsBodyEl.hidden = !auditIn;
     if (!auditIn) { return; }
     captureCostEdit();
-    var list = costEntries();
+    var every = costEntries();
+    var list = [];
+    for (var f = 0; f < every.length; f++) { if (costShown(every[f])) { list.push(every[f]); } }
     costCountsEl.textContent = list.length
-      ? list.length + (list.length === 1 ? " cost logged" : " costs logged") + ", newest first"
-      : "";
+      ? list.length + (list.length === 1 ? " cost logged" : " costs logged") +
+        (list.length !== every.length ? " of " + every.length : "") + ", newest first"
+      : (every.length ? "None of the " + every.length + " costs is " + (costShow === "site" ? "for the whole site" : "for Tower " + costShow) + "." : "");
     var html = "";
     var open = identified();
     for (var i = 0; i < list.length; i++) {
@@ -7435,6 +7498,7 @@
       var meta = esc(e.author || "Someone");
       var when = shortDate(e.at);
       if (when) { meta += " \u00b7 " + esc(when); }
+      meta += " \u00b7 " + (e.tower ? "Tower " + e.tower : "Whole site");
       if (e.edited) {
         meta += " \u00b7 edited" + (e.edited.by && e.edited.by !== e.author ? " by " + esc(e.edited.by) : "");
         var ew = shortDate(e.edited.at);
@@ -7446,6 +7510,9 @@
         html += '<li class="editing"><span class="note-who">' + meta + "</span>" +
           '<textarea class="cost-edit-text" data-id="' + id + '" aria-label="Edit this cost">' +
           esc(costEdit.text) + "</textarea>" +
+          '<div class="log-fields"><div class="field"><label for="cost-edit-tower-' + id + '">Tower</label>' +
+          '<select class="cost-edit-tower" id="cost-edit-tower-' + id + '" data-id="' + id + '">' +
+          costTowerOptions(costEdit.tower) + "</select></div></div>" +
           '<div class="panel-actions">' +
           '<button type="button" class="cost-save" data-id="' + id + '">Save</button>' +
           '<button type="button" class="cost-cancel secondary" data-id="' + id + '">Cancel</button>' +
@@ -7458,7 +7525,7 @@
         (open ? "" : " disabled") + ">Edit</button></span></li>";
     }
     costListEl.innerHTML = html;
-    costEmptyEl.hidden = list.length > 0;
+    costEmptyEl.hidden = every.length > 0;
   }
 
   costListEl.addEventListener("click", function (ev) {
@@ -7472,7 +7539,7 @@
       list = costEntries();
       for (i = 0; i < list.length; i++) { if (list[i].id === id) { cur = list[i]; } }
       if (!cur) { return; }
-      costEdit = { id: id, text: cur.body, note: "" };
+      costEdit = { id: id, text: cur.body, tower: cur.tower, note: "" };
       renderCosts();
       var ta = costListEl.querySelector(".cost-edit-text");
       if (ta) { ta.focus(); }
@@ -7491,9 +7558,13 @@
     if (!text) { costEdit.note = "Say what the cost is, or cancel."; renderCosts(); return; }
     list = costEntries();
     for (i = 0; i < list.length; i++) { if (list[i].id === id) { cur = list[i]; } }
+    var tw = costEdit.tower >= 1 && costEdit.tower <= 4 ? costEdit.tower : 0;
     costEdit = null;
-    if (!cur || cur.body === text) { renderCosts(); return; }
-    postEntry(COST_EDIT + id, text);
+    if (!cur) { renderCosts(); return; }
+    var changed = false;
+    if (cur.body !== text) { postEntry(COST_EDIT + id, text); changed = true; }
+    if (tw !== cur.tower) { postEntry("retag:" + id, tw ? "tower:" + tw : "site"); changed = true; }
+    if (!changed) { renderCosts(); }
   });
 
   function costGate() {
@@ -7512,8 +7583,10 @@
     if (!auditIn) { return; }
     if (!body) { costNoteEl.textContent = "Say what the cost is."; costTextEl.focus(); return; }
     costTextEl.value = "";
-    postEntry(COST_TAG, body);
-    costNoteEl.textContent = "Logged, with your name on it.";
+    var tw = parseInt(costTowerEl.value, 10) || 0;
+    var made = postEntry(COST_TAG, body);
+    if (tw >= 1 && tw <= 4) { postEntry("retag:" + made.id, "tower:" + tw); }
+    costNoteEl.textContent = "Logged" + (tw ? " for Tower " + tw : " for the whole site") + ", with your name on it.";
   });
 
   document.getElementById("costs-to-audit").addEventListener("click", function () {
