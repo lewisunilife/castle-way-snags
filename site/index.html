@@ -770,6 +770,20 @@
   }
 
   #issue-list li.is-done { border-left-color: var(--live); }
+
+  /* Cost recovery from iKew (23 Sep): a free-text log, newest first. */
+  #cost-list { list-style: none; margin: 16px 0 0; padding: 0; }
+  #cost-list li {
+    border-left: 3px solid var(--ink);
+    padding: 2px 0 2px 12px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  #cost-list li.unsent { border-left-style: dashed; }
+  #cost-list .note-who { display: block; }
+  .cost-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+  #costs-locked .note-line { margin-top: 0; }
   #issue-list li.is-done .note-body { text-decoration: line-through; color: var(--muted); }
   #issue-list .note-btn { margin-top: 4px; }
 
@@ -1093,7 +1107,7 @@
   .note-btn:hover { border-color: var(--tick); opacity: 1; }
 
   .panel { border: 1px solid var(--rule); padding: 18px; }
-  #log-panel { border-width: 2px; border-color: var(--ink); margin: 12px 0 28px; }
+  #log-panel, #cost-panel { border-width: 2px; border-color: var(--ink); margin: 12px 0 28px; }
   .log-head { margin: 0 0 6px; font-size: 18px; }
   .log-fields { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-bottom: 12px; }
   .log-fields .field { min-width: 220px; flex: 1 1 220px; }
@@ -1494,6 +1508,7 @@
     <button type="button" class="view-btn" data-view="studio">By studio</button>
     <button type="button" class="view-btn" data-view="floors">By floor</button>
     <button type="button" class="view-btn" data-view="audit">Audit log</button>
+    <button type="button" class="view-btn" data-view="costs">Cost recovery</button>
   </nav>
 
   <div id="controls">
@@ -1694,6 +1709,34 @@
         <ul id="issue-list"></ul>
         <p class="empty" id="issue-empty">No issues logged against this studio.</p>
       </div>
+    </div>
+  </div>
+
+  <div id="view-costs" hidden>
+    <h2>Cost recovery from iKew</h2>
+    <div id="costs-locked" class="panel">
+      <p class="note-line">Costs to recover from iKew are kept behind the audit
+        sign-in: sign in on the Audit log to see the list and add to it.</p>
+      <div class="panel-actions">
+        <button type="button" id="costs-to-audit" class="secondary">Go to the sign-in</button>
+      </div>
+    </div>
+    <div id="costs-body" hidden>
+      <section class="panel log-panel" id="cost-panel">
+        <h2 class="log-head">Log a cost to recover</h2>
+        <p class="note-line">Free text: what it was, where, and what it has cost us.
+          It goes on the list with your name and the time on it, and everyone
+          signed in sees the same list on every tower&rsquo;s page.</p>
+        <label for="cost-text">What we need to recover</label>
+        <textarea id="cost-text" placeholder="e.g. CW215 heat sensor cover missing, replaced by Stelling"></textarea>
+        <div class="panel-actions">
+          <button type="button" id="cost-add">Log it</button>
+          <span class="note-line" id="cost-note"></span>
+        </div>
+      </section>
+      <p class="studio-counts" id="cost-counts"></p>
+      <ul id="cost-list"></ul>
+      <p class="all-clear" id="cost-empty" hidden>Nothing logged yet.</p>
     </div>
   </div>
 
@@ -3245,6 +3288,7 @@
     commentText.disabled = !open;
     commentBtn.disabled = !open;
     if (typeof logGate === "function") { logGate(); }
+    if (typeof costGate === "function") { costGate(); }
     gateNotice.hidden = open;
   }
 
@@ -5295,6 +5339,7 @@
     if (auditIn) { fillStudios(); }
     renderAudit();
     renderStudios();
+    renderCosts();
     render();
   }
 
@@ -6129,6 +6174,91 @@
     logNoteEl.textContent = "Logged against " + roomLabel(room) + " under " + tradeName(to) +
       ", with your name on it. It is on the list now.";
   });
+  /* ---- Cost recovery from iKew (Lewis, 23 Sep) ---- */
+
+  /* A free-text log of costs to recover from iKew, its own tab, behind the
+     audit sign-in so who can see and add to it is who has an audit login.
+     Each entry is a comment record tagged cost:ikew, with the free text as
+     the body and the name and company at the top as its author, so it is
+     append-only like everything else and every device sees it as it lands.
+     The tag names no tower: one list, the same on every tower's page. Not
+     a job, so it is on no trade list, no card and no summary. */
+  var COST_TAG = "cost:ikew";
+  var costsLockedEl = document.getElementById("costs-locked");
+  var costsBodyEl = document.getElementById("costs-body");
+  var costTextEl = document.getElementById("cost-text");
+  var costAddEl = document.getElementById("cost-add");
+  var costNoteEl = document.getElementById("cost-note");
+  var costCountsEl = document.getElementById("cost-counts");
+  var costListEl = document.getElementById("cost-list");
+  var costEmptyEl = document.getElementById("cost-empty");
+
+  // Newest first: the one just logged is the one being looked for.
+  function costEntries() {
+    var confirmed = {};
+    var i;
+    for (i = 0; i < comments.length; i++) {
+      if (comments[i] && comments[i].id) { confirmed[comments[i].id] = true; }
+    }
+    var all = comments.concat(queuedComments);
+    var out = [];
+    for (i = 0; i < all.length; i++) {
+      var c = all[i];
+      if (!c || c.snag_id !== COST_TAG) { continue; }
+      out.push({ id: c.id, body: c.body || "", author: c.author || "", at: c.created_at || "",
+        unsent: !confirmed[c.id] });
+    }
+    out.sort(function (x, y) { return String(y.at).localeCompare(String(x.at)); });
+    return out;
+  }
+
+  function renderCosts() {
+    costsLockedEl.hidden = auditIn;
+    costsBodyEl.hidden = !auditIn;
+    if (!auditIn) { return; }
+    var list = costEntries();
+    costCountsEl.textContent = list.length
+      ? list.length + (list.length === 1 ? " cost logged" : " costs logged") + ", newest first"
+      : "";
+    var html = "";
+    for (var i = 0; i < list.length; i++) {
+      var e = list[i];
+      var meta = esc(e.author || "Someone");
+      var when = shortDate(e.at);
+      if (when) { meta += " \u00b7 " + esc(when); }
+      if (e.unsent && live) { meta += " \u00b7 sending\u2026"; }
+      html += "<li" + (e.unsent ? ' class="unsent"' : "") + '><span class="note-who">' + meta +
+        '</span><span class="cost-body">' + esc(e.body) + "</span></li>";
+    }
+    costListEl.innerHTML = html;
+    costEmptyEl.hidden = list.length > 0;
+  }
+
+  function costGate() {
+    var open = identified();
+    costAddEl.disabled = !open;
+    costTextEl.disabled = !open;
+    costTextEl.placeholder = open
+      ? "e.g. CW215 heat sensor cover missing, replaced by Stelling"
+      : "Add your name and company at the top first";
+  }
+
+  costAddEl.addEventListener("click", function () {
+    var body = costTextEl.value.trim();
+    if (!identified()) { costNoteEl.textContent = "Add your name and company at the top first."; return; }
+    if (!auditIn) { return; }
+    if (!body) { costNoteEl.textContent = "Say what the cost is."; costTextEl.focus(); return; }
+    costTextEl.value = "";
+    postEntry(COST_TAG, body);
+    costNoteEl.textContent = "Logged, with your name on it.";
+  });
+
+  document.getElementById("costs-to-audit").addEventListener("click", function () {
+    showView("audit");
+    var u = document.getElementById("audit-user");
+    if (u) { u.focus(); }
+  });
+
   var studioViewOn = false;
   var floorViewOn = false;
   var hideGround = false;
@@ -6329,11 +6459,12 @@
     document.getElementById("view-studio").hidden = name !== "studio";
     document.getElementById("view-floors").hidden = name !== "floors";
     document.getElementById("view-audit").hidden = name !== "audit";
+    document.getElementById("view-costs").hidden = name !== "costs";
 
-    // The audit log is a checklist for one studio, so the list controls
-    // have nothing to say there.
+    // The audit log is a checklist for one studio, and the cost log is not
+    // a list of jobs, so the list controls have nothing to say on either.
     activeView = name;
-    controlsEl.hidden = name === "audit";
+    controlsEl.hidden = name === "audit" || name === "costs";
     studioViewOn = name === "studio";
     floorViewOn = name === "floors";
     renderFiltered();
@@ -6343,13 +6474,15 @@
       if (auditIn) { fillStudios(); }
       renderAudit();
     }
+    if (name === "costs") { renderCosts(); }
   }
 
-  // An audit done on someone else's phone changes both of these, so they
+  // An audit done on someone else's phone changes all of these, so they
   // are redrawn whenever new records land.
   function refreshAuditViews() {
     renderAudit();
     renderStudios();
+    renderCosts();
   }
 
   viewsEl.addEventListener("click", function (ev) {
@@ -6365,6 +6498,7 @@
     if (on) { lastChecksHtml = null; fillStudios(); loadDrafts(); renderAudit(); }
     else { cardLog = {}; }
     renderStudios();
+    renderCosts();
   }
 
   document.getElementById("audit-in").addEventListener("click", function () {

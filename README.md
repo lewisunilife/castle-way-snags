@@ -45,8 +45,8 @@ Then open the page on two devices — the bar at the top should read
 ## The audit log
 
 Four views, one URL: **By trade** (the snagging list), **By studio**, **By
-floor**, and **Audit log**. The first two are public; the audit log asks for a username
-and password. The sign-ins are in `AUDIT_USERS` in `site/index.html` (JBA,
+floor**, **Audit log** and **Cost recovery**. The first three are public; the audit log
+and the cost log ask for a username and password. The sign-ins are in `AUDIT_USERS` in `site/index.html` (JBA,
 JCA, Steve, Bal, Nycole, Sam, Ryan and VA at the time of writing; the username is not
 case-sensitive). That is a guard on the view, not a lock on the data: the
 page and its source are public, and so is that list.
@@ -364,6 +364,18 @@ the buttons are not there and a line under the counts says to sign in
 first. The cards are rebuilt on every tick and on every record that lands
 from anyone's phone, so what is typed on a card is read back before each
 rebuild and put back after it; signing out shuts every open form.
+
+## Cost recovery from iKew
+
+A fifth tab, **Cost recovery** (23 Sep): a free-text log of costs to recover
+from iKew, behind the audit sign-in so that who can see the list and add to
+it is who has an audit login. Say what it was, where, and what it has cost,
+and it goes on the list with the name and company at the top of the page
+and the time on it, newest first. Each entry is a comment record tagged
+`cost:ikew` with the text as its body, append-only like everything else,
+and the tag names no tower, so it is one list, the same on every tower's
+page, and every device sees it as it lands. It is not a job: nothing from
+it appears on a trade list, a card or a summary.
 
 ## Ticking, everywhere
 
