@@ -785,7 +785,7 @@
   .cost-body { white-space: pre-wrap; overflow-wrap: anywhere; }
   .cost-edit { display: block; margin-top: 4px; }
   .issue-edit { display: block; margin: 4px 0 0 26px; }
-  button.cost-edit, button.issue-edit {
+  button.cost-edit, button.issue-edit, button.comment-edit {
     font: inherit;
     font-size: 12px;
     font-weight: 700;
@@ -797,9 +797,26 @@
     min-height: 0;
     width: auto;
   }
-  button.cost-edit:hover, button.issue-edit:hover { border-color: var(--tick); }
-  button.cost-edit:disabled, button.issue-edit:disabled { opacity: 0.5; }
+  button.cost-edit:hover, button.issue-edit:hover, button.comment-edit:hover { border-color: var(--tick); }
+  button.cost-edit:disabled, button.issue-edit:disabled, button.comment-edit:disabled { opacity: 0.5; }
   #issue-list li.editing { border-left-color: var(--tick); }
+  #comment-list li.editing { border-left-color: var(--tick); }
+  .comment-edit { display: block; margin-top: 4px; }
+  .comment-edit-text { width: 100%; box-sizing: border-box; min-height: 72px; margin: 6px 0; }
+  #comment-list .panel-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  #comment-list .panel-actions .note-line { margin: 0; }
+  .comment-filter { margin-bottom: 4px; }
+  #entered-fold { margin-top: 32px; }
+  #entered-list { list-style: none; margin: 14px 0 0; padding: 0; }
+  #entered-list li {
+    border-left: 3px solid var(--rule);
+    padding: 2px 0 2px 12px;
+    margin-bottom: 8px;
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+  #entered-list .note-who { display: block; }
+  #entered-list .note-body { overflow-wrap: anywhere; }
   .issue-edit-text { width: 100%; box-sizing: border-box; min-height: 72px; margin: 6px 0; }
   #issue-list .panel-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   #issue-list .panel-actions .note-line { margin: 0; }
@@ -1438,7 +1455,7 @@
 
     .panel { padding: 14px; }
     button { width: 100%; }
-    button.card-log-open, button.why-save, button.issue-edit, button.cost-edit { width: auto; }
+    button.card-log-open, button.why-save, button.issue-edit, button.cost-edit, button.comment-edit { width: auto; }
 
     /* ...except the note Submit, which sits beside its field and would
        otherwise squeeze it to nothing. */
@@ -1615,9 +1632,21 @@
 
   <h2>Comments</h2>
   <div class="panel">
+    <div class="log-fields comment-filter">
+      <div class="field">
+        <label for="comment-floor">Show</label>
+        <select id="comment-floor"></select>
+      </div>
+    </div>
     <ul id="comment-list"></ul>
     <p class="empty" id="comment-empty">No comments yet.</p>
     <div id="comment-form">
+      <div class="log-fields">
+        <div class="field">
+          <label for="comment-room">About</label>
+          <select id="comment-room"></select>
+        </div>
+      </div>
       <label for="comment-text">Add a comment</label>
       <textarea id="comment-text" placeholder="Access problems, parts on order, dates you can attend, anything not covered above."></textarea>
       <div class="panel-actions">
@@ -1713,6 +1742,8 @@
         <label class="filter audit-new" for="audit-new">
           <input type="checkbox" id="audit-new"> Only rooms not audited yet
         </label>
+        <label for="audit-floor">Floor</label>
+        <select id="audit-floor"></select>
         <label for="audit-studio">Studio</label>
         <select id="audit-studio"></select>
         <div class="panel-actions">
@@ -1735,6 +1766,23 @@
         <ul id="issue-list"></ul>
         <p class="empty" id="issue-empty">No issues logged against this studio.</p>
       </div>
+
+      <details class="fold" id="entered-fold">
+        <summary><h2>Entered by <span id="entered-name">&hellip;</span>
+          <span class="sec-count" id="entered-count"></span></h2></summary>
+        <div class="panel">
+          <p class="note-line">Everything this person has entered or changed on this
+            tower, newest first: checks passed and failed, tickets logged, edits,
+            ticks, moves and comments, and costs to recover. A person is the name
+            and company typed at the top of the page when the entry was made. The
+            Floor filter above narrows this list too.</p>
+          <label for="entered-who">Person</label>
+          <select id="entered-who"></select>
+          <ul id="entered-list"></ul>
+          <p class="empty" id="entered-empty" hidden>Nothing entered by this person on
+            this tower yet.</p>
+        </div>
+      </details>
     </div>
   </div>
 
@@ -3315,6 +3363,7 @@
     commentBtn.disabled = !open;
     if (typeof logGate === "function") { logGate(); }
     if (typeof costGate === "function") { costGate(); }
+    if (typeof renderComments === "function" && listEl) { renderComments(); }
     gateNotice.hidden = open;
   }
 
@@ -4367,39 +4416,187 @@
   // Tower 1's, which is every comment made before there was a Tower 2.
   var TOWER_TAG = "tower:" + TOWER_N;
 
+  // A comment about one room or area carries it as note:<room> (Lewis, 23
+  // Sep), so the list can be narrowed to a floor; the rest are the
+  // tower's, as before.
   function generalOnly(list) {
     var out = [];
     for (var i = 0; i < list.length; i++) {
       if (!list[i]) { continue; }
       var tag = list[i].snag_id;
+      if (tag && tag.indexOf("note:") === 0) {
+        if (roomInTower(tag.slice(5))) { out.push(list[i]); }
+        continue;
+      }
       if (tag ? tag === TOWER_TAG : TOWER_N === 1) { out.push(list[i]); }
     }
     return out;
   }
 
+  function commentRoomOf(c) {
+    var tag = c && c.snag_id ? String(c.snag_id) : "";
+    return tag.indexOf("note:") === 0 ? tag.slice(5) : "";
+  }
+
+  var commentEdit = null;    // { id, text, note } while a comment is being edited
+  var commentFloor = "";     // "" all, "tower" the tower-wide ones, or a floor digit
+  var commentFloorEl = document.getElementById("comment-floor");
+  var commentRoomEl = document.getElementById("comment-room");
+  var COMMENT_FLOOR_KEY = "cw-tower" + TOWER_N + "-comment-floor";
+
+  function captureCommentEdit() {
+    if (!commentEdit) { return; }
+    var ta = listEl.querySelector(".comment-edit-text");
+    if (ta && ta.getAttribute("data-id") === commentEdit.id) { commentEdit.text = ta.value; }
+  }
+
+  function commentShown(room) {
+    if (!commentFloor) { return true; }
+    if (commentFloor === "tower") { return !room; }
+    return !!room && levelOf(room) === commentFloor;
+  }
+
   function renderComments() {
+    captureCommentEdit();
     var confirmed = generalOnly(comments);
     var all = confirmed.concat(generalOnly(queuedComments));
+    var edits = issueEdits();
+    var open = identified();
     if (!all.length) {
       listEl.innerHTML = "";
+      emptyEl.textContent = "No comments yet.";
       emptyEl.hidden = false;
       return;
     }
-    emptyEl.hidden = true;
     var html = "";
+    var shown = 0;
     for (var c = 0; c < all.length; c++) {
       var item = all[c];
+      var room = commentRoomOf(item);
+      if (!commentShown(room)) { continue; }
+      shown++;
       var unsent = c >= confirmed.length && live;
+      var ed = edits[item.id] || null;
       var meta = esc(item.author || "Someone");
       var when = shortDate(item.created_at);
-      if (when) { meta += " · " + esc(when); }
-      if (unsent) { meta += " · sending…"; }
+      if (when) { meta += " \u00b7 " + esc(when); }
+      if (room) {
+        var lv = levelOf(room);
+        meta += " \u00b7 " + esc(roomLabel(room)) + (FLOORS[lv] ? ", " + esc(FLOORS[lv].toLowerCase()) : "");
+      }
+      if (ed) {
+        meta += " \u00b7 edited" + (ed.by && ed.by !== item.author ? " by " + esc(ed.by) : "");
+        var ew = shortDate(ed.at);
+        if (ew) { meta += " \u00b7 " + esc(ew); }
+      }
+      if (unsent) { meta += " \u00b7 sending\u2026"; }
+      var id = esc(item.id);
+      if (commentEdit && commentEdit.id === item.id) {
+        html += '<li class="editing"><span class="c-meta">' + meta + "</span>" +
+          '<textarea class="comment-edit-text" data-id="' + id + '" aria-label="Edit this comment">' +
+          esc(commentEdit.text) + "</textarea>" +
+          '<div class="panel-actions">' +
+          '<button type="button" class="comment-save" data-id="' + id + '">Save</button>' +
+          '<button type="button" class="comment-cancel secondary" data-id="' + id + '">Cancel</button>' +
+          '<span class="note-line comment-edit-note">' + esc(commentEdit.note || "") + "</span></div></li>";
+        continue;
+      }
       html +=
         "<li" + (unsent ? ' class="unsent"' : "") + ">" +
         '<span class="c-meta">' + meta + "</span>" +
-        '<span class="c-text">' + esc(item.body || "") + "</span></li>";
+        '<span class="c-text">' + esc(ed ? ed.body : (item.body || "")) + "</span>" +
+        '<span class="comment-edit"><button type="button" class="comment-edit" data-id="' + id + '"' +
+        (open ? "" : " disabled") + ">Edit</button></span></li>";
     }
     listEl.innerHTML = html;
+    if (!shown) {
+      var others = all.length;
+      emptyEl.textContent = commentFloor === "tower"
+        ? "Every comment so far is about a room; none is about the tower as a whole."
+        : others + (others === 1 ? " comment" : " comments") + " elsewhere in the tower, none on this floor yet.";
+      emptyEl.hidden = false;
+    } else {
+      emptyEl.hidden = true;
+    }
+  }
+
+  function findComment(id) {
+    var all = generalOnly(comments).concat(generalOnly(queuedComments));
+    for (var i = 0; i < all.length; i++) { if (all[i].id === id) { return all[i]; } }
+    return null;
+  }
+
+  listEl.addEventListener("click", function (ev) {
+    var btn = ev.target;
+    if (!btn || !btn.classList || !btn.getAttribute) { return; }
+    var id = btn.getAttribute("data-id");
+    if (!id) { return; }
+    if (btn.classList.contains("comment-edit")) {
+      if (!identified()) { return; }
+      var cur = findComment(id);
+      if (!cur) { return; }
+      var ed = issueEdits()[id];
+      commentEdit = { id: id, text: ed ? ed.body : (cur.body || ""), note: "" };
+      renderComments();
+      var ta = listEl.querySelector(".comment-edit-text");
+      if (ta) { ta.focus(); }
+      return;
+    }
+    if (btn.classList.contains("comment-cancel")) {
+      commentEdit = null;
+      renderComments();
+      return;
+    }
+    if (!btn.classList.contains("comment-save")) { return; }
+    captureCommentEdit();
+    if (!commentEdit || commentEdit.id !== id) { return; }
+    var text = (commentEdit.text || "").trim();
+    if (!identified()) { commentEdit.note = "Add your name and company at the top first."; renderComments(); return; }
+    if (!text) { commentEdit.note = "Say something, or cancel."; renderComments(); return; }
+    var was = findComment(id);
+    var wasEd = issueEdits()[id];
+    commentEdit = null;
+    if (!was || (wasEd ? wasEd.body : (was.body || "")) === text) { renderComments(); return; }
+    postEntry("edit:" + id, text);
+    renderComments();
+  });
+
+  commentFloor = String(load(COMMENT_FLOOR_KEY, "") || "");
+  if (commentFloor !== "tower" && !FLOORS[commentFloor]) { commentFloor = ""; }
+  commentFloorEl.innerHTML = '<option value=""' + (commentFloor === "" ? " selected" : "") + ">All comments</option>" +
+    '<option value="tower"' + (commentFloor === "tower" ? " selected" : "") + ">About the tower as a whole</option>";
+  (function () {
+    var digits = Object.keys(FLOORS).sort();
+    for (var i = 0; i < digits.length; i++) {
+      commentFloorEl.innerHTML += '<option value="' + digits[i] + '"' +
+        (commentFloor === digits[i] ? " selected" : "") + ">" + esc(FLOORS[digits[i]]) + "</option>";
+    }
+  })();
+  commentFloorEl.addEventListener("change", function () {
+    var v = commentFloorEl.value;
+    commentFloor = v === "tower" || FLOORS[v] ? v : "";
+    store(COMMENT_FLOOR_KEY, commentFloor);
+    renderComments();
+  });
+
+  // The rooms and areas a comment can be about; the whole tower by default.
+  function fillCommentRooms() {
+    var list = AUDIT_STUDIOS.slice();
+    list.sort(function (a, b) {
+      if (!!a.common !== !!b.common) { return a.common ? 1 : -1; }
+      var la = roomLabel(a.room), lb = roomLabel(b.room);
+      return la < lb ? -1 : (la > lb ? 1 : 0);
+    });
+    var rooms = "", areas = "";
+    for (var i = 0; i < list.length; i++) {
+      var st = list[i];
+      var opt = '<option value="' + esc(st.room) + '">' + esc(roomLabel(st.room)) +
+        (st.floor ? " \u2014 " + esc(st.floor) : "") + "</option>";
+      if (st.common) { areas += opt; } else { rooms += opt; }
+    }
+    commentRoomEl.innerHTML = '<option value="">The tower as a whole</option>' +
+      '<optgroup label="Rooms">' + rooms + "</optgroup>" +
+      (areas ? '<optgroup label="' + AREA_LABEL + '">' + areas + "</optgroup>" : "");
   }
 
   /* ---- Status ---- */
@@ -4808,10 +5005,15 @@
   commentBtn.addEventListener("click", function () {
     var body = commentText.value.trim();
     if (!body) { commentText.focus(); return; }
+    var about = commentRoomEl.value;
+    if (about && !STUDIO_BY_ROOM[about]) { about = ""; }
 
     var entry = {
       id: uuid(),
-      snag_id: TOWER_N === 1 ? null : TOWER_TAG,
+      // About one room or area, or the tower as a whole (the tower's own
+      // comments carry its tag; Tower 1's carry none, from before there
+      // were other towers).
+      snag_id: about ? "note:" + about : (TOWER_N === 1 ? null : TOWER_TAG),
       body: body,
       author: who(),
       created_at: new Date().toISOString()
@@ -5495,6 +5697,7 @@
 
     for (var i = 0; i < STELLING_LIST.length; i++) {
       var st = STELLING_LIST[i];
+      if (!onAuditFloor(st.room)) { continue; }
       var sum = studioSummary(st.room, state, issues, false);
       sortFresh(st, sum);
       if (sum.complete) { done += optFor(st); } else { todo += optFor(st); }
@@ -5504,6 +5707,7 @@
     var common = "";
     for (var ca = 0; ca < COMMON_AREAS.length; ca++) {
       var area = COMMON_AREAS[ca];
+      if (!onAuditFloor(area.room)) { continue; }
       sortFresh(area, studioSummary(area.room, state, issues, false));
       common += optFor(area);
     }
@@ -5512,6 +5716,7 @@
     // state, so they are there to pick until the reopening is taken off.
     var reopened = "";
     for (var r = 0; r < REOPENED_ROOMS.length; r++) {
+      if (!onAuditFloor(REOPENED_ROOMS[r].room)) { continue; }
       sortFresh(REOPENED_ROOMS[r], studioSummary(REOPENED_ROOMS[r].room, state, issues, false));
       reopened += optFor(REOPENED_ROOMS[r]);
     }
@@ -5522,6 +5727,7 @@
     for (var o = 0; o < AUDIT_STUDIOS.length; o++) {
       var ost = AUDIT_STUDIOS[o];
       if (ost.listed || ost.reopened || ost.common) { continue; }
+      if (!onAuditFloor(ost.room)) { continue; }
       sortFresh(ost, studioSummary(ost.room, state, issues, false));
       others += optFor(ost);
     }
@@ -5808,7 +6014,200 @@
       }
       issueListEl.innerHTML = ih;
     }
+    renderEntered();
   }
+
+  /* ---- Entered by (Lewis, 23 Sep) ---- */
+
+  /* Everything one person has entered or changed on this tower, newest
+     first, read from the records: a person is the author on them, the
+     name and company typed at the top when the entry was made. The ticks
+     come from the jobs table, which keeps only the latest state of each
+     job, so a tick shows as it stands now. */
+  var enteredFoldEl = document.getElementById("entered-fold");
+  var enteredWhoEl = document.getElementById("entered-who");
+  var enteredListEl = document.getElementById("entered-list");
+  var enteredEmptyEl = document.getElementById("entered-empty");
+  var enteredNameEl = document.getElementById("entered-name");
+  var enteredCountEl = document.getElementById("entered-count");
+  var ENTERED_OPEN_KEY = "cw-tower" + TOWER_N + "-entered-open";
+  var enteredWho = "";   // the person picked; "" means the name at the top
+
+  function checkLabelOf(id) {
+    var ck = CHECK_BY_ID[id];
+    return ck ? ck.label : id;
+  }
+
+  function issueTextOf(c) {
+    var text = String(c.body || "");
+    var tm = ISSUE_TO_RE.exec(text);
+    return tm ? text.slice(0, tm.index) : text;
+  }
+
+  function enteredNames() {
+    var seen = {};
+    var all = comments.concat(queuedComments);
+    var i, k;
+    for (i = 0; i < all.length; i++) {
+      if (all[i] && all[i].author) { seen[all[i].author] = true; }
+    }
+    for (k in items) {
+      if (Object.prototype.hasOwnProperty.call(items, k) && items[k] && items[k].updated_by) { seen[items[k].updated_by] = true; }
+    }
+    for (k in queued) {
+      if (Object.prototype.hasOwnProperty.call(queued, k) && queued[k] && queued[k].updated_by) { seen[queued[k].updated_by] = true; }
+    }
+    var names = Object.keys(seen);
+    names.sort(function (a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; });
+    return names;
+  }
+
+  function enteredBy(name) {
+    var out = [];
+    var all = comments.concat(queuedComments);
+    var byId = {};
+    var i, c, k;
+    for (i = 0; i < all.length; i++) { c = all[i]; if (c && c.id) { byId[c.id] = c; } }
+
+    function push(at, room, what, text) {
+      if (room && !onAuditFloor(room)) { return; }
+      if (!room && auditFloor) { return; }
+      out.push({ at: at || "", room: room || "", what: what, text: text || "" });
+    }
+
+    for (i = 0; i < all.length; i++) {
+      c = all[i];
+      if (!c || (c.author || "") !== name) { continue; }
+      var tag = c.snag_id ? String(c.snag_id) : "";
+      var body = String(c.body || "");
+      var room, src, otag;
+      if (tag.indexOf("audit:") === 0) {
+        var bits = tag.split(":");
+        room = bits[1];
+        if (!roomInTower(room)) { continue; }
+        var m = FAIL_RE.exec(body);
+        if (m) {
+          var reason = body.slice(m[0].length);
+          var hm = HAB_RE.exec(reason);
+          if (hm) { reason = reason.slice(0, hm.index); }
+          var to = m[1] && knownTrade(m[1]) ? tradeName(m[1]) : "";
+          push(c.created_at, room, "Failed " + checkLabelOf(bits[2]),
+            (to ? "to " + to : "") + (reason ? (to ? ": " : "") + reason : "") +
+            (hm ? " \u00b7 " + (hm[1] === "nh" ? "not habitable" : "habitable") : ""));
+        } else {
+          var pm = PASS_RE.exec(body);
+          var text = pm && pm[2] ? pm[2].trim() : "";
+          var ol = pm && pm[1] ? optionLabel(CHECK_BY_ID[bits[2]], pm[1]) : "";
+          push(c.created_at, room, "Passed " + checkLabelOf(bits[2]), ol ? ol + (text ? " \u00b7 " + text : "") : text);
+        }
+      } else if (tag.indexOf("issue:") === 0) {
+        room = tag.slice(6);
+        if (!roomInTower(room)) { continue; }
+        var tm = ISSUE_TO_RE.exec(body);
+        var it = tm && knownTrade(tm[1]) ? tm[1] : UNASSIGNED;
+        push(c.created_at, room, "Logged a ticket to " + tradeName(it), issueTextOf(c));
+      } else if (tag.indexOf("issue-done:") === 0 || tag.indexOf("issue-open:") === 0) {
+        src = byId[tag.slice(11)];
+        if (!src || !src.snag_id || String(src.snag_id).indexOf("issue:") !== 0) { continue; }
+        room = String(src.snag_id).slice(6);
+        if (!roomInTower(room)) { continue; }
+        push(c.created_at, room, tag.indexOf("issue-done:") === 0 ? "Marked a ticket done" : "Reopened a ticket", issueTextOf(src));
+      } else if (tag.indexOf("move:") === 0) {
+        var job = index[tag.slice(5)];
+        if (!job) { continue; }
+        var mt = body.trim().toLowerCase();
+        push(c.created_at, job.room, "Moved to " + (knownTrade(mt) ? tradeName(mt) : mt), job.action);
+      } else if (tag.indexOf("edit:") === 0) {
+        src = byId[tag.slice(5)];
+        if (!src) { continue; }
+        otag = src.snag_id ? String(src.snag_id) : "";
+        if (otag.indexOf("issue:") === 0) {
+          room = otag.slice(6);
+          if (!roomInTower(room)) { continue; }
+          push(c.created_at, room, "Edited a ticket", body);
+        } else if (otag.indexOf("note:") === 0) {
+          room = otag.slice(5);
+          if (!roomInTower(room)) { continue; }
+          push(c.created_at, room, "Edited a comment", body);
+        } else if (otag === TOWER_TAG || (!otag && TOWER_N === 1)) {
+          push(c.created_at, "", "Edited a comment", body);
+        }
+      } else if (tag === COST_TAG) {
+        push(c.created_at, "", "Logged a cost to recover", body);
+      } else if (tag.indexOf(COST_EDIT) === 0) {
+        push(c.created_at, "", "Edited a cost to recover", body);
+      } else if (tag.indexOf("note:") === 0) {
+        room = tag.slice(5);
+        if (!roomInTower(room)) { continue; }
+        push(c.created_at, room, "Commented", body);
+      } else if (tag === TOWER_TAG || (!tag && TOWER_N === 1)) {
+        push(c.created_at, "", "Commented", body);
+      } else if (index[tag]) {
+        push(c.created_at, index[tag].room, "Noted on " + index[tag].action, body);
+      }
+    }
+
+    var ids = {};
+    for (k in items) { if (Object.prototype.hasOwnProperty.call(items, k)) { ids[k] = true; } }
+    for (k in queued) { if (Object.prototype.hasOwnProperty.call(queued, k)) { ids[k] = true; } }
+    for (k in ids) {
+      if (!Object.prototype.hasOwnProperty.call(ids, k)) { continue; }
+      var rec = effective(k);
+      var tj = index[k];
+      if (!tj || (rec.updated_by || "") !== name) { continue; }
+      push(rec.updated_at, tj.room, rec.done === true ? "Ticked done" : "Unticked", tj.action);
+    }
+
+    out.sort(function (x, y) { return String(y.at).localeCompare(String(x.at)); });
+    return out;
+  }
+
+  function renderEntered() {
+    if (!auditIn || !enteredFoldEl) { return; }
+    var names = enteredNames();
+    var me = identified() ? who() : "";
+    var pick = enteredWho || me;
+    if (names.indexOf(pick) < 0) { pick = me && names.indexOf(me) >= 0 ? me : (names[0] || ""); }
+    var html = "";
+    for (var i = 0; i < names.length; i++) {
+      html += '<option value="' + esc(names[i]) + '"' + (names[i] === pick ? " selected" : "") + ">" +
+        esc(names[i]) + (names[i] === me ? " (you)" : "") + "</option>";
+    }
+    enteredWhoEl.innerHTML = html || '<option value="">No one yet</option>';
+    enteredNameEl.textContent = pick || "\u2026";
+    if (!pick) {
+      enteredListEl.innerHTML = "";
+      enteredCountEl.textContent = "";
+      enteredEmptyEl.hidden = false;
+      return;
+    }
+    var list = enteredBy(pick);
+    enteredCountEl.textContent = list.length + (list.length === 1 ? " entry" : " entries") +
+      (auditFloor && FLOORS[auditFloor] ? " on the " + FLOORS[auditFloor].toLowerCase() : "");
+    // While shut, the count on the heading is enough.
+    if (!enteredFoldEl.open) { enteredListEl.innerHTML = ""; return; }
+    var h = "";
+    for (var e = 0; e < list.length; e++) {
+      var en = list[e];
+      h += '<li><span class="note-who">' + esc(shortDate(en.at) || "") +
+        (en.room ? " \u00b7 " + esc(roomLabel(en.room)) : "") + "</span>" +
+        '<span class="note-body"><strong>' + esc(en.what) + "</strong>" +
+        (en.text ? ": " + esc(en.text) : "") + "</span></li>";
+    }
+    enteredListEl.innerHTML = h;
+    enteredEmptyEl.hidden = list.length > 0;
+  }
+
+  enteredWhoEl.addEventListener("change", function () {
+    enteredWho = enteredWhoEl.value;
+    renderEntered();
+  });
+
+  enteredFoldEl.open = load(ENTERED_OPEN_KEY, false) === true;
+  enteredFoldEl.addEventListener("toggle", function () {
+    store(ENTERED_OPEN_KEY, enteredFoldEl.open);
+    renderEntered();
+  });
 
   /* ---- Editing a logged issue on the audit log (Lewis, 23 Sep) ---- */
 
@@ -6289,6 +6688,7 @@
     if (kept && logRoomEl.querySelector('option[value="' + kept + '"]')) { logRoomEl.value = kept; }
   }
   fillLogRooms();
+  fillCommentRooms();
   logTradeEl.innerHTML = tradeOptions(UNASSIGNED);
   logRoomEl.addEventListener("change", function () { store(LOG_ROOM_KEY, logRoomEl.value); });
 
@@ -6780,6 +7180,42 @@
     var before = auditStudio;
     fillStudios();
     if (auditStudio !== before && auditStudio) { studioChanged(); }
+  });
+
+  /* Narrowing the picker to one floor (Lewis, 23 Sep): every group keeps
+     only that floor's rooms and corridor; the stair core, which is on no
+     one floor, waits for All floors. The Entered by list below follows the
+     same floor. Remembered on the device. */
+  var auditFloorEl = document.getElementById("audit-floor");
+  var AUDIT_FLOOR_KEY = "cw-tower" + TOWER_N + "-audit-floor";
+  var auditFloor = "";
+
+  function floorOptions(sel, first) {
+    var html = '<option value=""' + (sel === "" ? " selected" : "") + ">" + esc(first) + "</option>";
+    var digits = Object.keys(FLOORS).sort();
+    for (var i = 0; i < digits.length; i++) {
+      html += '<option value="' + digits[i] + '"' + (sel === digits[i] ? " selected" : "") + ">" +
+        esc(FLOORS[digits[i]]) + "</option>";
+    }
+    return html;
+  }
+
+  function onAuditFloor(room) {
+    return !auditFloor || levelOf(room) === auditFloor;
+  }
+
+  auditFloor = String(load(AUDIT_FLOOR_KEY, "") || "");
+  if (!FLOORS[auditFloor]) { auditFloor = ""; }
+  auditFloorEl.innerHTML = floorOptions(auditFloor, "All floors");
+
+  auditFloorEl.addEventListener("change", function () {
+    auditFloor = FLOORS[auditFloorEl.value] ? auditFloorEl.value : "";
+    store(AUDIT_FLOOR_KEY, auditFloor);
+    if (!auditIn) { return; }
+    var before = auditStudio;
+    fillStudios();
+    if (auditStudio !== before && auditStudio) { studioChanged(); }
+    renderEntered();
   });
 
   // Pass is one tap. Fail asks why, and the reason travels with it.
