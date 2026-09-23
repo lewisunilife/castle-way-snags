@@ -841,6 +841,8 @@
   #entered-list .panel-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   #entered-list .panel-actions .note-line { margin: 0; }
   #entered-list .log-fields { margin: 0 0 8px; }
+  .entered-bulk { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0 4px; }
+  .entered-bulk .note-line { margin: 0; }
   #entered-list .note-body { overflow-wrap: anywhere; }
   .issue-edit-text { width: 100%; box-sizing: border-box; min-height: 72px; margin: 6px 0; }
   #issue-list .panel-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -1662,6 +1664,11 @@
         <label for="comment-floor">Show</label>
         <select id="comment-floor"></select>
       </div>
+      <div class="field">
+        <label class="filter audit-new" for="comment-areas">
+          <input type="checkbox" id="comment-areas"> Only <span id="comment-areas-label">corridors and stairs</span>
+        </label>
+      </div>
     </div>
     <p class="note-line" id="comment-flash" hidden></p>
     <ul id="comment-list"></ul>
@@ -1770,6 +1777,9 @@
         </label>
         <label for="audit-floor">Floor</label>
         <select id="audit-floor"></select>
+        <label class="filter audit-new" for="audit-areas">
+          <input type="checkbox" id="audit-areas"> Only <span id="audit-areas-label">corridors and stairs</span>
+        </label>
         <div class="panel-actions my-rooms-row">
           <button type="button" class="secondary" id="my-rooms-btn">Rooms I&rsquo;ve logged</button>
           <span class="note-line" id="my-rooms-note"></span>
@@ -1797,6 +1807,7 @@
         <div class="panel-actions">
           <button type="button" id="issue-add">Add issue</button>
         </div>
+        <p class="note-line" id="issue-flash" hidden></p>
         <ul id="issue-list"></ul>
         <p class="empty" id="issue-empty">No issues logged against this studio.</p>
       </div>
@@ -1812,6 +1823,12 @@
             Floor filter above narrows this list too.</p>
           <label for="entered-who">Person</label>
           <select id="entered-who"></select>
+          <div class="panel-actions entered-bulk">
+            <label class="check-assign" for="entered-move-tower">Move every ticket on this list to</label>
+            <select id="entered-move-tower"></select>
+            <button type="button" class="secondary" id="entered-move-all">Move them</button>
+            <span class="note-line" id="entered-move-note"></span>
+          </div>
           <ul id="entered-list"></ul>
           <p class="empty" id="entered-empty" hidden>Nothing entered by this person on
             this tower yet.</p>
@@ -3979,6 +3996,14 @@
     for (id in wanted) {
       if (!Object.prototype.hasOwnProperty.call(wanted, id)) { continue; }
       if (auditRowIds[id]) {
+        // Moved to another room: out and in again, under the new room,
+        // on the same key.
+        if (index[id] && index[id].room !== wanted[id].f.room) {
+          removeAuditRow(id);
+          addAuditRow(id, wanted[id].trade, wanted[id].f);
+          changed = true;
+          continue;
+        }
         // Still here; the reason, the text or who failed it may have changed.
         var dom = sectionDom[auditRowIds[id]][id];
         // An edited issue keeps its key and row; the words on it follow.
@@ -4508,8 +4533,8 @@
   }
 
   // The rooms and areas of a tower a comment can be about, as options.
-  function commentAboutOptions(tower, sel) {
-    var html = '<option value=""' + (!sel ? " selected" : "") + ">Tower " + tower + " as a whole</option>";
+  function commentAboutOptions(tower, sel, roomsOnly) {
+    var html = roomsOnly ? "" : '<option value=""' + (!sel ? " selected" : "") + ">Tower " + tower + " as a whole</option>";
     var rooms = "", areas = "";
     var i;
     if (tower === TOWER_N) {
@@ -4588,10 +4613,15 @@
     if (ab && ab.getAttribute("data-id") === commentEdit.id) { commentEdit.room = ab.value; }
   }
 
+  var commentAreasEl = document.getElementById("comment-areas");
+  var COMMENT_AREAS_KEY = "cw-tower" + TOWER_N + "-comment-areas";
+  var commentAreasOnly = false;
+
   function commentShown(room) {
+    if (commentAreasOnly && !(room && isCommon(room))) { return false; }
     if (!commentFloor) { return true; }
     if (commentFloor === "tower") { return !room; }
-    if (commentFloor === "areas") { return !!room && isCommon(room); }
+    if (commentAreasOnly && /-STAIRS$/.test(room)) { return true; }
     return !!room && levelOf(room) === commentFloor;
   }
 
@@ -4666,10 +4696,10 @@
     listEl.innerHTML = html;
     if (!shown) {
       var others = all.length;
-      emptyEl.textContent = commentFloor === "tower"
+      emptyEl.textContent = commentFloor === "tower" && !commentAreasOnly
         ? "Every comment so far is about a room; none is about the tower as a whole."
         : others + (others === 1 ? " comment" : " comments") + " elsewhere in the tower, none " +
-          (commentFloor === "areas" ? "about the " + AREA_LABEL.toLowerCase() : "on this floor") + " yet.";
+          (commentAreasOnly ? "about the " + AREA_LABEL.toLowerCase() + (commentFloor && FLOORS[commentFloor] ? " on this floor" : "") : "on this floor") + " yet.";
       emptyEl.hidden = false;
     } else {
       emptyEl.hidden = true;
@@ -4750,7 +4780,16 @@
   });
 
   commentFloor = String(load(COMMENT_FLOOR_KEY, "") || "");
-  if (commentFloor !== "tower" && commentFloor !== "areas" && !FLOORS[commentFloor]) { commentFloor = ""; }
+  if (commentFloor === "areas") { commentFloor = ""; commentAreasOnly = true; store(COMMENT_AREAS_KEY, true); }
+  if (commentFloor !== "tower" && !FLOORS[commentFloor]) { commentFloor = ""; }
+  commentAreasOnly = commentAreasOnly || load(COMMENT_AREAS_KEY, false) === true;
+  commentAreasEl.checked = commentAreasOnly;
+  document.getElementById("comment-areas-label").textContent = AREA_LABEL.toLowerCase();
+  commentAreasEl.addEventListener("change", function () {
+    commentAreasOnly = commentAreasEl.checked;
+    store(COMMENT_AREAS_KEY, commentAreasOnly);
+    renderComments();
+  });
   commentFloorEl.innerHTML = '<option value=""' + (commentFloor === "" ? " selected" : "") + ">All comments</option>" +
     '<option value="tower"' + (commentFloor === "tower" ? " selected" : "") + ">About the tower as a whole</option>";
   (function () {
@@ -4759,12 +4798,10 @@
       commentFloorEl.innerHTML += '<option value="' + digits[i] + '"' +
         (commentFloor === digits[i] ? " selected" : "") + ">" + esc(FLOORS[digits[i]]) + "</option>";
     }
-    commentFloorEl.innerHTML += '<option value="areas"' + (commentFloor === "areas" ? " selected" : "") +
-      ">" + esc(AREA_LABEL) + "</option>";
   })();
   commentFloorEl.addEventListener("change", function () {
     var v = commentFloorEl.value;
-    commentFloor = v === "tower" || v === "areas" || FLOORS[v] ? v : "";
+    commentFloor = v === "tower" || FLOORS[v] ? v : "";
     store(COMMENT_FLOOR_KEY, commentFloor);
     renderComments();
   });
@@ -5644,25 +5681,41 @@
     return out;
   }
 
+  /* A ticket logged against the wrong room or tower can be moved (Lewis,
+     23 Sep): a retag:<id> record whose body is issue:<room> says where it
+     is now, and the newest wins. The key stays the one it was given from
+     the room and text as first logged, so its tick and moves go with it. */
+  function issueRoomNow(c, retags) {
+    var et = effectiveTag(c, retags);
+    return et.indexOf("issue:") === 0 ? et.slice(6) : String(c.snag_id || "").split(":")[1];
+  }
+
+  function towerOfRoom(room) {
+    var cm = /^T([1-4])-/.exec(room || "");
+    return cm ? parseInt(cm[1], 10) : (ROOM_TOWER[room] || 1);
+  }
+
   function studioIssues() {
     var all = comments.concat(queuedComments);
     var res = issueResolutions();
     var moves = tradeMoves();
     var edits = issueEdits();
+    var retags = commentRetags();
     var out = {};
     for (var i = 0; i < all.length; i++) {
       var c = all[i];
       if (!c || !c.snag_id || c.snag_id.indexOf("issue:") !== 0) { continue; }
-      var room = c.snag_id.split(":")[1];
+      var origRoom = c.snag_id.split(":")[1];
+      var room = issueRoomNow(c, retags);
       if (!roomInTower(room)) { continue; }
       if (!out[room]) { out[room] = []; }
       var text = String(c.body || "");
       var tm = ISSUE_TO_RE.exec(text);
       var to = tm && knownTrade(tm[1]) ? tm[1] : UNASSIGNED;
       if (tm) { text = text.slice(0, tm.index); }
-      // The key comes from the text as first logged; an edit changes what
-      // is shown, never the key.
-      var rowId = rowKey(room, "Logged: " + text);
+      // The key comes from the room and text as first logged; an edit or
+      // a move changes what is shown and where, never the key.
+      var rowId = rowKey(origRoom, "Logged: " + text);
       if (moves[rowId]) { to = moves[rowId].to; }
       var ed = edits[c.id] || null;
       if (ed) { text = ed.body; }
@@ -5670,6 +5723,8 @@
         id: c.id,
         body: text,
         edited: ed,
+        room: room,
+        moved: room !== origRoom ? retags[c.id] : null,
         trade: to,
         rowId: rowId,
         author: c.author,
@@ -6153,6 +6208,8 @@
     auditStateEl.textContent = line;
 
     var issues = studioIssues()[auditStudio] || [];
+    issueFlashEl.textContent = issueFlash;
+    issueFlashEl.hidden = !issueFlash;
     if (!issues.length) {
       issueListEl.innerHTML = "";
       issueEmptyEl.hidden = false;
@@ -6172,11 +6229,23 @@
           var ew = shortDate(ed.at);
           if (ew) { meta += " \u00b7 " + esc(ew); }
         }
+        if (issues[q].moved) {
+          meta += " \u00b7 moved here" + (issues[q].moved.by && issues[q].moved.by !== issues[q].author ? " by " + esc(issues[q].moved.by) : "");
+          var mw = shortDate(issues[q].moved.at);
+          if (mw) { meta += " \u00b7 " + esc(mw); }
+        }
         if (issueEdit && issueEdit.id === issues[q].id) {
           var iid = esc(issues[q].id);
           ih += '<li class="editing"><span class="note-who">' + meta + "</span>" +
             '<textarea class="issue-edit-text" data-id="' + iid + '" aria-label="Edit this issue">' +
             esc(issueEdit.text) + "</textarea>" +
+            '<div class="log-fields">' +
+            '<div class="field"><label for="issue-edit-tower-' + iid + '">Tower</label>' +
+            '<select class="issue-edit-tower" id="issue-edit-tower-' + iid + '" data-id="' + iid + '">' +
+            commentTowerOptions(issueEdit.tower) + "</select></div>" +
+            '<div class="field"><label for="issue-edit-room-' + iid + '">Room</label>' +
+            '<select class="issue-edit-room" id="issue-edit-room-' + iid + '" data-id="' + iid + '">' +
+            commentAboutOptions(issueEdit.tower, issueEdit.room, true) + "</select></div></div>" +
             '<div class="panel-actions">' +
             '<button type="button" class="issue-save" data-id="' + iid + '">Save</button>' +
             '<button type="button" class="issue-cancel secondary" data-id="' + iid + '">Cancel</button>' +
@@ -6346,7 +6415,7 @@
           push(c.created_at, room, "Passed " + checkLabelOf(bits[2]), ol ? ol + (text ? " \u00b7 " + text : "") : text);
         }
       } else if (tag.indexOf("issue:") === 0) {
-        room = tag.slice(6);
+        room = issueRoomNow(c, retags);
         if (!roomInTower(room)) { continue; }
         var tm = ISSUE_TO_RE.exec(body);
         var it = tm && knownTrade(tm[1]) ? tm[1] : UNASSIGNED;
@@ -6355,7 +6424,7 @@
       } else if (tag.indexOf("issue-done:") === 0 || tag.indexOf("issue-open:") === 0) {
         src = byId[tag.slice(11)];
         if (!src || !src.snag_id || String(src.snag_id).indexOf("issue:") !== 0) { continue; }
-        room = String(src.snag_id).slice(6);
+        room = issueRoomNow(src, retags);
         if (!roomInTower(room)) { continue; }
         issueId = src.id;
         push(c.created_at, room, tag.indexOf("issue-done:") === 0 ? "Marked a ticket done" : "Reopened a ticket", issueTextOf(src));
@@ -6369,7 +6438,7 @@
         if (!src) { continue; }
         otag = src.snag_id ? String(src.snag_id) : "";
         if (otag.indexOf("issue:") === 0) {
-          room = otag.slice(6);
+          room = issueRoomNow(src, retags);
           if (!roomInTower(room)) { continue; }
           issueId = src.id;
           push(c.created_at, room, "Edited a ticket", body);
@@ -6382,6 +6451,18 @@
         src = byId[tag.slice(6)];
         if (!src) { continue; }
         var to = body.trim();
+        if (to.indexOf("issue:") === 0) {
+          // A ticket moved to another room or tower: on the list of the
+          // tower it left and the one it went to.
+          var toR = to.slice(6);
+          var fromR = String(src.snag_id || "").split(":")[1] || "";
+          if (!roomInTower(toR) && !roomInTower(fromR)) { continue; }
+          issueId = src.id;
+          var ted = issueEdits()[src.id];
+          push(c.created_at, roomInTower(toR) ? toR : "", "Moved a ticket to " + anyRoomLabel(toR) + ", Tower " + towerOfRoom(toR),
+            ted ? ted.body : issueTextOf(src));
+          continue;
+        }
         var toRoom = to.indexOf("note:") === 0 ? to.slice(5) : "";
         var toTower = toRoom ? (/^T([1-4])-/.test(toRoom) ? parseInt(/^T([1-4])-/.exec(toRoom)[1], 10) : (ROOM_TOWER[toRoom] || 1)) : (parseInt((/^tower:([1-4])$/.exec(to) || [])[1], 10) || 0);
         var hereNow = toRoom ? roomInTower(toRoom) : toTower === TOWER_N;
@@ -6427,7 +6508,7 @@
     return out;
   }
 
-  var enteredEdit = null;   // { rid, issue, text, trade, note } while a line is being edited
+  var enteredEdit = null;   // { rid, issue, text, trade, tower, room, note } while a line is being edited
 
   function captureEnteredEdit() {
     if (!enteredEdit) { return; }
@@ -6435,6 +6516,10 @@
     if (ta && ta.getAttribute("data-rid") === enteredEdit.rid) { enteredEdit.text = ta.value; }
     var sel = enteredListEl.querySelector(".entered-edit-trade");
     if (sel && sel.getAttribute("data-rid") === enteredEdit.rid) { enteredEdit.trade = sel.value; }
+    var tw = enteredListEl.querySelector(".entered-edit-tower");
+    if (tw && tw.getAttribute("data-rid") === enteredEdit.rid) { enteredEdit.tower = parseInt(tw.value, 10) || enteredEdit.tower; }
+    var rm = enteredListEl.querySelector(".entered-edit-room");
+    if (rm && rm.getAttribute("data-rid") === enteredEdit.rid) { enteredEdit.room = rm.value; }
   }
 
   // The ticket an Entered by line is about, as it stands now.
@@ -6486,7 +6571,11 @@
           '<textarea class="entered-edit-text" data-rid="' + rid + '" aria-label="Edit this ticket">' +
           esc(enteredEdit.text) + "</textarea>" +
           '<div class="log-fields"><div class="field"><label>Trade</label>' +
-          '<select class="entered-edit-trade" data-rid="' + rid + '">' + tradeOptions(enteredEdit.trade) + "</select></div></div>" +
+          '<select class="entered-edit-trade" data-rid="' + rid + '">' + tradeOptions(enteredEdit.trade) + "</select></div>" +
+          '<div class="field"><label>Tower</label>' +
+          '<select class="entered-edit-tower" data-rid="' + rid + '">' + commentTowerOptions(enteredEdit.tower) + "</select></div>" +
+          '<div class="field"><label>Room</label>' +
+          '<select class="entered-edit-room" data-rid="' + rid + '">' + commentAboutOptions(enteredEdit.tower, enteredEdit.room, true) + "</select></div></div>" +
           '<div class="panel-actions">' +
           '<button type="button" class="entered-save" data-rid="' + rid + '">Save</button>' +
           '<button type="button" class="entered-cancel secondary" data-rid="' + rid + '">Cancel</button>' +
@@ -6516,7 +6605,7 @@
       if (!identified()) { return; }
       var cur = issueNow(btn.getAttribute("data-issue"));
       if (!cur) { return; }
-      enteredEdit = { rid: rid, issue: cur.id, text: cur.body, trade: cur.trade, note: "" };
+      enteredEdit = { rid: rid, issue: cur.id, text: cur.body, trade: cur.trade, tower: towerOfRoom(cur.room), room: cur.room, note: "" };
       renderEntered();
       var ta = enteredListEl.querySelector(".entered-edit-text");
       if (ta) { ta.focus(); }
@@ -6535,12 +6624,91 @@
     if (!text) { enteredEdit.note = "Say what the issue is, or cancel."; renderEntered(); return; }
     var was = issueNow(enteredEdit.issue);
     var to = knownTrade(enteredEdit.trade) ? enteredEdit.trade : UNASSIGNED;
+    var target = ticketMoveTarget(enteredEdit.tower, enteredEdit.room);
     enteredEdit = null;
     if (!was) { renderEntered(); return; }
     var changed = false;
     if (was.body !== text) { postEntry("edit:" + was.id, text); changed = true; }
     if (to !== was.trade && index[was.rowId]) { moveJob(was.rowId, to); changed = true; }
+    if (target && target !== was.room) {
+      issueFlash = ticketMoveFlash(target);
+      postEntry("retag:" + was.id, "issue:" + target);
+      changed = true;
+    }
     if (!changed) { renderEntered(); }
+  });
+
+  enteredListEl.addEventListener("change", function (ev) {
+    var sel = ev.target;
+    if (!sel || !sel.classList || !sel.classList.contains("entered-edit-tower")) { return; }
+    captureEnteredEdit();
+    if (!enteredEdit) { return; }
+    enteredEdit.room = "";
+    renderEntered();
+  });
+
+  /* Every ticket on the list, moved to another tower in one go (Lewis, 23
+     Sep): for tickets logged against the wrong tower's corridors. A
+     corridor goes to the same floor's corridor there, the stair core to
+     the stair core; a room stays, since a room number belongs to one
+     tower. One move record per ticket, the same as moving one by hand. */
+  var enteredMoveTowerEl = document.getElementById("entered-move-tower");
+  var enteredMoveAllEl = document.getElementById("entered-move-all");
+  var enteredMoveNoteEl = document.getElementById("entered-move-note");
+  (function () {
+    var html = "";
+    for (var t = 1; t <= 4; t++) {
+      if (t === TOWER_N) { continue; }
+      html += '<option value="' + t + '">Tower ' + t + "</option>";
+    }
+    enteredMoveTowerEl.innerHTML = html;
+  })();
+
+  function equivalentRoom(room, tower) {
+    var m;
+    if ((m = /^T[1-4]-CORRIDOR-(\d)$/.exec(room))) {
+      var has = false;
+      var rooms = TOWER_ROOMS[tower] || [];
+      for (var i = 0; i < rooms.length; i++) { if (rooms[i].charAt(2) === m[1]) { has = true; break; } }
+      return has ? "T" + tower + "-CORRIDOR-" + m[1] : "";
+    }
+    if (/^T[1-4]-STAIRS$/.test(room)) { return "T" + tower + "-STAIRS"; }
+    return ROOM_TOWER[room] === tower ? room : "";
+  }
+
+  enteredMoveAllEl.addEventListener("click", function () {
+    if (!identified()) { enteredMoveNoteEl.textContent = "Add your name and company at the top first."; return; }
+    var tower = parseInt(enteredMoveTowerEl.value, 10);
+    if (!(tower >= 1 && tower <= 4) || tower === TOWER_N) { return; }
+    var pick = enteredWhoEl.value;
+    if (!pick) { return; }
+    var list = enteredBy(pick);
+    var seen = {};
+    var moves = [];
+    var stay = 0;
+    for (var i = 0; i < list.length; i++) {
+      var id = list[i].issue;
+      if (!id || seen[id]) { continue; }
+      seen[id] = true;
+      var cur = issueNow(id);
+      if (!cur) { continue; }
+      var to = equivalentRoom(cur.room, tower);
+      if (to) { moves.push({ id: id, to: to, from: cur.room }); } else { stay++; }
+    }
+    if (!moves.length) {
+      enteredMoveNoteEl.textContent = stay
+        ? "None of these can go: a room number belongs to one tower, so only corridor and stair core tickets move."
+        : "No tickets on this list.";
+      return;
+    }
+    var ask = "Move " + moves.length + (moves.length === 1 ? " ticket" : " tickets") + " to Tower " + tower +
+      (stay ? "? " + stay + " against rooms will stay, since a room number belongs to one tower." : "?");
+    if (!window.confirm(ask)) { return; }
+    for (var m = 0; m < moves.length; m++) {
+      postEntry("retag:" + moves[m].id, "issue:" + moves[m].to);
+    }
+    enteredMoveNoteEl.textContent = "Moved " + moves.length + (moves.length === 1 ? " ticket" : " tickets") +
+      " to Tower " + tower + ". They are on that tower\u2019s page now.";
   });
 
   enteredWhoEl.addEventListener("change", function () {
@@ -6642,13 +6810,35 @@
 
   /* ---- Editing a logged issue on the audit log (Lewis, 23 Sep) ---- */
 
-  var issueEdit = null;   // { id, text, note } while an issue is being edited
+  var issueEdit = null;   // { id, text, tower, room, note } while an issue is being edited
+  var issueFlash = "";
+  var issueFlashEl = document.getElementById("issue-flash");
 
   // What is in the editor now, before the list is redrawn under it.
   function captureIssueEdit() {
     if (!issueEdit) { return; }
     var ta = issueListEl.querySelector(".issue-edit-text");
     if (ta && ta.getAttribute("data-id") === issueEdit.id) { issueEdit.text = ta.value; }
+    var tw = issueListEl.querySelector(".issue-edit-tower");
+    if (tw && tw.getAttribute("data-id") === issueEdit.id) { issueEdit.tower = parseInt(tw.value, 10) || issueEdit.tower; }
+    var rm = issueListEl.querySelector(".issue-edit-room");
+    if (rm && rm.getAttribute("data-id") === issueEdit.id) { issueEdit.room = rm.value; }
+  }
+
+  // Where a ticket is being sent: a room of the tower picked, or nowhere.
+  function ticketMoveTarget(tower, room) {
+    if (!(tower >= 1 && tower <= 4) || !room) { return ""; }
+    if (towerOfRoom(room) !== tower) { return ""; }
+    if (tower === TOWER_N && !STUDIO_BY_ROOM[room]) { return ""; }
+    if (tower !== TOWER_N && !(ROOM_TOWER[room] === tower || /^T[1-4]-/.test(room))) { return ""; }
+    return room;
+  }
+
+  function ticketMoveFlash(room) {
+    var tower = towerOfRoom(room);
+    return tower !== TOWER_N
+      ? "Moved to " + anyRoomLabel(room) + ", Tower " + tower + ". It is on that tower\u2019s page now."
+      : "Now against " + anyRoomLabel(room) + ".";
   }
 
   function findIssue(id) {
@@ -6666,7 +6856,8 @@
       if (!identified()) { return; }
       var cur = findIssue(id);
       if (!cur) { return; }
-      issueEdit = { id: id, text: cur.body, note: "" };
+      issueEdit = { id: id, text: cur.body, tower: towerOfRoom(cur.room), room: cur.room, note: "" };
+      issueFlash = "";
       renderAudit();
       var ta = issueListEl.querySelector(".issue-edit-text");
       if (ta) { ta.focus(); }
@@ -6684,9 +6875,27 @@
     if (!identified()) { issueEdit.note = "Add your name and company at the top first."; renderAudit(); return; }
     if (!text) { issueEdit.note = "Say what the issue is, or cancel."; renderAudit(); return; }
     var was = findIssue(id);
+    if (!was) { issueEdit = null; renderAudit(); return; }
+    var target = ticketMoveTarget(issueEdit.tower, issueEdit.room);
     issueEdit = null;
-    if (!was || was.body === text) { renderAudit(); return; }
-    postEntry("edit:" + id, text);
+    var changed = false;
+    if (was.body !== text) { postEntry("edit:" + id, text); changed = true; }
+    if (target && target !== was.room) {
+      issueFlash = ticketMoveFlash(target);
+      postEntry("retag:" + id, "issue:" + target);
+      changed = true;
+    }
+    if (!changed) { renderAudit(); }
+  });
+
+  // Picking another tower in the editor offers that tower's rooms.
+  issueListEl.addEventListener("change", function (ev) {
+    var sel = ev.target;
+    if (!sel || !sel.classList || !sel.classList.contains("issue-edit-tower")) { return; }
+    captureIssueEdit();
+    if (!issueEdit) { return; }
+    issueEdit.room = "";
+    renderAudit();
   });
 
   /* ---- By floor ---- */
@@ -7590,6 +7799,7 @@
     tradeDraft = {};
     habDraft = {};
     issueEdit = null;
+    issueFlash = "";
     lastChecksHtml = null;
     loadDrafts();
     renderAudit();
@@ -7621,8 +7831,14 @@
   var AUDIT_FLOOR_KEY = "cw-tower" + TOWER_N + "-audit-floor";
   var auditFloor = "";
 
-  // The floors, and then the corridors, stairs and twodios as a group of
-  // their own (Lewis, 23 Sep), whatever floor they are on.
+  /* The floor, and beside it a switch for the corridors, stairs and
+     twodios on their own (Lewis, 23 Sep): the two combine, so the 3rd
+     floor with the switch on is that floor's corridor and the stair core,
+     which is on every floor. */
+  var auditAreasEl = document.getElementById("audit-areas");
+  var AUDIT_AREAS_KEY = "cw-tower" + TOWER_N + "-audit-areas";
+  var auditAreasOnly = false;
+
   function floorOptions(sel, first) {
     var html = '<option value=""' + (sel === "" ? " selected" : "") + ">" + esc(first) + "</option>";
     var digits = Object.keys(FLOORS).sort();
@@ -7630,39 +7846,54 @@
       html += '<option value="' + digits[i] + '"' + (sel === digits[i] ? " selected" : "") + ">" +
         esc(FLOORS[digits[i]]) + "</option>";
     }
-    html += '<option value="areas"' + (sel === "areas" ? " selected" : "") + ">" + esc(AREA_LABEL) + "</option>";
     return html;
   }
 
   function floorChoiceOk(v) {
-    return v === "areas" || !!FLOORS[v];
+    return !!FLOORS[v];
   }
 
   function onAuditFloor(room) {
+    if (auditAreasOnly && !isCommon(room)) { return false; }
     if (!auditFloor) { return true; }
-    if (auditFloor === "areas") { return isCommon(room); }
+    if (auditAreasOnly && /-STAIRS$/.test(room)) { return true; }
     return levelOf(room) === auditFloor;
   }
 
-  // "on the 2nd floor", "in the corridors, stairs and twodios", or nothing.
+  // "on the 2nd floor", "in the corridors, stairs and twodios", both, or nothing.
   function auditFloorPhrase() {
-    if (!auditFloor) { return ""; }
-    if (auditFloor === "areas") { return " in the " + AREA_LABEL.toLowerCase(); }
-    return " on the " + FLOORS[auditFloor].toLowerCase();
+    var floor = auditFloor ? " on the " + FLOORS[auditFloor].toLowerCase() : "";
+    if (!auditAreasOnly) { return floor; }
+    return " in the " + AREA_LABEL.toLowerCase() + floor;
   }
 
   auditFloor = String(load(AUDIT_FLOOR_KEY, "") || "");
+  // Earlier today the areas were a choice on the floor list; carried over.
+  if (auditFloor === "areas") { auditFloor = ""; auditAreasOnly = true; store(AUDIT_AREAS_KEY, true); }
   if (!floorChoiceOk(auditFloor)) { auditFloor = ""; }
   auditFloorEl.innerHTML = floorOptions(auditFloor, "All floors");
+  auditAreasOnly = auditAreasOnly || load(AUDIT_AREAS_KEY, false) === true;
+  auditAreasEl.checked = auditAreasOnly;
+  document.getElementById("audit-areas-label").textContent = AREA_LABEL.toLowerCase();
 
-  auditFloorEl.addEventListener("change", function () {
-    auditFloor = floorChoiceOk(auditFloorEl.value) ? auditFloorEl.value : "";
+  function auditFilterChanged() {
     store(AUDIT_FLOOR_KEY, auditFloor);
+    store(AUDIT_AREAS_KEY, auditAreasOnly);
     if (!auditIn) { return; }
     var before = auditStudio;
     fillStudios();
     if (auditStudio !== before && auditStudio) { studioChanged(); }
     renderEntered();
+  }
+
+  auditFloorEl.addEventListener("change", function () {
+    auditFloor = floorChoiceOk(auditFloorEl.value) ? auditFloorEl.value : "";
+    auditFilterChanged();
+  });
+
+  auditAreasEl.addEventListener("change", function () {
+    auditAreasOnly = auditAreasEl.checked;
+    auditFilterChanged();
   });
 
   // Pass is one tap. Fail asks why, and the reason travels with it.

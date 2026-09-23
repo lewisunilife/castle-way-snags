@@ -385,8 +385,10 @@ another phone.
 
 The audit log's picker has a **Floor** filter (23 Sep): every group keeps
 only that floor's rooms and its corridor, the stair core waiting for All
-floors; its last choice is the corridors, stairs and twodios on their own,
-whatever floor they are on; remembered on the device. The tower is the page's own Tower
+floors. Beside it, **Only corridors and stairs** (on Tower 2, corridors,
+stairs and twodios) is a switch that combines with the floor: the 3rd
+floor with the switch on is that floor's corridor and the stair core,
+which is on every floor. Both remembered on the device. The tower is the page's own Tower
 buttons at the top, as on every view.
 
 At the bottom of the signed-in audit log, **Entered by** lists everything
@@ -401,7 +403,17 @@ name at the top picked first. The Floor filter narrows this list too. The
 fold shows the count while shut and is remembered open or shut. A line
 about a ticket (logged, edited, marked done or reopened) has **Edit the
 ticket** under it: the text and the trade, saved as the same edit record
-and trade move as on the audit log. One person with two names is read as
+and trade move as on the audit log, plus **Tower** and **Room**: a ticket
+logged against the wrong room or tower is moved with a `retag:<id>` record
+whose body is `issue:<room>`, the newest winning; it keeps the key it was
+given from the room and text as first logged, so its tick and moves go
+with it, and it reads "moved here" where it lands. The same Tower and
+Room are on the audit log's own ticket editor. **Move every ticket on
+this list to** another tower moves them in one go, for tickets logged
+against the wrong tower's corridors: a corridor goes to the same floor's
+corridor there and the stair core to the stair core, a room stays since a
+room number belongs to one tower; one move record per ticket, after a
+confirmation naming the count. One person with two names is read as
 one (23 Sep): `MERGE_FIRST_NAMES` in the page lists the first names to
 merge (Violeta, who typed her name two ways), and such a person's entries
 are gathered under whichever name she used last; `NAME_ALIASES` takes an
@@ -419,9 +431,9 @@ widens the picker if the room it is asked for is hidden.
 The Comments panel at the bottom of By trade is the tower's own (Tower 2's
 comments carry `tower:2` and so on; Tower 1's carry no tag, from before
 there were other towers). From 23 Sep a comment can be **About** one room
-or area, recorded as `note:<room>`, and the list has a **Show** filter:
-all, the tower-wide ones, one floor, or the corridors, stairs and twodios,
-remembered on the device. Each
+or area, recorded as `note:<room>`, and the list has a **Show** filter,
+all, the tower-wide ones or one floor, with the same corridors switch
+beside it, remembered on the device. Each
 comment has an **Edit** button, the same `edit:<id>` record as a ticket's
 edit, with the original kept and the edit marked with who and when. The
 editor also has **Tower** and **About**: a comment can be moved to another
