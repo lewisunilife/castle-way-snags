@@ -784,7 +784,8 @@
   #cost-list .note-who { display: block; }
   .cost-body { white-space: pre-wrap; overflow-wrap: anywhere; }
   .cost-edit { display: block; margin-top: 4px; }
-  button.cost-edit {
+  .issue-edit { display: block; margin: 4px 0 0 26px; }
+  button.cost-edit, button.issue-edit {
     font: inherit;
     font-size: 12px;
     font-weight: 700;
@@ -796,8 +797,14 @@
     min-height: 0;
     width: auto;
   }
-  button.cost-edit:hover { border-color: var(--tick); }
-  button.cost-edit:disabled { opacity: 0.5; }
+  button.cost-edit:hover, button.issue-edit:hover { border-color: var(--tick); }
+  button.cost-edit:disabled, button.issue-edit:disabled { opacity: 0.5; }
+  #issue-list li.editing { border-left-color: var(--tick); }
+  .issue-edit-text { width: 100%; box-sizing: border-box; min-height: 72px; margin: 6px 0; }
+  #issue-list .panel-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  #issue-list .panel-actions .note-line { margin: 0; }
+  /* Saving an edited reason or comment on a recorded check (23 Sep). */
+  .check-why .why-save { margin-top: 8px; font-size: 13px; padding: 6px 14px; min-height: 36px; width: auto; }
   #cost-list li.editing { border-left-color: var(--tick); }
   .cost-edit-text { width: 100%; box-sizing: border-box; min-height: 72px; margin: 6px 0; }
   #cost-list .panel-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -1431,7 +1438,7 @@
 
     .panel { padding: 14px; }
     button { width: 100%; }
-    button.card-log-open { width: auto; }
+    button.card-log-open, button.why-save, button.issue-edit, button.cost-edit { width: auto; }
 
     /* ...except the note Submit, which sits beside its field and would
        otherwise squeeze it to nothing. */
@@ -3708,6 +3715,9 @@
         out[iss.trade].push({
           room: room,
           action: "Logged: " + iss.body,
+          // The key from the text as first logged, so an edit to the text
+          // leaves the row, its tick and its moves where they are.
+          key: iss.rowId,
           why: "",
           hab: "",
           kind: "issue",
@@ -3868,7 +3878,7 @@
         f.src = auditRoundName(f.at);
         f.srcKey = dayKey(f.at);
         if (f.hab === "nh") { nhRooms[f.room] = true; }
-        wanted[rowKey(f.room, f.action)] = { trade: t, f: f };
+        wanted[f.key || rowKey(f.room, f.action)] = { trade: t, f: f };
       }
     }
 
@@ -3884,8 +3894,14 @@
     for (id in wanted) {
       if (!Object.prototype.hasOwnProperty.call(wanted, id)) { continue; }
       if (auditRowIds[id]) {
-        // Still here; the reason or who failed it may have changed.
+        // Still here; the reason, the text or who failed it may have changed.
         var dom = sectionDom[auditRowIds[id]][id];
+        // An edited issue keeps its key and row; the words on it follow.
+        var actEl = document.querySelector("#row-" + dom + " .action-text");
+        if (actEl && actEl.textContent !== wanted[id].f.action) {
+          actEl.textContent = wanted[id].f.action;
+          index[id].action = wanted[id].f.action;
+        }
         var whyEl = document.querySelector("#row-" + dom + " .fail-why");
         var wantWhy = wanted[id].f.why || "no reason given";
         if (whyEl && whyEl.textContent !== wantWhy) {
@@ -5217,10 +5233,29 @@
       MONTH_NAMES[parseInt(k.slice(4, 6), 10) - 1] + " audit";
   }
 
+  /* An edit to a logged issue is its own record, edit:<id of the issue>
+     with the new text as its body (Lewis, 23 Sep): the newest wins, the
+     original stays in the record, and the row keeps the key it was given
+     from the original text, so its ticks and moves stay with it. */
+  function issueEdits() {
+    var all = comments.concat(queuedComments);
+    var out = {};
+    for (var i = 0; i < all.length; i++) {
+      var c = all[i];
+      if (!c || !c.snag_id || c.snag_id.indexOf("edit:") !== 0) { continue; }
+      var id = c.snag_id.slice(5);
+      var prior = out[id];
+      if (prior && String(prior.at || "") > String(c.created_at || "")) { continue; }
+      out[id] = { body: String(c.body || ""), by: c.author || "", at: c.created_at || "" };
+    }
+    return out;
+  }
+
   function studioIssues() {
     var all = comments.concat(queuedComments);
     var res = issueResolutions();
     var moves = tradeMoves();
+    var edits = issueEdits();
     var out = {};
     for (var i = 0; i < all.length; i++) {
       var c = all[i];
@@ -5232,11 +5267,16 @@
       var tm = ISSUE_TO_RE.exec(text);
       var to = tm && knownTrade(tm[1]) ? tm[1] : UNASSIGNED;
       if (tm) { text = text.slice(0, tm.index); }
+      // The key comes from the text as first logged; an edit changes what
+      // is shown, never the key.
       var rowId = rowKey(room, "Logged: " + text);
       if (moves[rowId]) { to = moves[rowId].to; }
+      var ed = edits[c.id] || null;
+      if (ed) { text = ed.body; }
       out[room].push({
         id: c.id,
         body: text,
+        edited: ed,
         trade: to,
         rowId: rowId,
         author: c.author,
@@ -5608,6 +5648,10 @@
         ' placeholder="' + (st && st.status === "pass" ? "Comment on this check" : "Why did it fail? Or a comment on a pass") + '"' +
         ' value="' + esc(st && st.comment ? st.comment : "") + '"' +
         ' aria-label="Comment on ' + esc(ck.label) + '">' +
+        // Once recorded, an edited reason or comment is saved with this,
+        // as well as with Enter (Lewis, 23 Sep).
+        (st ? '<button type="button" class="why-save secondary" data-check="' + esc(ck.id) +
+          '" aria-label="Save the comment on ' + esc(ck.label) + '">Save</button>' : "") +
         '<div class="fail-only"' + (st && st.status === "pass" ? " hidden" : "") + ">" +
         '<label class="check-assign" for="trade-' + esc(ck.id) + '">Send to</label>' +
         '<select id="trade-' + esc(ck.id) + '" data-check="' + esc(ck.id) + '"' +
@@ -5622,8 +5666,10 @@
         "</div>" +
         '<span class="check-need" id="need-' + esc(ck.id) + '"></span>' +
         "</div>" +
-        '<span class="check-hint">' + (st && st.status === "pass"
-          ? "Press Enter to save the comment against the pass."
+        '<span class="check-hint">' + (st
+          ? (st.status === "pass"
+            ? "Change the comment and press Save."
+            : "Change the reason and press Save; a new trade or habitable answer saves as soon as it is picked. Pass or Fail again to change the result.")
           : "") + "</span>" +
         "</div>" +
         '<span class="check-stamp">' + stamp + "</span>" +
@@ -5717,11 +5763,30 @@
       issueEmptyEl.hidden = true;
       var ih = "";
       var igate = identified() ? "" : " disabled";
+      captureIssueEdit();
       for (var q = 0; q < issues.length; q++) {
         var meta = esc(issues[q].author || "Someone");
         var iw = shortDate(issues[q].created_at);
         if (iw) { meta += " \u00b7 " + esc(iw); }
         meta += " \u00b7 " + esc(tradeName(issues[q].trade));
+        if (issues[q].edited) {
+          var ed = issues[q].edited;
+          meta += " \u00b7 edited" + (ed.by && ed.by !== issues[q].author ? " by " + esc(ed.by) : "");
+          var ew = shortDate(ed.at);
+          if (ew) { meta += " \u00b7 " + esc(ew); }
+        }
+        if (issueEdit && issueEdit.id === issues[q].id) {
+          var iid = esc(issues[q].id);
+          ih += '<li class="editing"><span class="note-who">' + meta + "</span>" +
+            '<textarea class="issue-edit-text" data-id="' + iid + '" aria-label="Edit this issue">' +
+            esc(issueEdit.text) + "</textarea>" +
+            '<div class="panel-actions">' +
+            '<button type="button" class="issue-save" data-id="' + iid + '">Save</button>' +
+            '<button type="button" class="issue-cancel secondary" data-id="' + iid + '">Cancel</button>' +
+            '<span class="note-line issue-edit-note">' + esc(issueEdit.note || "") + "</span></div>" +
+            moveSelect(issues[q].rowId, issues[q].trade, roomLabel(auditStudio), issues[q].body || "", !!igate) + "</li>";
+          continue;
+        }
         // The same tick as the row on the trade list and the By studio card.
         var rec = effective(issues[q].rowId);
         var fin = rec && rec.done === true;
@@ -5737,11 +5802,62 @@
           '<span><span class="note-who">' + meta + "</span>" +
           '<span class="note-body">' + esc(issues[q].body || "") + "</span>" +
           tail + "</span></label>" +
+          '<span class="issue-edit"><button type="button" class="issue-edit" data-id="' +
+          esc(issues[q].id) + '"' + igate + ">Edit</button></span>" +
           moveSelect(issues[q].rowId, issues[q].trade, roomLabel(auditStudio), issues[q].body || "", !!igate) + "</li>";
       }
       issueListEl.innerHTML = ih;
     }
   }
+
+  /* ---- Editing a logged issue on the audit log (Lewis, 23 Sep) ---- */
+
+  var issueEdit = null;   // { id, text, note } while an issue is being edited
+
+  // What is in the editor now, before the list is redrawn under it.
+  function captureIssueEdit() {
+    if (!issueEdit) { return; }
+    var ta = issueListEl.querySelector(".issue-edit-text");
+    if (ta && ta.getAttribute("data-id") === issueEdit.id) { issueEdit.text = ta.value; }
+  }
+
+  function findIssue(id) {
+    var list = studioIssues()[auditStudio] || [];
+    for (var i = 0; i < list.length; i++) { if (list[i].id === id) { return list[i]; } }
+    return null;
+  }
+
+  issueListEl.addEventListener("click", function (ev) {
+    var btn = ev.target;
+    if (!btn || !btn.classList || !btn.getAttribute) { return; }
+    var id = btn.getAttribute("data-id");
+    if (!id) { return; }
+    if (btn.classList.contains("issue-edit")) {
+      if (!identified()) { return; }
+      var cur = findIssue(id);
+      if (!cur) { return; }
+      issueEdit = { id: id, text: cur.body, note: "" };
+      renderAudit();
+      var ta = issueListEl.querySelector(".issue-edit-text");
+      if (ta) { ta.focus(); }
+      return;
+    }
+    if (btn.classList.contains("issue-cancel")) {
+      issueEdit = null;
+      renderAudit();
+      return;
+    }
+    if (!btn.classList.contains("issue-save")) { return; }
+    captureIssueEdit();
+    if (!issueEdit || issueEdit.id !== id) { return; }
+    var text = (issueEdit.text || "").trim();
+    if (!identified()) { issueEdit.note = "Add your name and company at the top first."; renderAudit(); return; }
+    if (!text) { issueEdit.note = "Say what the issue is, or cancel."; renderAudit(); return; }
+    var was = findIssue(id);
+    issueEdit = null;
+    if (!was || was.body === text) { renderAudit(); return; }
+    postEntry("edit:" + id, text);
+  });
 
   /* ---- By floor ---- */
 
@@ -6603,7 +6719,7 @@
     auditLoginEl.hidden = on;
     auditBodyEl.hidden = !on;
     if (on) { lastChecksHtml = null; fillStudios(); loadDrafts(); renderAudit(); }
-    else { cardLog = {}; costEdit = null; }
+    else { cardLog = {}; costEdit = null; issueEdit = null; }
     renderStudios();
     renderCosts();
   }
@@ -6642,6 +6758,7 @@
     whyDraft = {};
     tradeDraft = {};
     habDraft = {};
+    issueEdit = null;
     lastChecksHtml = null;
     loadDrafts();
     renderAudit();
@@ -6728,16 +6845,22 @@
     saveDrafts();
   });
 
-  auditChecksEl.addEventListener("keydown", function (ev) {
-    var field = ev.target;
-    if (!field || ev.key !== "Enter" || field.id.indexOf("why-") !== 0) { return; }
-    ev.preventDefault();
-    var cid = field.id.slice(4);
+  // Saving what is in the reason box: on a pass it keeps the pass and
+  // saves the comment; otherwise it records the fail with the reason,
+  // trade and habitable answer as they stand. Enter and the Save button
+  // both come here.
+  function saveReason(cid) {
+    var field = document.getElementById("why-" + cid);
+    if (!field) { return; }
+    if (!identified()) {
+      var need = document.getElementById("need-" + cid);
+      if (need) { need.textContent = "Add your name and company at the top first."; }
+      return;
+    }
     var sel = document.getElementById("trade-" + cid);
     var typed = field.value.trim();
     var cur = (auditState()[auditStudio] || {})[cid];
     if (cur && cur.status === "pass") {
-      // Already passed: Enter keeps the pass and saves the comment on it.
       if ((cur.comment || "") === typed) { return; }
       clearDraft(cid);
       setCheck(auditStudio, cid, true, typed, "", "", cur.opt || "");
@@ -6747,6 +6870,19 @@
     if (!hab) { needHab(cid, true); return; }
     clearDraft(cid);
     setCheck(auditStudio, cid, false, typed, sel ? sel.value : "", hab);
+  }
+
+  auditChecksEl.addEventListener("keydown", function (ev) {
+    var field = ev.target;
+    if (!field || ev.key !== "Enter" || field.id.indexOf("why-") !== 0) { return; }
+    ev.preventDefault();
+    saveReason(field.id.slice(4));
+  });
+
+  auditChecksEl.addEventListener("click", function (ev) {
+    var btn = ev.target;
+    if (!btn || !btn.classList || !btn.classList.contains("why-save")) { return; }
+    saveReason(btn.getAttribute("data-check"));
   });
 
   // The habitable choice on a check: what is ticked, or the draft held

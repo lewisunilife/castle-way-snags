@@ -365,6 +365,22 @@ first. The cards are rebuilt on every tick and on every record that lands
 from anyone's phone, so what is typed on a card is read back before each
 rebuild and put back after it; signing out shuts every open form.
 
+## Editing on the audit log
+
+Everything recorded on a room's or a corridor's audit log can be changed
+afterwards (23 Sep). On a check, Pass or Fail can be pressed again to
+change the result; the reason or comment box stays open once recorded and
+has a **Save** button under it (Enter does the same); a new trade in Send
+to, or a new habitable answer, records again as soon as it is picked. A
+logged issue has an **Edit** button for its text and the Trade control for
+its trade. An edit to an issue is its own record, `edit:<id of the issue>`
+with the new text as its body: the newest wins, the original stays in the
+record, and the row keeps the key it was given from the original text, so
+its ticks and moves stay with it and the edited text shows wherever the
+issue does, on the trade list and the room's card included. Text typed
+into the editor survives the list being redrawn by an entry landing from
+another phone.
+
 ## Cost recovery from iKew
 
 A fifth tab, **Cost recovery** (23 Sep): a free-text log of costs to recover
