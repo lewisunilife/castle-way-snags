@@ -785,7 +785,7 @@
   .cost-body { white-space: pre-wrap; overflow-wrap: anywhere; }
   .cost-edit { display: block; margin-top: 4px; }
   .issue-edit { display: block; margin: 4px 0 0 26px; }
-  button.cost-edit, button.issue-edit, button.comment-edit {
+  button.cost-edit, button.issue-edit, button.comment-edit, button.entered-edit {
     font: inherit;
     font-size: 12px;
     font-weight: 700;
@@ -797,8 +797,8 @@
     min-height: 0;
     width: auto;
   }
-  button.cost-edit:hover, button.issue-edit:hover, button.comment-edit:hover { border-color: var(--tick); }
-  button.cost-edit:disabled, button.issue-edit:disabled, button.comment-edit:disabled { opacity: 0.5; }
+  button.cost-edit:hover, button.issue-edit:hover, button.comment-edit:hover, button.entered-edit:hover { border-color: var(--tick); }
+  button.cost-edit:disabled, button.issue-edit:disabled, button.comment-edit:disabled, button.entered-edit:disabled { opacity: 0.5; }
   #issue-list li.editing { border-left-color: var(--tick); }
   #comment-list li.editing { border-left-color: var(--tick); }
   .comment-edit { display: block; margin-top: 4px; }
@@ -835,6 +835,12 @@
     line-height: 1.45;
   }
   #entered-list .note-who { display: block; }
+  #entered-list li.editing { border-left-color: var(--tick); }
+  .entered-edit { display: block; margin-top: 4px; }
+  .entered-edit-text { width: 100%; box-sizing: border-box; min-height: 64px; margin: 6px 0; }
+  #entered-list .panel-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  #entered-list .panel-actions .note-line { margin: 0; }
+  #entered-list .log-fields { margin: 0 0 8px; }
   #entered-list .note-body { overflow-wrap: anywhere; }
   .issue-edit-text { width: 100%; box-sizing: border-box; min-height: 72px; margin: 6px 0; }
   #issue-list .panel-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -1474,7 +1480,7 @@
 
     .panel { padding: 14px; }
     button { width: 100%; }
-    button.card-log-open, button.why-save, button.issue-edit, button.cost-edit, button.comment-edit, button.room-chip { width: auto; }
+    button.card-log-open, button.why-save, button.issue-edit, button.cost-edit, button.comment-edit, button.room-chip, button.entered-edit { width: auto; }
 
     /* ...except the note Submit, which sits beside its field and would
        otherwise squeeze it to nothing. */
@@ -6224,6 +6230,45 @@
     return ck ? ck.label : id;
   }
 
+  /* One person, two names (Lewis, 23 Sep): Violeta typed her name two
+     ways, so for Entered by and Rooms I've logged her entries are read as
+     one person's, under whichever name she used last. Merged by first
+     name, and only for the first names listed here, so another person
+     sharing a first name is left alone. NAME_ALIASES takes an exact old
+     name to a new one where that is known. */
+  var MERGE_FIRST_NAMES = ["violeta"];
+  var NAME_ALIASES = {};
+
+  function firstNameOf(name) {
+    return String(name || "").trim().split(/[\s,]+/)[0].toLowerCase();
+  }
+
+  // For each merged first name, the name on that person's newest record.
+  function canonNames() {
+    var latest = {};
+    function see(name, at) {
+      var f = firstNameOf(name);
+      if (!name || MERGE_FIRST_NAMES.indexOf(f) < 0) { return; }
+      if (!latest[f] || String(latest[f].at || "") < String(at || "")) { latest[f] = { name: name, at: at }; }
+    }
+    var all = comments.concat(queuedComments);
+    var i, k;
+    for (i = 0; i < all.length; i++) { if (all[i]) { see(all[i].author, all[i].created_at); } }
+    for (k in items) { if (Object.prototype.hasOwnProperty.call(items, k) && items[k]) { see(items[k].updated_by, items[k].updated_at); } }
+    for (k in queued) { if (Object.prototype.hasOwnProperty.call(queued, k) && queued[k]) { see(queued[k].updated_by, queued[k].updated_at); } }
+    var map = {};
+    for (var f in latest) { if (Object.prototype.hasOwnProperty.call(latest, f)) { map[f] = latest[f].name; } }
+    return map;
+  }
+
+  function canon(name, map) {
+    name = String(name || "");
+    if (NAME_ALIASES[name]) { return NAME_ALIASES[name]; }
+    var f = firstNameOf(name);
+    if (MERGE_FIRST_NAMES.indexOf(f) < 0) { return name; }
+    return (map || canonNames())[f] || name;
+  }
+
   function issueTextOf(c) {
     var text = String(c.body || "");
     var tm = ISSUE_TO_RE.exec(text);
@@ -6233,15 +6278,16 @@
   function enteredNames() {
     var seen = {};
     var all = comments.concat(queuedComments);
+    var cmap = canonNames();
     var i, k;
     for (i = 0; i < all.length; i++) {
-      if (all[i] && all[i].author) { seen[all[i].author] = true; }
+      if (all[i] && all[i].author) { seen[canon(all[i].author, cmap)] = true; }
     }
     for (k in items) {
-      if (Object.prototype.hasOwnProperty.call(items, k) && items[k] && items[k].updated_by) { seen[items[k].updated_by] = true; }
+      if (Object.prototype.hasOwnProperty.call(items, k) && items[k] && items[k].updated_by) { seen[canon(items[k].updated_by, cmap)] = true; }
     }
     for (k in queued) {
-      if (Object.prototype.hasOwnProperty.call(queued, k) && queued[k] && queued[k].updated_by) { seen[queued[k].updated_by] = true; }
+      if (Object.prototype.hasOwnProperty.call(queued, k) && queued[k] && queued[k].updated_by) { seen[canon(queued[k].updated_by, cmap)] = true; }
     }
     var names = Object.keys(seen);
     names.sort(function (a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; });
@@ -6253,6 +6299,7 @@
     var all = comments.concat(queuedComments);
     var byId = {};
     var retags = commentRetags();
+    var cmap = canonNames();
     var i, c, k;
     for (i = 0; i < all.length; i++) { c = all[i]; if (c && c.id) { byId[c.id] = c; } }
 
@@ -6263,15 +6310,19 @@
       return { here: et === TOWER_TAG || (!et && TOWER_N === 1), room: "" };
     }
 
+    var rid = "";      // the record each entry comes from, for the editor
+    var issueId = "";  // the ticket an entry is about, where it is about one
     function push(at, room, what, text) {
       if (room && !onAuditFloor(room)) { return; }
       if (!room && auditFloor) { return; }
-      out.push({ at: at || "", room: room || "", what: what, text: text || "" });
+      out.push({ at: at || "", room: room || "", what: what, text: text || "", rid: rid, issue: issueId });
     }
 
     for (i = 0; i < all.length; i++) {
       c = all[i];
-      if (!c || (c.author || "") !== name) { continue; }
+      if (!c || canon(c.author, cmap) !== name) { continue; }
+      rid = c.id || "";
+      issueId = "";
       var tag = c.snag_id ? String(c.snag_id) : "";
       var body = String(c.body || "");
       var room, src, otag;
@@ -6299,12 +6350,14 @@
         if (!roomInTower(room)) { continue; }
         var tm = ISSUE_TO_RE.exec(body);
         var it = tm && knownTrade(tm[1]) ? tm[1] : UNASSIGNED;
+        issueId = c.id;
         push(c.created_at, room, "Logged a ticket to " + tradeName(it), issueTextOf(c));
       } else if (tag.indexOf("issue-done:") === 0 || tag.indexOf("issue-open:") === 0) {
         src = byId[tag.slice(11)];
         if (!src || !src.snag_id || String(src.snag_id).indexOf("issue:") !== 0) { continue; }
         room = String(src.snag_id).slice(6);
         if (!roomInTower(room)) { continue; }
+        issueId = src.id;
         push(c.created_at, room, tag.indexOf("issue-done:") === 0 ? "Marked a ticket done" : "Reopened a ticket", issueTextOf(src));
       } else if (tag.indexOf("move:") === 0) {
         var job = index[tag.slice(5)];
@@ -6318,6 +6371,7 @@
         if (otag.indexOf("issue:") === 0) {
           room = otag.slice(6);
           if (!roomInTower(room)) { continue; }
+          issueId = src.id;
           push(c.created_at, room, "Edited a ticket", body);
         } else if (otag.indexOf("cost:") !== 0 && otag.indexOf("audit:") !== 0) {
           var eh = commentHome(src);
@@ -6363,7 +6417,9 @@
       if (!Object.prototype.hasOwnProperty.call(ids, k)) { continue; }
       var rec = effective(k);
       var tj = index[k];
-      if (!tj || (rec.updated_by || "") !== name) { continue; }
+      if (!tj || canon(rec.updated_by, cmap) !== name) { continue; }
+      rid = "tick:" + k;
+      issueId = "";
       push(rec.updated_at, tj.room, rec.done === true ? "Ticked done" : "Unticked", tj.action);
     }
 
@@ -6371,10 +6427,33 @@
     return out;
   }
 
+  var enteredEdit = null;   // { rid, issue, text, trade, note } while a line is being edited
+
+  function captureEnteredEdit() {
+    if (!enteredEdit) { return; }
+    var ta = enteredListEl.querySelector(".entered-edit-text");
+    if (ta && ta.getAttribute("data-rid") === enteredEdit.rid) { enteredEdit.text = ta.value; }
+    var sel = enteredListEl.querySelector(".entered-edit-trade");
+    if (sel && sel.getAttribute("data-rid") === enteredEdit.rid) { enteredEdit.trade = sel.value; }
+  }
+
+  // The ticket an Entered by line is about, as it stands now.
+  function issueNow(issueId) {
+    var all = studioIssues();
+    for (var room in all) {
+      if (!Object.prototype.hasOwnProperty.call(all, room)) { continue; }
+      for (var i = 0; i < all[room].length; i++) {
+        if (all[room][i].id === issueId) { return all[room][i]; }
+      }
+    }
+    return null;
+  }
+
   function renderEntered() {
     if (!auditIn || !enteredFoldEl) { return; }
+    captureEnteredEdit();
     var names = enteredNames();
-    var me = identified() ? who() : "";
+    var me = identified() ? canon(who()) : "";
     var pick = enteredWho || me;
     if (names.indexOf(pick) < 0) { pick = me && names.indexOf(me) >= 0 ? me : (names[0] || ""); }
     var html = "";
@@ -6395,16 +6474,74 @@
     // While shut, the count on the heading is enough.
     if (!enteredFoldEl.open) { enteredListEl.innerHTML = ""; return; }
     var h = "";
+    var open = identified();
     for (var e = 0; e < list.length; e++) {
       var en = list[e];
-      h += '<li><span class="note-who">' + esc(shortDate(en.at) || "") +
-        (en.room ? " \u00b7 " + esc(roomLabel(en.room)) : "") + "</span>" +
+      var rid = esc(en.rid || "");
+      var head = '<span class="note-who">' + esc(shortDate(en.at) || "") +
+        (en.room ? " \u00b7 " + esc(roomLabel(en.room)) : "") + "</span>";
+      if (en.issue && enteredEdit && enteredEdit.rid === en.rid) {
+        h += '<li class="editing">' + head +
+          '<span class="note-body"><strong>' + esc(en.what) + "</strong></span>" +
+          '<textarea class="entered-edit-text" data-rid="' + rid + '" aria-label="Edit this ticket">' +
+          esc(enteredEdit.text) + "</textarea>" +
+          '<div class="log-fields"><div class="field"><label>Trade</label>' +
+          '<select class="entered-edit-trade" data-rid="' + rid + '">' + tradeOptions(enteredEdit.trade) + "</select></div></div>" +
+          '<div class="panel-actions">' +
+          '<button type="button" class="entered-save" data-rid="' + rid + '">Save</button>' +
+          '<button type="button" class="entered-cancel secondary" data-rid="' + rid + '">Cancel</button>' +
+          '<span class="note-line entered-edit-note">' + esc(enteredEdit.note || "") + "</span></div></li>";
+        continue;
+      }
+      h += "<li>" + head +
         '<span class="note-body"><strong>' + esc(en.what) + "</strong>" +
-        (en.text ? ": " + esc(en.text) : "") + "</span></li>";
+        (en.text ? ": " + esc(en.text) : "") + "</span>" +
+        (en.issue
+          ? '<span class="entered-edit"><button type="button" class="entered-edit" data-rid="' + rid +
+            '" data-issue="' + esc(en.issue) + '"' + (open ? "" : " disabled") + ">Edit the ticket</button></span>"
+          : "") + "</li>";
     }
     enteredListEl.innerHTML = h;
     enteredEmptyEl.hidden = list.length > 0;
   }
+
+  // Editing a ticket from its Entered by line (Lewis, 23 Sep): the text is
+  // the same edit record as on the audit log, the trade the same move.
+  enteredListEl.addEventListener("click", function (ev) {
+    var btn = ev.target;
+    if (!btn || !btn.classList || !btn.getAttribute) { return; }
+    var rid = btn.getAttribute("data-rid");
+    if (!rid) { return; }
+    if (btn.classList.contains("entered-edit")) {
+      if (!identified()) { return; }
+      var cur = issueNow(btn.getAttribute("data-issue"));
+      if (!cur) { return; }
+      enteredEdit = { rid: rid, issue: cur.id, text: cur.body, trade: cur.trade, note: "" };
+      renderEntered();
+      var ta = enteredListEl.querySelector(".entered-edit-text");
+      if (ta) { ta.focus(); }
+      return;
+    }
+    if (btn.classList.contains("entered-cancel")) {
+      enteredEdit = null;
+      renderEntered();
+      return;
+    }
+    if (!btn.classList.contains("entered-save")) { return; }
+    captureEnteredEdit();
+    if (!enteredEdit || enteredEdit.rid !== rid) { return; }
+    var text = (enteredEdit.text || "").trim();
+    if (!identified()) { enteredEdit.note = "Add your name and company at the top first."; renderEntered(); return; }
+    if (!text) { enteredEdit.note = "Say what the issue is, or cancel."; renderEntered(); return; }
+    var was = issueNow(enteredEdit.issue);
+    var to = knownTrade(enteredEdit.trade) ? enteredEdit.trade : UNASSIGNED;
+    enteredEdit = null;
+    if (!was) { renderEntered(); return; }
+    var changed = false;
+    if (was.body !== text) { postEntry("edit:" + was.id, text); changed = true; }
+    if (to !== was.trade && index[was.rowId]) { moveJob(was.rowId, to); changed = true; }
+    if (!changed) { renderEntered(); }
+  });
 
   enteredWhoEl.addEventListener("change", function () {
     enteredWho = enteredWhoEl.value;
@@ -6456,7 +6593,7 @@
       return;
     }
     myRoomsNoteEl.textContent = "";
-    var name = who();
+    var name = canon(who());
     var rooms = myRooms(name);
     myRoomsHeadEl.textContent = rooms.length
       ? rooms.length + (rooms.length === 1 ? " room" : " rooms") + " with something entered by " + name +

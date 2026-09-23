@@ -398,7 +398,15 @@ A person is the author on the records, the name and company typed at the
 top of the page when the entry was made, not the audit login, which is
 only a gate; the person picker lists everyone on the records, with the
 name at the top picked first. The Floor filter narrows this list too. The
-fold shows the count while shut and is remembered open or shut.
+fold shows the count while shut and is remembered open or shut. A line
+about a ticket (logged, edited, marked done or reopened) has **Edit the
+ticket** under it: the text and the trade, saved as the same edit record
+and trade move as on the audit log. One person with two names is read as
+one (23 Sep): `MERGE_FIRST_NAMES` in the page lists the first names to
+merge (Violeta, who typed her name two ways), and such a person's entries
+are gathered under whichever name she used last; `NAME_ALIASES` takes an
+exact old name to a new one where that is known. The names on the
+individual records are left as typed.
 
 Above the picker, **Rooms I've logged** (23 Sep) lists every room the
 person named at the top has entered anything against on this tower, from
