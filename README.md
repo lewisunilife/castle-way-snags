@@ -47,7 +47,7 @@ Then open the page on two devices — the bar at the top should read
 Four views, one URL: **By trade** (the snagging list), **By studio**, **By
 floor**, and **Audit log**. The first two are public; the audit log asks for a username
 and password. The sign-ins are in `AUDIT_USERS` in `site/index.html` (JBA,
-JCA, Steve, Bal, Nycole, Sam and Ryan at the time of writing; the username is not
+JCA, Steve, Bal, Nycole, Sam, Ryan and VA at the time of writing; the username is not
 case-sensitive). That is a guard on the view, not a lock on the data: the
 page and its source are public, and so is that list.
 
