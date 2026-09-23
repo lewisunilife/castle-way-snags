@@ -166,7 +166,7 @@ are jobs) and logged issues, each naming its trade. Ticking a failure off in
 the trade list clears it from the studio card too.
 
 A failed check whose fix the trade has ticked off counts as done. Once all
-twenty-six checks have been recorded and nothing is left against the studio —
+twenty-seven checks have been recorded and nothing is left against the studio —
 no open jobs, no open issues — it reads **audited, nothing outstanding** and
 moves into the picker's Completed group. It is the tick that clears a
 failure, not a second visit from the auditor.
@@ -216,7 +216,7 @@ the rooms with nothing recorded against them, counted in the heading; the
 room in hand stays on the list whatever its state, so recording its first
 check does not pull it out from under the auditor. Remembered on the device.
 
-One of Stelling's rooms is clear once all twenty-six checks have passed, every
+One of Stelling's rooms is clear once all twenty-seven checks have passed, every
 logged issue is marked done, **and** nothing is left against it on the trade
 lists. A room in the rest of the building is clear once its trade list is
 clear.
@@ -542,7 +542,7 @@ on the device.
 Each tower's audit log also carries one corridor per floor the tower has
 rooms on ("Floor 1 corridor" and so on) and a single "Stair core", under
 **Corridors and stairs** in the studio picker. They take the checks that
-apply to a common area, fifteen of the twenty-six: fire detection, fire
+apply to a common area, fifteen of the twenty-seven: fire detection, fire
 doors, window restrictors, sockets, leaks, lights, switches, heating,
 extraction, windows and blinds, skirting, architraves, mastic, the sprinkler
 check and cleaning; no door fob, bed, taps, toilet, appliances, studio door,
@@ -577,10 +577,13 @@ ticked in any of the three places with the one tick. Its record is
 marked done before they were tickets still show ticked: the old done entry
 seeds the row's tick, and any tick made on the row since wins.
 
-The checklist is twenty-six: the eighteen originals, MVHR door secured,
+The checklist is twenty-seven: the eighteen originals, MVHR door secured,
 studio doors, skirting, architraves, mastic, the sprinkler check, the Egger
-panel, and last a final sense check of whether the room is student
-move-in ready, whose fail goes to no trade until the auditor picks one.
+panel, an MEP box snag (23 Sep; a plain pass or fail, the fail going to
+Joinery / Carpentry unless the auditor sends it elsewhere, since MEP boxes
+and their boxing are joinery's), and last a final sense check of whether
+the room is student move-in ready, whose fail goes to no trade until the
+auditor picks one.
 
 ## Habitable or not
 
