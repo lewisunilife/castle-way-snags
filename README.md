@@ -614,6 +614,22 @@ floors 1 to 5, shown on the south side and on the whole-tower view, with a
 card on By studio and an entry on the audit picker under "Corridors, stairs
 and twodios", and audited with the same checks as a corridor.
 
+## The Tower 3 inspection
+
+Levels 4 and 5 of Tower 3, from the snag list of 24 Sep: one ticket per
+numbered item on each module's line, the module number being the room
+(CW420 to CW439 and CW512 to CW521), 178 tickets under the source "Tower
+3 inspection". Filed by the same keyword rules as the Tower 2 inspection,
+with rippling added to vinyl for Flooring and a mattress to lay out added
+to Room set-up: Decorating 30, Joinery 37, Room set-up 28, Flooring 9,
+iKew 9, Sprinklers 8, Blinds 7, Electrical 2, Doors 1, Mastic 1, and 46
+under Unassigned until Lewis says where (insulation in risers and
+showers, Egger and intercom panels, toilet splashbacks and upstands,
+mould, standing water, doors missing or needing rework, communal doors
+and materials left in modules, a kitchen tap, a towel ring, a bed frame).
+Each row's key is the room and its text, so every tick and move stays
+with it.
+
 ## By floor
 
 The fourth view is the summary by trade, floor by floor from the top down:
