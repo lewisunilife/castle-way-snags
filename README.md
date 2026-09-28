@@ -475,6 +475,15 @@ being redrawn under it by an entry landing from another phone.
 A trade with nothing on it yet (23 Sep), like Marius: on the filter, the
 Trade control and Send to, ready for tickets to be moved or logged to it.
 
+## Missing parts
+
+A trade for Towers 3 and 4 (28 Sep), the parts a room is without: on
+every tower's filter, Trade control and Send to like any trade. The Tower
+3 inspection rows that say "missing" and were under Unassigned are filed
+here (eleven: toilet upstands and splashback panels, a towel ring, a
+kitchen tap, a sink bund cap, Egger panels, a studio door, a bathroom
+door, a bed frame); Tower 4's list is not on the page yet.
+
 ## Ticking, everywhere
 
 Every job can be ticked and unticked from wherever it is shown: its row in
@@ -622,11 +631,11 @@ numbered item on each module's line, the module number being the room
 3 inspection". Filed by the same keyword rules as the Tower 2 inspection,
 with rippling added to vinyl for Flooring and a mattress to lay out added
 to Room set-up: Decorating 30, Joinery 37, Room set-up 28, Flooring 9,
-iKew 9, Sprinklers 8, Blinds 7, Electrical 2, Doors 1, Mastic 1, and 46
-under Unassigned until Lewis says where (insulation in risers and
-showers, Egger and intercom panels, toilet splashbacks and upstands,
-mould, standing water, doors missing or needing rework, communal doors
-and materials left in modules, a kitchen tap, a towel ring, a bed frame).
+iKew 9, Sprinklers 8, Blinds 7, Electrical 2, Doors 1, Mastic 1, Missing
+parts 11 (from 28 Sep, the rows that say "missing"), and 35 under
+Unassigned until Lewis says where (insulation in risers and showers,
+intercom panels not fixed, mould, standing water, doors needing rework,
+communal doors and materials left in modules).
 Each row's key is the room and its text, so every tick and move stays
 with it.
 

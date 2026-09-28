@@ -2341,6 +2341,16 @@
     rows: []
   });
 
+  // Missing parts (Lewis, 28 Sep): for Towers 3 and 4, the parts a room is
+  // without. The Tower 3 inspection rows that say so and were unplaced
+  // are filed here; the rest of the building's rows are unchanged.
+  ALL_SECTIONS.push({
+    key: "missingparts",
+    title: "Missing parts",
+    col3: "Source",
+    rows: []
+  });
+
   /* Tower 2, inspected room by room (Lewis, 21 Sep): the solo rooms on the
      north side, the twodio private rooms on the south, and each twodio
      itself (CW140, the part shared between 140A and 140B: id T2-TWODIO-140,
@@ -2717,7 +2727,7 @@
     ["CW428", T3I, "Full repaint.", "decorating"],
     ["CW428", T3I, "Vinyl rippling by studio door.", "flooring"],
     ["CW428", T3I, "Bathroom door adjustment.", "joinery"],
-    ["CW428", T3I, "Toilet upstands missing."],
+    ["CW428", T3I, "Toilet upstands missing.", "missingparts"],
     ["CW428", T3I, "Shower door adjustment.", "joinery"],
     ["CW428", T3I, "Insulation in riser."],
     ["CW428", T3I, "3x Grey sprinkler caps missing.", "sprinklers"],
@@ -2730,12 +2740,12 @@
     ["CW429", T3I, "Ensure kitchen MEP box is secure.", "joinery"],
     ["CW429", T3I, "Furniture needs laying out.", "setup"],
     ["CW430", T3I, "Full repaint.", "decorating"],
-    ["CW430", T3I, "Bathroom towel ring missing."],
+    ["CW430", T3I, "Bathroom towel ring missing.", "missingparts"],
     ["CW430", T3I, "Verticsl shower trim between shower and mirror needs regluing.", "joinery"],
     ["CW430", T3I, "Furniture needs laying out.", "setup"],
     ["CW430", T3I, "Window blinds need levelling.", "blinds"],
     ["CW430", T3I, "Shelf under kitchen sink not fitted."],
-    ["CW430", T3I, "Kitchen sink bund cap missing."],
+    ["CW430", T3I, "Kitchen sink bund cap missing.", "missingparts"],
     ["CW431", T3I, "Full repaint.", "decorating"],
     ["CW431", T3I, "Bathroom mirror needs hanging.", "joinery"],
     ["CW431", T3I, "Bathroom door handle missing.", "doors"],
@@ -2743,7 +2753,7 @@
     ["CW431", T3I, "3x sprinkler caps missing.", "sprinklers"],
     ["CW431", T3I, "Furniture needs laying out.", "setup"],
     ["CW431", T3I, "Large gap beteeen bedroom MEP and bedroom wall needs mastic.", "mastic"],
-    ["CW431", T3I, "Kitchen tap missing."],
+    ["CW431", T3I, "Kitchen tap missing.", "missingparts"],
     ["CW432", T3I, "Full repaint.", "decorating"],
     ["CW432", T3I, "Large egger panel with intercom not fixed."],
     ["CW432", T3I, "Shower door adjustment.", "joinery"],
@@ -2759,7 +2769,7 @@
     ["CW433", T3I, "Window MEP box sagging.", "joinery"],
     ["CW434", T3I, "Full repaint.", "decorating"],
     ["CW434", T3I, "Bathroom door adjustment.", "joinery"],
-    ["CW434", T3I, "Toilet splashback panels missing."],
+    ["CW434", T3I, "Toilet splashback panels missing.", "missingparts"],
     ["CW434", T3I, "Shower door adjustment.", "joinery"],
     ["CW434", T3I, "3x grey sprinkler caps missing.", "sprinklers"],
     ["CW434", T3I, "Huge gap between bedroom wall and long wall."],
@@ -2777,22 +2787,22 @@
     ["CW437", T3I, "Insulation in riser."],
     ["CW438", T3I, "Paint touch ups to cracks and around bathroom mirror.", "decorating"],
     ["CW438", T3I, "Bathroom door adjustment.", "joinery"],
-    ["CW438", T3I, "3x egger panels missing around bathroom door."],
+    ["CW438", T3I, "3x egger panels missing around bathroom door.", "missingparts"],
     ["CW438", T3I, "Insulation in riser."],
     ["CW438", T3I, "Furniture needs laying out.", "setup"],
     ["CW439", T3I, "Minor paint touch ups to cracks and blemishes.", "decorating"],
-    ["CW439", T3I, "Studio door missing."],
+    ["CW439", T3I, "Studio door missing.", "missingparts"],
     ["CW439", T3I, "Hallway mirror needs rehanging.", "joinery"],
-    ["CW439", T3I, "Bathroom door missing."],
+    ["CW439", T3I, "Bathroom door missing.", "missingparts"],
     ["CW439", T3I, "Wardrobe and vents need removing."],
     ["CW439", T3I, "Sprinkler cap by studio door protruding.", "sprinklers"],
     ["CW439", T3I, "Shower sprinkler cap missing.", "sprinklers"],
     ["CW439", T3I, "Pinboard bottom right corner dented."],
     ["CW439", T3I, "MEP box has dropped to right of window, needs refixing.", "joinery"],
-    ["CW439", T3I, "Kitchen missing multiple grey egger panels."],
+    ["CW439", T3I, "Kitchen missing multiple grey egger panels.", "missingparts"],
     ["CW439", T3I, "Furniture needs laying out.", "setup"],
     ["CW439", T3I, "Skirting missing by kitchen.", "joinery"],
-    ["CW439", T3I, "Bed frame missint."],
+    ["CW439", T3I, "Bed frame missint.", "missingparts"],
     ["CW512", T3I, "Significant repaint needed.", "decorating"],
     ["CW512", T3I, "Bathroom door adjustment.", "joinery"],
     ["CW512", T3I, "Shower door adjustment.", "joinery"],
@@ -2844,7 +2854,7 @@
     ["CW519", T3I, "Insulation in shower."],
     ["CW519", T3I, "Sprinkler caps missing.", "sprinklers"],
     ["CW520", T3I, "Full repaint.", "decorating"],
-    ["CW520", T3I, "Egger panels above bathroom door missing."],
+    ["CW520", T3I, "Egger panels above bathroom door missing.", "missingparts"],
     ["CW520", T3I, "Bathroom door adjustment.", "joinery"],
     ["CW520", T3I, "Bathroom cabinet missing.", "joinery"],
     ["CW520", T3I, "DGU in module."],
