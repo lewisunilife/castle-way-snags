@@ -1540,6 +1540,7 @@
     <a class="tower-btn" data-tower="2" href="?tower=2">Tower 2</a>
     <a class="tower-btn" data-tower="3" href="?tower=3">Tower 3</a>
     <a class="tower-btn" data-tower="4" href="?tower=4">Tower 4</a>
+    <a class="tower-btn" data-tower="students" href="?tower=students">Students reported issues</a>
   </nav>
   <nav class="towers" id="sides" aria-label="Side of Tower 2" hidden>
     <span class="towers-label">Side</span>
@@ -1657,8 +1658,8 @@
     trade lists yet. A check that fails in the audit log lands here, under
     the trade it is sent to.</p>
 
-  <h2>Comments</h2>
-  <div class="panel">
+  <h2 id="comments-head">Comments</h2>
+  <div class="panel" id="comments-panel">
     <div class="log-fields comment-filter">
       <div class="field">
         <label for="comment-floor">Show</label>
@@ -1771,7 +1772,7 @@
         </div>
       </section>
 
-      <div class="panel">
+      <div class="panel" id="audit-picker-panel">
         <label class="filter audit-new" for="audit-new">
           <input type="checkbox" id="audit-new"> Only rooms not audited yet
         </label>
@@ -1798,8 +1799,8 @@
 
       <div id="audit-checks"></div>
 
-      <h2>Log an issue</h2>
-      <div class="panel">
+      <h2 id="issue-head">Log an issue</h2>
+      <div class="panel" id="issue-panel">
         <label for="issue-text">Anything else found in this studio</label>
         <textarea id="issue-text" placeholder="Something not covered by the checks above."></textarea>
         <label class="check-assign" for="issue-trade">Send to</label>
@@ -2915,7 +2916,16 @@
     else { T2_UNPLACED.push(hdrow); }
   }
 
+  /* Students reported issues (Lewis, 29 Sep): ?tower=students is a page
+     for the whole building showing only what students have reported,
+     through FaultFixers and GrokBot each day or by hand on the form: the
+     same views and filters, every room of every tower, no built-in rows
+     and no audit checks. Its records are student:<room>, which also show
+     on the room's own tower page under their trade, so the trades see
+     them where they work. */
+  var STUDENTS = /[?&]tower=students(?![a-z])/i.test(window.location.search || "");
   var TOWER_N = (function () {
+    if (STUDENTS) { return 0; }
     var m = /[?&]tower=([1-4])(?![0-9])/.exec(window.location.search || "");
     return m ? parseInt(m[1], 10) : 1;
   }());
@@ -2938,16 +2948,22 @@
     if (ROOM_TOWER[room] !== 2) { return ""; }
     return /[AB]$/.test(room) ? "south" : "north";
   }
-  var TOWER_NAME = "Castle Way Tower " + TOWER_N +
+  var TOWER_NAME = STUDENTS ? "Students reported issues" : "Castle Way Tower " + TOWER_N +
     (SIDE ? " " + SIDE.charAt(0).toUpperCase() + SIDE.slice(1) : "");
+  var PAGE_TOWERS = STUDENTS ? [1, 2, 3, 4] : [TOWER_N];   // the towers this page covers
   var EVERY_ROOM = [];
-  for (var evr = 0; evr < TOWER_ROOMS[TOWER_N].length; evr++) {
-    if (!SIDE || roomSide(TOWER_ROOMS[TOWER_N][evr]) === SIDE) { EVERY_ROOM.push(TOWER_ROOMS[TOWER_N][evr]); }
+  for (var evt = 0; evt < PAGE_TOWERS.length; evt++) {
+    var evList = TOWER_ROOMS[PAGE_TOWERS[evt]] || [];
+    for (var evr = 0; evr < evList.length; evr++) {
+      if (!SIDE || roomSide(evList[evr]) === SIDE) { EVERY_ROOM.push(evList[evr]); }
+    }
   }
 
   // A number on no tower's list counts as Tower 1, where every record
   // made before the split belongs.
   function roomInTower(room) {
+    // The students' page is the whole building.
+    if (STUDENTS) { return /^T[1-4]-/.test(room || "") || /^CW\d{3}[AB]?$/.test(room || ""); }
     // A corridor or stair core carries its tower in its id: T2-CORRIDOR-3.
     var cm = /^T([1-4])-/.exec(room || "");
     if (cm) {
@@ -2966,6 +2982,12 @@
   // This tower's share of every trade list. A row keeps its key whichever
   // tower shows it, so the split touches nothing that is ticked.
   var sections = [];
+  // The students' page carries only what students have reported: no
+  // built-in rows from the sweeps, the inspections or the helpdesk.
+  if (STUDENTS) {
+    for (var stc = 0; stc < ALL_SECTIONS.length; stc++) { ALL_SECTIONS[stc].rows = []; }
+    T2_UNPLACED = [];
+  }
   var drawn = [];   // the sections plus Unassigned, in the order they are drawn
   for (var ts = 0; ts < ALL_SECTIONS.length; ts++) {
     var kept = [];
@@ -3217,7 +3239,9 @@
      the ground floor and the twodios (the A/B rooms) go last: Lewis, 16
      Sep, for Tower 2. Tower 3 and 4 have neither, so they are room order. */
   var STELLING_LIST = [];
-  if (TOWER_N === 1) {
+  if (STUDENTS) {
+    STELLING_LIST = [];   // no audit on the students' page: every room is just a room
+  } else if (TOWER_N === 1) {
     STELLING_LIST = TOWER1_LIST;
   } else {
     var ordered = EVERY_ROOM.slice();
@@ -3252,49 +3276,56 @@
   var COMMON_AREAS = [];
   var COMMON_BY_ID = {};
   (function () {
-    var floors = {};
-    for (var i = 0; i < EVERY_ROOM.length; i++) {
-      var d = EVERY_ROOM[i].charAt(2);
-      if (d !== "0") { floors[d] = true; }
-    }
-    for (var f = 1; f <= 5; f++) {
-      if (!floors[String(f)]) { continue; }
-      COMMON_AREAS.push({
-        room: "T" + TOWER_N + "-CORRIDOR-" + f,
-        floor: FLOORS[String(f)],
-        label: "Floor " + f + " corridor",
-        type: "", movein: "", listed: true, common: true
-      });
-    }
-    COMMON_AREAS.push({
-      room: "T" + TOWER_N + "-STAIRS",
-      floor: "",
-      label: "Stair core",
-      type: "", movein: "", listed: true, common: true
-    });
-    // Tower 2's twodios: CW524 is the twodio itself, the part shared between
-    // its private rooms CW524A and CW524B, inspected as a unit (Lewis, 21
-    // Sep): one per twodio on floors 1 to 5, on the south side with them.
-    // Its id stays T2-TWODIO-524, so nothing keyed on it moves.
-    if (TOWER_N === 2 && SIDE !== "north") {
-      var seenMod = {};
-      for (var tw = 0; tw < EVERY_ROOM.length; tw++) {
-        var mod = /^CW([1-5]\d\d)A$/.exec(EVERY_ROOM[tw]);
-        if (!mod || seenMod[mod[1]]) { continue; }
-        seenMod[mod[1]] = true;
+    for (var pt = 0; pt < PAGE_TOWERS.length; pt++) {
+      var tn = PAGE_TOWERS[pt];
+      var suffix = STUDENTS ? " (Tower " + tn + ")" : "";
+      var floors = {};
+      var rooms = TOWER_ROOMS[tn] || [];
+      var i;
+      for (i = 0; i < rooms.length; i++) {
+        if (SIDE && roomSide(rooms[i]) !== SIDE) { continue; }
+        var d = rooms[i].charAt(2);
+        if (d !== "0") { floors[d] = true; }
+      }
+      for (var f = 1; f <= 5; f++) {
+        if (!floors[String(f)]) { continue; }
         COMMON_AREAS.push({
-          room: "T2-TWODIO-" + mod[1],
-          floor: FLOORS[mod[1].charAt(0)],
-          label: "CW" + mod[1],
+          room: "T" + tn + "-CORRIDOR-" + f,
+          floor: FLOORS[String(f)],
+          label: "Floor " + f + " corridor" + suffix,
           type: "", movein: "", listed: true, common: true
         });
+      }
+      COMMON_AREAS.push({
+        room: "T" + tn + "-STAIRS",
+        floor: "",
+        label: "Stair core" + suffix,
+        type: "", movein: "", listed: true, common: true
+      });
+      // Tower 2's twodios: CW524 is the twodio itself, the part shared between
+      // its private rooms CW524A and CW524B, inspected as a unit (Lewis, 21
+      // Sep): one per twodio on floors 1 to 5, on the south side with them.
+      // Its id stays T2-TWODIO-524, so nothing keyed on it moves.
+      if (tn === 2 && SIDE !== "north") {
+        var seenMod = {};
+        for (i = 0; i < rooms.length; i++) {
+          var mod = /^CW([1-5]\d\d)A$/.exec(rooms[i]);
+          if (!mod || seenMod[mod[1]]) { continue; }
+          seenMod[mod[1]] = true;
+          COMMON_AREAS.push({
+            room: "T2-TWODIO-" + mod[1],
+            floor: FLOORS[mod[1].charAt(0)],
+            label: "CW" + mod[1],
+            type: "", movein: "", listed: true, common: true
+          });
+        }
       }
     }
     for (var c = 0; c < COMMON_AREAS.length; c++) { COMMON_BY_ID[COMMON_AREAS[c].room] = COMMON_AREAS[c]; }
   }());
 
   function isCommon(room) { return !!COMMON_BY_ID[room]; }
-  var AREA_LABEL = TOWER_N === 2 ? "Corridors, stairs and twodios" : "Corridors and stairs";
+  var AREA_LABEL = TOWER_N === 2 || STUDENTS ? "Corridors, stairs and twodios" : "Corridors and stairs";
 
   // The name a room goes by on the page: its number, or a corridor's label.
   function roomLabel(room) {
@@ -4072,7 +4103,8 @@
         if (!out[iss.trade]) { out[iss.trade] = []; }
         out[iss.trade].push({
           room: room,
-          action: "Logged: " + iss.body,
+          action: (iss.student ? "Reported: " : "Logged: ") + iss.body,
+          student: iss.student,
           // The key from the text as first logged, so an edit to the text
           // leaves the row, its tick and its moves where they are.
           key: iss.rowId,
@@ -4233,8 +4265,8 @@
       if (!Object.prototype.hasOwnProperty.call(byTrade, t)) { continue; }
       for (var r = 0; r < byTrade[t].length; r++) {
         var f = byTrade[t][r];
-        f.src = auditRoundName(f.at);
-        f.srcKey = dayKey(f.at);
+        f.src = f.student ? "Students" : auditRoundName(f.at);
+        f.srcKey = f.student ? "students" : dayKey(f.at);
         if (f.hab === "nh") { nhRooms[f.room] = true; }
         wanted[f.key || rowKey(f.room, f.action)] = { trade: t, f: f };
       }
@@ -5744,6 +5776,7 @@
   }
 
   function checksFor(room) {
+    if (STUDENTS) { return []; }
     return isCommon(room) ? COMMON_CHECKS : AUDIT_CHECKS;
   }
 
@@ -5834,6 +5867,7 @@
   function auditState() {
     var all = comments.concat(queuedComments);
     var out = {};
+    if (STUDENTS) { return out; }
 
     for (var i = 0; i < all.length; i++) {
       var c = all[i];
@@ -5945,9 +5979,14 @@
      23 Sep): a retag:<id> record whose body is issue:<room> says where it
      is now, and the newest wins. The key stays the one it was given from
      the room and text as first logged, so its tick and moves go with it. */
+  function isIssueTag(t) {
+    t = String(t || "");
+    return t.indexOf("issue:") === 0 || t.indexOf("student:") === 0;
+  }
+
   function issueRoomNow(c, retags) {
     var et = effectiveTag(c, retags);
-    return et.indexOf("issue:") === 0 ? et.slice(6) : String(c.snag_id || "").split(":")[1];
+    return isIssueTag(et) ? et.slice(et.indexOf(":") + 1) : String(c.snag_id || "").split(":")[1];
   }
 
   function towerOfRoom(room) {
@@ -5964,7 +6003,11 @@
     var out = {};
     for (var i = 0; i < all.length; i++) {
       var c = all[i];
-      if (!c || !c.snag_id || c.snag_id.indexOf("issue:") !== 0) { continue; }
+      if (!c || !c.snag_id || !isIssueTag(c.snag_id)) { continue; }
+      // A student's report (student:<room>) is a ticket like any logged
+      // issue; the students' page shows those alone.
+      var isStudent = c.snag_id.indexOf("student:") === 0;
+      if (STUDENTS && !isStudent) { continue; }
       var origRoom = c.snag_id.split(":")[1];
       var room = issueRoomNow(c, retags);
       if (!roomInTower(room)) { continue; }
@@ -5975,7 +6018,7 @@
       if (tm) { text = text.slice(0, tm.index); }
       // The key comes from the room and text as first logged; an edit or
       // a move changes what is shown and where, never the key.
-      var rowId = rowKey(origRoom, "Logged: " + text);
+      var rowId = rowKey(origRoom, (isStudent ? "Reported: " : "Logged: ") + text);
       if (moves[rowId]) { to = moves[rowId].to; }
       var ed = edits[c.id] || null;
       if (ed) { text = ed.body; }
@@ -5983,6 +6026,7 @@
         id: c.id,
         body: text,
         edited: ed,
+        student: isStudent,
         room: room,
         moved: room !== origRoom ? retags[c.id] : null,
         trade: to,
@@ -6677,16 +6721,16 @@
           var ol = pm && pm[1] ? optionLabel(CHECK_BY_ID[bits[2]], pm[1]) : "";
           push(c.created_at, room, "Passed " + checkLabelOf(bits[2]), ol ? ol + (text ? " \u00b7 " + text : "") : text);
         }
-      } else if (tag.indexOf("issue:") === 0) {
+      } else if (isIssueTag(tag)) {
         room = issueRoomNow(c, retags);
         if (!roomInTower(room)) { continue; }
         var tm = ISSUE_TO_RE.exec(body);
         var it = tm && knownTrade(tm[1]) ? tm[1] : UNASSIGNED;
         issueId = c.id;
-        push(c.created_at, room, "Logged a ticket to " + tradeName(it), issueTextOf(c));
+        push(c.created_at, room, (tag.indexOf("student:") === 0 ? "Logged a student report to " : "Logged a ticket to ") + tradeName(it), issueTextOf(c));
       } else if (tag.indexOf("issue-done:") === 0 || tag.indexOf("issue-open:") === 0) {
         src = byId[tag.slice(11)];
-        if (!src || !src.snag_id || String(src.snag_id).indexOf("issue:") !== 0) { continue; }
+        if (!src || !isIssueTag(src.snag_id)) { continue; }
         room = issueRoomNow(src, retags);
         if (!roomInTower(room)) { continue; }
         issueId = src.id;
@@ -6700,7 +6744,7 @@
         src = byId[tag.slice(5)];
         if (!src) { continue; }
         otag = src.snag_id ? String(src.snag_id) : "";
-        if (otag.indexOf("issue:") === 0) {
+        if (isIssueTag(otag)) {
           room = issueRoomNow(src, retags);
           if (!roomInTower(room)) { continue; }
           issueId = src.id;
@@ -6715,10 +6759,10 @@
         if (!src) { continue; }
         var to = body.trim();
         if (src.snag_id === COST_TAG) { continue; }
-        if (to.indexOf("issue:") === 0) {
+        if (isIssueTag(to)) {
           // A ticket moved to another room or tower: on the list of the
           // tower it left and the one it went to.
-          var toR = to.slice(6);
+          var toR = to.slice(to.indexOf(":") + 1);
           var fromR = String(src.snag_id || "").split(":")[1] || "";
           if (!roomInTower(toR) && !roomInTower(fromR)) { continue; }
           issueId = src.id;
@@ -6895,7 +6939,7 @@
     if (to !== was.trade && index[was.rowId]) { moveJob(was.rowId, to); changed = true; }
     if (target && target !== was.room) {
       issueFlash = ticketMoveFlash(target);
-      postEntry("retag:" + was.id, "issue:" + target);
+      postEntry("retag:" + was.id, (was.student ? "student:" : "issue:") + target);
       changed = true;
     }
     if (!changed) { renderEntered(); }
@@ -6956,7 +7000,7 @@
       var cur = issueNow(id);
       if (!cur) { continue; }
       var to = equivalentRoom(cur.room, tower);
-      if (to) { moves.push({ id: id, to: to, from: cur.room }); } else { stay++; }
+      if (to) { moves.push({ id: id, to: to, from: cur.room, student: cur.student }); } else { stay++; }
     }
     if (!moves.length) {
       enteredMoveNoteEl.textContent = stay
@@ -6968,7 +7012,7 @@
       (stay ? "? " + stay + " against rooms will stay, since a room number belongs to one tower." : "?");
     if (!window.confirm(ask)) { return; }
     for (var m = 0; m < moves.length; m++) {
-      postEntry("retag:" + moves[m].id, "issue:" + moves[m].to);
+      postEntry("retag:" + moves[m].id, (moves[m].student ? "student:" : "issue:") + moves[m].to);
     }
     enteredMoveNoteEl.textContent = "Moved " + moves.length + (moves.length === 1 ? " ticket" : " tickets") +
       " to Tower " + tower + ". They are on that tower\u2019s page now.";
@@ -7145,7 +7189,7 @@
     if (was.body !== text) { postEntry("edit:" + id, text); changed = true; }
     if (target && target !== was.room) {
       issueFlash = ticketMoveFlash(target);
-      postEntry("retag:" + id, "issue:" + target);
+      postEntry("retag:" + id, (was.student ? "student:" : "issue:") + target);
       changed = true;
     }
     if (!changed) { renderAudit(); }
@@ -7579,11 +7623,23 @@
       return la < lb ? -1 : (la > lb ? 1 : 0);
     });
     var rooms = "", areas = "";
+    var byTower = { 1: "", 2: "", 3: "", 4: "" };
     for (var i = 0; i < list.length; i++) {
       var st = list[i];
       var opt = '<option value="' + esc(st.room) + '">' + esc(roomLabel(st.room)) +
         (st.floor ? " \u2014 " + esc(st.floor) : "") + "</option>";
-      if (st.common) { areas += opt; } else { rooms += opt; }
+      if (st.common) { areas += opt; }
+      else if (STUDENTS) { byTower[towerOfRoom(st.room)] += opt; }
+      else { rooms += opt; }
+    }
+    if (STUDENTS) {
+      // The whole building: a group per tower, then the corridors.
+      for (var tg = 1; tg <= 4; tg++) {
+        if (byTower[tg]) { rooms += '<optgroup label="Tower ' + tg + '">' + byTower[tg] + "</optgroup>"; }
+      }
+      logRoomEl.innerHTML = rooms +
+        (areas ? '<optgroup label="' + AREA_LABEL + '">' + areas + "</optgroup>" : "");
+      return;
     }
     logRoomEl.innerHTML = '<optgroup label="Rooms">' + rooms + "</optgroup>" +
       (areas ? '<optgroup label="' + AREA_LABEL + '">' + areas + "</optgroup>" : "");
@@ -7612,7 +7668,7 @@
     if (!body) { logNoteEl.textContent = "Say what needs doing."; logTextEl.focus(); return; }
     var to = knownTrade(logTradeEl.value) ? logTradeEl.value : UNASSIGNED;
     logTextEl.value = "";
-    postEntry("issue:" + room, body + (to === UNASSIGNED ? "" : " [to:" + to + "]"));
+    postEntry((STUDENTS ? "student:" : "issue:") + room, body + (to === UNASSIGNED ? "" : " [to:" + to + "]"));
     logNoteEl.textContent = "Logged against " + roomLabel(room) + " under " + tradeName(to) +
       ", with your name on it. It is on the list now.";
   });
@@ -7950,6 +8006,9 @@
       if (habHidden(room, nh)) { continue; }
 
       var sum = studioSummary(room, state, issues, true);
+      // The students' page lists the whole building; a card for every
+      // room nobody has reported anything in would bury the rest.
+      if (STUDENTS && !sum.jobs.length) { continue; }
       var tally = isCommon(room) ? areas : null;
       if (sum.awaiting) { if (tally) { tally.waiting++; } else { waiting++; } }
       else if (sum.complete) { if (tally) { tally.clear++; } else { clear++; } }
@@ -8678,14 +8737,37 @@
   // this is, and the Tower buttons mark the one showing.
   if (TOWER_N !== 1) {
     document.title = TOWER_NAME + " Snagging";
-    document.getElementById("page-title").textContent = TOWER_NAME + ": issues by trade";
+    document.getElementById("page-title").textContent = TOWER_NAME + (STUDENTS ? ", by trade" : ": issues by trade");
     document.getElementById("tower-name-2").textContent = TOWER_NAME;
   }
   document.getElementById("studio-note-1").hidden = TOWER_N !== 1;
   document.getElementById("studio-note-2").hidden = TOWER_N === 1;
+  if (STUDENTS) {
+    document.title = "Students reported issues";
+    document.getElementById("trade-empty").textContent = "Nothing reported by students yet. A report " +
+      "logged on the Audit log tab, or by GrokBot from FaultFixers, lands here under its trade.";
+    document.getElementById("comments-head").hidden = true;
+    document.getElementById("comments-panel").hidden = true;
+    // The picker's controls go, the Sign out button stays.
+    var pickerBits = ["label[for=audit-new]", "label[for=audit-floor]", "#audit-floor", "label[for=audit-areas]",
+      ".my-rooms-row", "#my-rooms", "label[for=audit-studio]", "#audit-studio", "#audit-studio-state"];
+    for (var pb = 0; pb < pickerBits.length; pb++) {
+      var pbEl = document.querySelector("#audit-picker-panel " + pickerBits[pb]);
+      if (pbEl) { pbEl.hidden = true; }
+    }
+    document.getElementById("audit-checks").hidden = true;
+    document.getElementById("audit-progress").hidden = true;
+    document.getElementById("issue-head").hidden = true;
+    document.getElementById("issue-panel").hidden = true;
+    document.querySelector("#log-panel .log-head").textContent = "Log a student reported issue";
+    document.querySelector("#log-panel .note-line").textContent = "Pick the room, anywhere in the " +
+      "building, leave the trade as Unassigned unless it is plain, say what the student reported, " +
+      "and it is a ticket at once: here, and on the room\u2019s own tower under its trade. GrokBot " +
+      "logs the FaultFixers reports the same way each day.";
+  }
   var towerBtns = document.querySelectorAll("#towers .tower-btn");
   for (var tb = 0; tb < towerBtns.length; tb++) {
-    var isThis = towerBtns[tb].getAttribute("data-tower") === String(TOWER_N);
+    var isThis = towerBtns[tb].getAttribute("data-tower") === (STUDENTS ? "students" : String(TOWER_N));
     towerBtns[tb].classList.toggle("is-on", isThis);
     if (isThis) { towerBtns[tb].setAttribute("aria-current", "page"); }
   }
@@ -8704,6 +8786,11 @@
   document.getElementById("studio-total").textContent = AUDIT_STUDIOS.length;
   document.getElementById("studio-total-2").textContent = AUDIT_STUDIOS.length;
   document.getElementById("studio-listed-total").textContent = STELLING_COUNT;
+  if (STUDENTS) {
+    // After the totals above, which live in spans inside this note.
+    document.getElementById("studio-note-2").textContent = "Every room of the building a student has " +
+      "reported something in, room by room, with what is still outstanding against it.";
+  }
   renderStudios();
   applyGate();
 

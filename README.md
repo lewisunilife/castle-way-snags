@@ -639,6 +639,36 @@ communal doors and materials left in modules).
 Each row's key is the room and its text, so every tick and move stays
 with it.
 
+## Students reported issues
+
+A fifth button beside the towers, **Students reported issues** (29 Sep):
+`?tower=students` is a page for the whole building showing only what
+students have reported, with the same views and filters as a tower page,
+every room of every tower and each tower's corridors, stair core and
+twodios (labelled with their tower), no built-in rows and no audit
+checks. Its records are `student:<room>` comment records, the body the
+report with an optional `[to:<trade>]` on the end, Unassigned otherwise;
+the same edits, moves, ticks and trade moves apply as to any logged
+ticket, and a move keeps the record's own kind. A student's report also
+shows on the room's own tower page under its trade, with the source
+"Students" and the text as "Reported: …", so the trades see it where they
+work. By studio on the students' page lists only rooms with something
+reported.
+
+Logging one by hand: the Audit log tab there is the sign-in and **Log a
+student reported issue** alone, the room picker grouped by tower with the
+corridors after, the trade left as Unassigned unless it is plain. GrokBot
+logs the FaultFixers reports the same way each day, straight into the
+records: a row in `castle_way_comments` with a fresh UUID for `id`, the
+reporter as `author` (for example `FaultFixers via GrokBot`), `created_at`
+now, and `body` of the form `[[snag:student:CW215]] Kitchen tap dripping`,
+with ` [to:plumbing]` on the end where the trade is plain (trade keys are
+the section keys in `ALL_SECTIONS`); the `[[snag:…]]` prefix is how the
+page carries the tag, since the production table has no `snag_id`
+column. Posting with the anon key through PostgREST, as the page does, is
+enough; one row per report, and never a row twice, since the page never
+deletes.
+
 ## Helpdesk tickets
 
 Tickets raised through the helpdesk (29 Sep) are rows under the source
