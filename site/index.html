@@ -2884,6 +2884,37 @@
     else { T2_UNPLACED.push(t3row); }
   }
 
+  /* Tickets raised through the helpdesk (Lewis, 29 Sep), one row per
+     fault with the helpdesk reference kept on it; a report naming more
+     than one fault is split so each part sits with its trade. Filed by
+     what the fault is: flooring, fire detection, mastic, extraction and
+     the MVHR unit to Ventilation, power and lights to Electrical; the
+     rest under Unassigned until Lewis says where. */
+  var HELPDESK = "Helpdesk";
+  var HELPDESK_ROWS = [
+    ["CW341A", HELPDESK, "Kitchen floorboards peeling (UCW-85266).", "flooring"],
+    ["CW341A", HELPDESK, "Room fire alarm not attached properly (UCW-85266).", "ikew"],
+    ["CW341A", HELPDESK, "Other kitchen issue, as reported (UCW-85266)."],
+    ["CW511", HELPDESK, "Shower screen mastic (UCW-22836).", "mastic"],
+    ["CW342A", HELPDESK, "Kitchen extractor fan not working (UCW-98502).", "ventilation"],
+    ["CW342A", HELPDESK, "MVHR not working (UCW-87883).", "ventilation"],
+    ["CW441B", HELPDESK, "Induction hob trips the breaker (UCW-89836).", "electrical"],
+    ["CW442A", HELPDESK, "Room power, lights and wardrobe electric gate not working (UCW-49181).", "electrical"],
+    ["CW310", HELPDESK, "Vinyl flooring lifted (UCW-54781).", "flooring"],
+    ["CW313", HELPDESK, "Network extremely unstable (UCW-95355)."],
+    ["CW342B", HELPDESK, "Bedroom wall fitting not working (UCW-80019).", "electrical"],
+    ["CW342B", HELPDESK, "Kitchen cooker hood not working (UCW-80019).", "ventilation"]
+  ];
+  for (var hdr = 0; hdr < HELPDESK_ROWS.length; hdr++) {
+    var hdrow = HELPDESK_ROWS[hdr];
+    var hdsec = null;
+    for (var hds = 0; hdrow[3] && hds < ALL_SECTIONS.length; hds++) {
+      if (ALL_SECTIONS[hds].key === hdrow[3]) { hdsec = ALL_SECTIONS[hds]; }
+    }
+    if (hdsec) { hdsec.rows.push([hdrow[0], hdrow[1], hdrow[2]]); }
+    else { T2_UNPLACED.push(hdrow); }
+  }
+
   var TOWER_N = (function () {
     var m = /[?&]tower=([1-4])(?![0-9])/.exec(window.location.search || "");
     return m ? parseInt(m[1], 10) : 1;

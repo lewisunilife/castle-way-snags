@@ -639,6 +639,18 @@ communal doors and materials left in modules).
 Each row's key is the room and its text, so every tick and move stays
 with it.
 
+## Helpdesk tickets
+
+Tickets raised through the helpdesk (29 Sep) are rows under the source
+"Helpdesk", one per fault with the UCW reference kept on the text; a
+report naming more than one fault is split so each part sits with its
+trade. Filed by what the fault is: flooring to Flooring, the fire alarm
+to iKew, mastic to Mastic, the extractor fan, cooker hood and MVHR unit
+to Ventilation / Extract, power, lights and the hob tripping the breaker
+to Electrical; the network fault and the unnamed kitchen issue wait under
+Unassigned. Twelve rows from nine reports: CW341A, CW511, CW342A (two),
+CW441B, CW442A, CW310, CW313 and CW342B.
+
 ## By floor
 
 The fourth view is the summary by trade, floor by floor from the top down:
