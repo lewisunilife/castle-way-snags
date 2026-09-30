@@ -655,6 +655,15 @@ shows on the room's own tower page under its trade, with the source
 work. By studio on the students' page lists only rooms with something
 reported.
 
+The students' page has no arrivals to order by, so its **Order by** reads
+**Date logged, newest first** and is on from the start (30 Sep): the
+collapsible headers on By trade and By studio are the day each ticket was
+logged ("Logged Tue 29 Sep 2026"), newest first, not the room's move-in.
+On By trade a ticket sits under its own day; on By studio a room sits
+under the day of its latest report. The choice, and which day groups are
+open, are kept apart from the towers', and the tower pages are as they
+were: there a student's ticket groups under the room's move-in date.
+
 Logging one by hand: the Audit log tab there is the sign-in and **Log a
 student reported issue** alone, the room picker grouped by tower with the
 corridors after, the trade left as Unassigned unless it is plain. GrokBot

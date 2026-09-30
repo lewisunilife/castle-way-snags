@@ -3464,9 +3464,56 @@
   function dateRank(k) { return !k ? 2 : (k === KEY_15M ? 1 : 0); }
 
   function dateGroupLabel(k, room) {
+    if (STUDENTS) { return loggedDayLabel(k); }
     if (!k) { return "No move-in date set"; }
     if (k === KEY_15M) { return "15M fire reg \u00b7 no move-in date"; }
     return moveinFor(room);
+  }
+
+  /* The students' page has no arrivals to order by: its tickets come in
+     day by day, from students and from GrokBot, so its date groups are
+     the day each ticket was logged, newest first (Lewis, 30 Sep). On By
+     trade that is the ticket's own day; on By studio a room sits under
+     the day of its latest report. */
+  var DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  function loggedDayLabel(k) {
+    if (!k || !/^\d{8}$/.test(k)) { return "Date logged not known"; }
+    var d = new Date(parseInt(k.slice(0, 4), 10), parseInt(k.slice(4, 6), 10) - 1,
+      parseInt(k.slice(6, 8), 10));
+    if (isNaN(d.getTime())) { return "Date logged not known"; }
+    return "Logged " + DAY_NAMES[d.getDay()] + " " + d.getDate() + " " +
+      MONTH_NAMES[d.getMonth()] + " " + d.getFullYear();
+  }
+
+  // The day a job on the trade lists goes under: its own logged day on the
+  // students' page, the room's move-in on a tower's.
+  function jobDateKey(job) {
+    if (STUDENTS) { return dayKey(job.at || ""); }
+    return dateGroupKey(job.room || "");
+  }
+
+  // The day a room goes under on By studio: the day of its latest report
+  // on the students' page, its move-in on a tower's.
+  function roomDateKey(room, issues) {
+    if (!STUDENTS) { return dateGroupKey(room); }
+    var list = (issues && issues[room]) || [];
+    var best = "";
+    for (var i = 0; i < list.length; i++) {
+      var k = dayKey(list[i].created_at || "");
+      if (k > best) { best = k; }
+    }
+    return best;
+  }
+
+  // Dates first and the undated last either way; a tower's arrivals run
+  // soonest first, the students' tickets newest first.
+  function compareDateKeys(a, b) {
+    var ra = dateRank(a);
+    var rb = dateRank(b);
+    if (ra !== rb) { return ra - rb; }
+    if (STUDENTS) { return a > b ? -1 : 1; }
+    return a < b ? -1 : 1;
   }
 
   var fireMode = "all";   // all | only | hide
@@ -3595,10 +3642,12 @@
   var HIDE_GROUND_KEY = "cw-tower1-hide-ground";
   var FIRE_MODE_KEY = "cw-tower1-fire-mode";
   var HAB_MODE_KEY = "cw-tower1-hab-mode";
-  var STUDIO_SORT_KEY = "cw-tower1-studio-sort";
+  // The students' page orders its tickets by the day they were logged,
+  // so its order and its open groups are kept apart from the towers'.
+  var STUDIO_SORT_KEY = STUDENTS ? "cw-students-studio-sort" : "cw-tower1-studio-sort";
   var TRADE_OFF_KEY = "cw-tower1-trades-off";
   var SRC_OFF_KEY = "cw-tower1-sources-off";
-  var DATE_OPEN_KEY = "cw-tower1-dates-open";
+  var DATE_OPEN_KEY = STUDENTS ? "cw-students-dates-open" : "cw-tower1-dates-open";
   var SUMMARY_OPEN_KEY = "cw-tower1-summary-open";
   var LOCAL_KEY = "cw-tower1-snags-local-v2";
   var QUEUE_KEY = "cw-tower1-snags-queue-v2";
@@ -4221,6 +4270,7 @@
       action: f.action,
       src: f.src,
       srcKey: f.srcKey,
+      at: f.at || "",
       why: f.why,
       kind: f.kind || "fail",
       trades: [trade],
@@ -4428,7 +4478,7 @@
         order.push({
           domId: domId,
           room: job.room || "",
-          date: dateGroupKey(job.room || "")
+          date: jobDateKey(job)
         });
       }
 
@@ -4436,10 +4486,7 @@
         if (studioSort === "movein" && a.date !== b.date) {
           // Dates first, then the undated 15M rooms, then rooms with no
           // arrival booked at all.
-          var ra = dateRank(a.date);
-          var rb = dateRank(b.date);
-          if (ra !== rb) { return ra - rb; }
-          return a.date < b.date ? -1 : 1;
+          return compareDateKeys(a.date, b.date);
         }
         if (a.room !== b.room) { return a.room < b.room ? -1 : 1; }
         return 0;
@@ -7960,14 +8007,9 @@
       // Soonest arrival first. A room with no move-in date given goes to
       // the end rather than the front, where an empty value would land.
       rooms.sort(function (a, b) {
-        var ka = dateGroupKey(a);
-        var kb = dateGroupKey(b);
-        if (ka !== kb) {
-          var ra = dateRank(ka);
-          var rb = dateRank(kb);
-          if (ra !== rb) { return ra - rb; }
-          return ka < kb ? -1 : 1;
-        }
+        var ka = roomDateKey(a, issues);
+        var kb = roomDateKey(b, issues);
+        if (ka !== kb) { return compareDateKeys(ka, kb); }
         return byRoom(a, b);
       });
     } else {
@@ -8025,7 +8067,7 @@
         continue;
       }
 
-      var gk = dateGroupKey(room);
+      var gk = roomDateKey(room, issues);
       var g = group(gk || "none", dateGroupLabel(gk, room));
       g.cards += studioCard(room, sum);
       g.rooms++;
@@ -8448,7 +8490,7 @@
   var savedHab = load(HAB_MODE_KEY, "all");
   habMode = savedHab === "h" || savedHab === "nh" ? savedHab : "all";
   habFilterEl.value = habMode;
-  studioSort = load(STUDIO_SORT_KEY, "room") === "movein" ? "movein" : "room";
+  studioSort = load(STUDIO_SORT_KEY, STUDENTS ? "movein" : "room") === "movein" ? "movein" : "room";
   studioSortEl.value = studioSort;
 
   var savedOff = load(TRADE_OFF_KEY, []);
@@ -8748,6 +8790,8 @@
       "logged on the Audit log tab, or by GrokBot from FaultFixers, lands here under its trade.";
     document.getElementById("comments-head").hidden = true;
     document.getElementById("comments-panel").hidden = true;
+    // Date order here is the day each ticket was logged, not a move-in.
+    document.querySelector("#studio-sort option[value=movein]").textContent = "Date logged, newest first";
     // The picker's controls go, the Sign out button stays.
     var pickerBits = ["label[for=audit-new]", "label[for=audit-floor]", "#audit-floor", "label[for=audit-areas]",
       ".my-rooms-row", "#my-rooms", "label[for=audit-studio]", "#audit-studio", "#audit-studio-state"];
