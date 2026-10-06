@@ -513,6 +513,17 @@
   .movein { white-space: nowrap; }
 
   /* A 15M fire regulation room is marked wherever its move-in shows. */
+  /* On the whole-building page a room says which tower it is in. */
+  .tag-tower {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-left: 6px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
   .tag-15m {
     display: inline-block;
     font-size: 11px;
@@ -1540,6 +1551,7 @@
     <a class="tower-btn" data-tower="2" href="?tower=2">Tower 2</a>
     <a class="tower-btn" data-tower="3" href="?tower=3">Tower 3</a>
     <a class="tower-btn" data-tower="4" href="?tower=4">Tower 4</a>
+    <a class="tower-btn" data-tower="all" href="?tower=all">Whole building</a>
     <a class="tower-btn" data-tower="students" href="?tower=students">Students reported issues</a>
   </nav>
   <nav class="towers" id="sides" aria-label="Side of Tower 2" hidden>
@@ -2924,8 +2936,16 @@
      on the room's own tower page under their trade, so the trades see
      them where they work. */
   var STUDENTS = /[?&]tower=students(?![a-z])/i.test(window.location.search || "");
+  /* ?tower=all is the whole building on one page (Lewis, 6 Oct): every
+     tower's rows, tickets, audit records and comments together, with the
+     same views, filters and audit log as a tower page. A corridor or
+     stair core says which tower it is, a room's tower shows beside it,
+     and a record is still tagged with its tower, so what is done here is
+     the same record the tower's own page shows. */
+  var ALL = /[?&]tower=all(?![a-z])/i.test(window.location.search || "");
+  var WHOLE = STUDENTS || ALL;   // a page that covers every tower
   var TOWER_N = (function () {
-    if (STUDENTS) { return 0; }
+    if (WHOLE) { return 0; }
     var m = /[?&]tower=([1-4])(?![0-9])/.exec(window.location.search || "");
     return m ? parseInt(m[1], 10) : 1;
   }());
@@ -2948,9 +2968,13 @@
     if (ROOM_TOWER[room] !== 2) { return ""; }
     return /[AB]$/.test(room) ? "south" : "north";
   }
-  var TOWER_NAME = STUDENTS ? "Students reported issues" : "Castle Way Tower " + TOWER_N +
-    (SIDE ? " " + SIDE.charAt(0).toUpperCase() + SIDE.slice(1) : "");
-  var PAGE_TOWERS = STUDENTS ? [1, 2, 3, 4] : [TOWER_N];   // the towers this page covers
+  var TOWER_NAME = STUDENTS ? "Students reported issues"
+    : ALL ? "Castle Way, whole building"
+    : "Castle Way Tower " + TOWER_N + (SIDE ? " " + SIDE.charAt(0).toUpperCase() + SIDE.slice(1) : "");
+  // The settings a page keeps for itself are keyed by its tower; the two
+  // whole-building pages keep their own.
+  var PAGE_KEY = ALL ? "all" : TOWER_N;
+  var PAGE_TOWERS = WHOLE ? [1, 2, 3, 4] : [TOWER_N];   // the towers this page covers
   var EVERY_ROOM = [];
   for (var evt = 0; evt < PAGE_TOWERS.length; evt++) {
     var evList = TOWER_ROOMS[PAGE_TOWERS[evt]] || [];
@@ -2964,6 +2988,8 @@
   function roomInTower(room) {
     // The students' page is the whole building.
     if (STUDENTS) { return /^T[1-4]-/.test(room || "") || /^CW\d{3}[AB]?$/.test(room || ""); }
+    // The whole-building page takes everything any tower's page would.
+    if (ALL) { return true; }
     // A corridor or stair core carries its tower in its id: T2-CORRIDOR-3.
     var cm = /^T([1-4])-/.exec(room || "");
     if (cm) {
@@ -3244,7 +3270,13 @@
   } else if (TOWER_N === 1) {
     STELLING_LIST = TOWER1_LIST;
   } else {
-    var ordered = EVERY_ROOM.slice();
+    // The whole building: Stelling's Tower 1 list first, in its order, then
+    // the other towers' rooms as their own pages have them.
+    if (ALL) { STELLING_LIST = TOWER1_LIST.slice(); }
+    var ordered = [];
+    for (var evo = 0; evo < EVERY_ROOM.length; evo++) {
+      if (!ALL || ROOM_TOWER[EVERY_ROOM[evo]] !== 1) { ordered.push(EVERY_ROOM[evo]); }
+    }
     ordered.sort(function (a, b) {
       var ga = a.charAt(2) === "0" ? 1 : 0;
       var gb = b.charAt(2) === "0" ? 1 : 0;
@@ -3278,7 +3310,7 @@
   (function () {
     for (var pt = 0; pt < PAGE_TOWERS.length; pt++) {
       var tn = PAGE_TOWERS[pt];
-      var suffix = STUDENTS ? " (Tower " + tn + ")" : "";
+      var suffix = WHOLE ? " (Tower " + tn + ")" : "";
       var floors = {};
       var rooms = TOWER_ROOMS[tn] || [];
       var i;
@@ -3325,7 +3357,18 @@
   }());
 
   function isCommon(room) { return !!COMMON_BY_ID[room]; }
-  var AREA_LABEL = TOWER_N === 2 || STUDENTS ? "Corridors, stairs and twodios" : "Corridors and stairs";
+  var AREA_LABEL = TOWER_N === 2 || WHOLE ? "Corridors, stairs and twodios" : "Corridors and stairs";
+
+  // On the whole-building page a room says which tower it is in; a
+  // corridor or stair core already carries it in its label.
+  function towerMark(room) {
+    if (!ALL || isCommon(room)) { return ""; }
+    return ' <span class="tag-tower">Tower ' + towerOfRoom(room) + "</span>";
+  }
+  function towerText(room) {
+    if (!ALL || isCommon(room)) { return ""; }
+    return " \u00b7 Tower " + towerOfRoom(room);
+  }
 
   // The name a room goes by on the page: its number, or a corridor's label.
   function roomLabel(room) {
@@ -3388,7 +3431,7 @@
      against them. A check recorded again supersedes the last entry, so an
      amendment is just recording the check as it now stands.
      16 Sep: the 5th floor of Tower 1, at Stelling's request. */
-  var REOPENED = TOWER_N === 1
+  var REOPENED = TOWER_N === 1 || ALL
     ? { label: "5th floor, reopened for amendments", rooms: fifthFloor() }
     : { label: "", rooms: [] };
   var REOPENED_ROOMS = [];
@@ -3591,7 +3634,7 @@
     // and indexed by its id all the same.
     var shown = roomLabel(shownRoom);
     return '<tr id="row-' + domId + '">' +
-      '<td class="room">' + esc(shown) + "</td>" +
+      '<td class="room">' + esc(shown) + towerMark(shownRoom) + "</td>" +
       '<td class="floor">' + esc(floor) + "</td>" +
       '<td class="movein' + moveinClass(shownRoom) + '">' + moveinCell(shownRoom) + "</td>" +
       '<td class="src">' + esc(src) + "</td>" +
@@ -4210,7 +4253,7 @@
     if (when) { stamp += (stamp ? " \u00b7 " : "") + esc(when); }
 
     return '<tr id="row-' + domId + '" class="audit-row">' +
-      '<td class="room">' + esc(roomLabel(f.room)) + "</td>" +
+      '<td class="room">' + esc(roomLabel(f.room)) + towerMark(f.room) + "</td>" +
       '<td class="floor">' + esc(floorOf(f.room)) + "</td>" +
       '<td class="movein' + moveinClass(f.room) + '">' + moveinCell(f.room) + "</td>" +
       '<td class="src">' + esc(f.src) + "</td>" +
@@ -4812,6 +4855,13 @@
   // Tower 1's, which is every comment made before there was a Tower 2.
   var TOWER_TAG = "tower:" + TOWER_N;
 
+  // Whether a tower-wide tag (tower:N, or none for Tower 1's oldest) is
+  // this page's: its own tower's, or any tower's on the whole building.
+  function towerTagHere(tag) {
+    if (ALL) { return !tag || /^tower:[1-4]$/.test(tag); }
+    return tag ? tag === TOWER_TAG : TOWER_N === 1;
+  }
+
   /* A comment about one room or area carries it as note:<room> (Lewis, 23
      Sep), so the list can be narrowed to a floor; the rest are the
      tower's, as before. A comment moved to another tower or room keeps
@@ -4850,7 +4900,7 @@
         if (roomInTower(tag.slice(5))) { out.push(list[i]); }
         continue;
       }
-      if (tag ? tag === TOWER_TAG : TOWER_N === 1) { out.push(list[i]); }
+      if (towerTagHere(tag)) { out.push(list[i]); }
     }
     return out;
   }
@@ -4937,7 +4987,7 @@
   var commentFloor = "";     // "" all, "tower" the tower-wide ones, or a floor digit
   var commentFloorEl = document.getElementById("comment-floor");
   var commentRoomEl = document.getElementById("comment-room");
-  var COMMENT_FLOOR_KEY = "cw-tower" + TOWER_N + "-comment-floor";
+  var COMMENT_FLOOR_KEY = "cw-tower" + PAGE_KEY + "-comment-floor";
 
   var commentFlash = "";
   var commentFlashEl = document.getElementById("comment-flash");
@@ -4953,7 +5003,7 @@
   }
 
   var commentAreasEl = document.getElementById("comment-areas");
-  var COMMENT_AREAS_KEY = "cw-tower" + TOWER_N + "-comment-areas";
+  var COMMENT_AREAS_KEY = "cw-tower" + PAGE_KEY + "-comment-areas";
   var commentAreasOnly = false;
 
   function commentShown(room) {
@@ -4993,7 +5043,10 @@
       if (when) { meta += " \u00b7 " + esc(when); }
       if (room) {
         var lv = levelOf(room);
-        meta += " \u00b7 " + esc(roomLabel(room)) + (FLOORS[lv] ? ", " + esc(FLOORS[lv].toLowerCase()) : "");
+        meta += " \u00b7 " + esc(roomLabel(room)) + (FLOORS[lv] ? ", " + esc(FLOORS[lv].toLowerCase()) : "") +
+          esc(towerText(room));
+      } else if (ALL) {
+        meta += " \u00b7 Tower " + commentWhere(item, retags).tower + " as a whole";
       }
       if (ed) {
         meta += " \u00b7 edited" + (ed.by && ed.by !== item.author ? " by " + esc(ed.by) : "");
@@ -5083,7 +5136,8 @@
     var was = findComment(id);
     if (!was) { commentEdit = null; renderComments(); return; }
     var wasEd = issueEdits()[id];
-    var tower = commentEdit.tower >= 1 && commentEdit.tower <= 4 ? commentEdit.tower : TOWER_N;
+    var tower = commentEdit.tower >= 1 && commentEdit.tower <= 4 ? commentEdit.tower
+      : (ALL ? commentWhere(was, commentRetags()).tower : TOWER_N);
     var room = commentEdit.room || "";
     // A room named must be one of that tower's.
     if (room) {
@@ -5100,9 +5154,10 @@
     if (wantTag !== nowTag) {
       postEntry("retag:" + id, wantTag);
       changed = true;
-      commentFlash = tower !== TOWER_N
+      commentFlash = tower !== TOWER_N && !ALL
         ? "Moved to Tower " + tower + (room ? ", " + anyRoomLabel(room) : "") + ". It is on that tower\u2019s page now."
-        : (room ? "Now about " + anyRoomLabel(room) + "." : "Now about the tower as a whole.");
+        : (room ? "Now about " + anyRoomLabel(room) + (ALL ? ", Tower " + tower : "") + "."
+          : (ALL ? "Now about Tower " + tower + " as a whole." : "Now about the tower as a whole."));
     }
     if (!changed) { commentFlash = ""; }
     renderComments();
@@ -5154,11 +5209,26 @@
       return la < lb ? -1 : (la > lb ? 1 : 0);
     });
     var rooms = "", areas = "";
+    var byTower = { 1: "", 2: "", 3: "", 4: "" };
     for (var i = 0; i < list.length; i++) {
       var st = list[i];
       var opt = '<option value="' + esc(st.room) + '">' + esc(roomLabel(st.room)) +
         (st.floor ? " \u2014 " + esc(st.floor) : "") + "</option>";
-      if (st.common) { areas += opt; } else { rooms += opt; }
+      if (st.common) { areas += opt; }
+      else if (ALL) { byTower[towerOfRoom(st.room)] += opt; }
+      else { rooms += opt; }
+    }
+    if (ALL) {
+      // The whole building: a comment is about one tower as a whole, or
+      // about a room or area of one, grouped by tower.
+      var whole = "";
+      for (var tw = 1; tw <= 4; tw++) {
+        whole += '<option value="tower:' + tw + '">Tower ' + tw + " as a whole</option>";
+        if (byTower[tw]) { rooms += '<optgroup label="Tower ' + tw + '">' + byTower[tw] + "</optgroup>"; }
+      }
+      commentRoomEl.innerHTML = whole + rooms +
+        (areas ? '<optgroup label="' + AREA_LABEL + '">' + areas + "</optgroup>" : "");
+      return;
     }
     commentRoomEl.innerHTML = '<option value="">The tower as a whole</option>' +
       '<optgroup label="Rooms">' + rooms + "</optgroup>" +
@@ -5572,6 +5642,9 @@
     var body = commentText.value.trim();
     if (!body) { commentText.focus(); return; }
     var about = commentRoomEl.value;
+    // On the whole building, "Tower N as a whole" is the tower's own tag.
+    var aboutTower = /^tower:[1-4]$/.test(about) ? about : "";
+    if (aboutTower) { about = ""; }
     if (about && !STUDIO_BY_ROOM[about]) { about = ""; }
     commentFlash = "";
 
@@ -5580,7 +5653,7 @@
       // About one room or area, or the tower as a whole (the tower's own
       // comments carry its tag; Tower 1's carry none, from before there
       // were other towers).
-      snag_id: about ? "note:" + about : (TOWER_N === 1 ? null : TOWER_TAG),
+      snag_id: about ? "note:" + about : (ALL ? (aboutTower || "tower:1") : (TOWER_N === 1 ? null : TOWER_TAG)),
       body: body,
       author: who(),
       created_at: new Date().toISOString()
@@ -5725,7 +5798,7 @@
     return false;
   }
   var AUDIT_SEEN = "cw-tower1-audit-in";
-  var AUDIT_STUDIO_KEY = "cw-tower" + TOWER_N + "-audit-studio";
+  var AUDIT_STUDIO_KEY = "cw-tower" + PAGE_KEY + "-audit-studio";
   var AUDIT_NEW_KEY = "cw-tower1-audit-new";
   var auditOnlyNew = false;   // the picker narrowed to rooms with no checks recorded
 
@@ -5844,7 +5917,7 @@
   /* Held on the device as well, so a refresh mid-sentence — including the
      one a new build asks for — hands the half-typed reason back rather
      than losing it. Keyed to the studio it was typed against. */
-  var AUDIT_DRAFT_KEY = "cw-tower" + TOWER_N + "-audit-draft";
+  var AUDIT_DRAFT_KEY = "cw-tower" + PAGE_KEY + "-audit-draft";
 
   function saveDrafts() {
     store(AUDIT_DRAFT_KEY, {
@@ -6255,7 +6328,7 @@
       return st.priority + ". " + st.room + (st.type ? " \u2014 " + st.type : "") +
         (st.movein ? ", in " + st.movein : "") + mark;
     }
-    return st.room + (st.floor ? " \u2014 " + st.floor : "") +
+    return st.room + towerText(st.room) + (st.floor ? " \u2014 " + st.floor : "") +
       (st.movein ? " \u00b7 " + moveinVerb(st).toLowerCase() + " " + st.movein : "") + mark;
   }
 
@@ -6643,7 +6716,7 @@
   var enteredEmptyEl = document.getElementById("entered-empty");
   var enteredNameEl = document.getElementById("entered-name");
   var enteredCountEl = document.getElementById("entered-count");
-  var ENTERED_OPEN_KEY = "cw-tower" + TOWER_N + "-entered-open";
+  var ENTERED_OPEN_KEY = "cw-tower" + PAGE_KEY + "-entered-open";
   var enteredWho = "";   // the person picked; "" means the name at the top
 
   function checkLabelOf(id) {
@@ -6728,7 +6801,7 @@
     function commentHome(src) {
       var et = effectiveTag(src, retags);
       if (et.indexOf("note:") === 0) { return roomInTower(et.slice(5)) ? { here: true, room: et.slice(5) } : { here: false }; }
-      return { here: et === TOWER_TAG || (!et && TOWER_N === 1), room: "" };
+      return { here: towerTagHere(et), room: "" };
     }
 
     var rid = "";      // the record each entry comes from, for the editor
@@ -6820,11 +6893,11 @@
         }
         var toRoom = to.indexOf("note:") === 0 ? to.slice(5) : "";
         var toTower = toRoom ? (/^T([1-4])-/.test(toRoom) ? parseInt(/^T([1-4])-/.exec(toRoom)[1], 10) : (ROOM_TOWER[toRoom] || 1)) : (parseInt((/^tower:([1-4])$/.exec(to) || [])[1], 10) || 0);
-        var hereNow = toRoom ? roomInTower(toRoom) : toTower === TOWER_N;
+        var hereNow = toRoom ? roomInTower(toRoom) : (ALL ? toTower >= 1 : toTower === TOWER_N);
         var wasHere = (function () {
           var ot = src.snag_id ? String(src.snag_id) : "";
           if (ot.indexOf("note:") === 0) { return roomInTower(ot.slice(5)); }
-          return ot === TOWER_TAG || (!ot && TOWER_N === 1);
+          return towerTagHere(ot);
         })();
         if (!hereNow && !wasHere) { continue; }
         var ed2 = issueEdits()[src.id];
@@ -7062,7 +7135,7 @@
       postEntry("retag:" + moves[m].id, (moves[m].student ? "student:" : "issue:") + moves[m].to);
     }
     enteredMoveNoteEl.textContent = "Moved " + moves.length + (moves.length === 1 ? " ticket" : " tickets") +
-      " to Tower " + tower + ". They are on that tower\u2019s page now.";
+      " to Tower " + tower + (ALL ? "." : ". They are on that tower\u2019s page now.");
   });
 
   enteredWhoEl.addEventListener("change", function () {
@@ -7190,9 +7263,9 @@
 
   function ticketMoveFlash(room) {
     var tower = towerOfRoom(room);
-    return tower !== TOWER_N
+    return tower !== TOWER_N && !ALL
       ? "Moved to " + anyRoomLabel(room) + ", Tower " + tower + ". It is on that tower\u2019s page now."
-      : "Now against " + anyRoomLabel(room) + ".";
+      : "Now against " + anyRoomLabel(room) + (ALL ? ", Tower " + tower : "") + ".";
   }
 
   function findIssue(id) {
@@ -7263,7 +7336,7 @@
      tick made anywhere shows here at once. */
   var floorListEl = document.getElementById("floor-list");
   var floorCountsEl = document.getElementById("floor-counts");
-  var FLOOR_OPEN_KEY = "cw-tower" + TOWER_N + "-floor-open";
+  var FLOOR_OPEN_KEY = "cw-tower" + PAGE_KEY + "-floor-open";
   var floorOpen = load(FLOOR_OPEN_KEY, {}) || {};
 
   // The floor digit a job's room is on: "5" to "1", "0" for the ground
@@ -7447,6 +7520,7 @@
 
     var sm = STUDIO_BY_ROOM[room];
     var bits = [];
+    if (ALL && !isCommon(room)) { bits.push("Tower " + towerOfRoom(room)); }
     if (sm && sm.movein) {
       bits.push(moveinVerb(sm) + " " + esc(sm.movein));
     }
@@ -7660,7 +7734,7 @@
   var logTextEl = document.getElementById("log-text");
   var logAddEl = document.getElementById("log-add");
   var logNoteEl = document.getElementById("log-note");
-  var LOG_ROOM_KEY = "cw-tower" + TOWER_N + "-log-room";
+  var LOG_ROOM_KEY = "cw-tower" + PAGE_KEY + "-log-room";
 
   function fillLogRooms() {
     var list = AUDIT_STUDIOS.slice();
@@ -7676,20 +7750,21 @@
       var opt = '<option value="' + esc(st.room) + '">' + esc(roomLabel(st.room)) +
         (st.floor ? " \u2014 " + esc(st.floor) : "") + "</option>";
       if (st.common) { areas += opt; }
-      else if (STUDENTS) { byTower[towerOfRoom(st.room)] += opt; }
+      else if (WHOLE) { byTower[towerOfRoom(st.room)] += opt; }
       else { rooms += opt; }
     }
-    if (STUDENTS) {
+    if (WHOLE) {
       // The whole building: a group per tower, then the corridors.
       for (var tg = 1; tg <= 4; tg++) {
         if (byTower[tg]) { rooms += '<optgroup label="Tower ' + tg + '">' + byTower[tg] + "</optgroup>"; }
       }
       logRoomEl.innerHTML = rooms +
         (areas ? '<optgroup label="' + AREA_LABEL + '">' + areas + "</optgroup>" : "");
-      return;
+      if (STUDENTS) { return; }
+    } else {
+      logRoomEl.innerHTML = '<optgroup label="Rooms">' + rooms + "</optgroup>" +
+        (areas ? '<optgroup label="' + AREA_LABEL + '">' + areas + "</optgroup>" : "");
     }
-    logRoomEl.innerHTML = '<optgroup label="Rooms">' + rooms + "</optgroup>" +
-      (areas ? '<optgroup label="' + AREA_LABEL + '">' + areas + "</optgroup>" : "");
     var kept = load(LOG_ROOM_KEY, "");
     if (kept && logRoomEl.querySelector('option[value="' + kept + '"]')) { logRoomEl.value = kept; }
   }
@@ -8242,7 +8317,7 @@
      one floor, waits for All floors. The Entered by list below follows the
      same floor. Remembered on the device. */
   var auditFloorEl = document.getElementById("audit-floor");
-  var AUDIT_FLOOR_KEY = "cw-tower" + TOWER_N + "-audit-floor";
+  var AUDIT_FLOOR_KEY = "cw-tower" + PAGE_KEY + "-audit-floor";
   var auditFloor = "";
 
   /* The floor, and beside it a switch for the corridors, stairs and
@@ -8250,7 +8325,7 @@
      floor with the switch on is that floor's corridor and the stair core,
      which is on every floor. */
   var auditAreasEl = document.getElementById("audit-areas");
-  var AUDIT_AREAS_KEY = "cw-tower" + TOWER_N + "-audit-areas";
+  var AUDIT_AREAS_KEY = "cw-tower" + PAGE_KEY + "-audit-areas";
   var auditAreasOnly = false;
 
   function floorOptions(sel, first) {
@@ -8778,7 +8853,7 @@
   // The heading, the tab title and the note over By studio say which tower
   // this is, and the Tower buttons mark the one showing.
   if (TOWER_N !== 1) {
-    document.title = TOWER_NAME + " Snagging";
+    document.title = ALL ? "Castle Way whole building Snagging" : TOWER_NAME + " Snagging";
     document.getElementById("page-title").textContent = TOWER_NAME + (STUDENTS ? ", by trade" : ": issues by trade");
     document.getElementById("tower-name-2").textContent = TOWER_NAME;
   }
@@ -8811,7 +8886,7 @@
   }
   var towerBtns = document.querySelectorAll("#towers .tower-btn");
   for (var tb = 0; tb < towerBtns.length; tb++) {
-    var isThis = towerBtns[tb].getAttribute("data-tower") === (STUDENTS ? "students" : String(TOWER_N));
+    var isThis = towerBtns[tb].getAttribute("data-tower") === (STUDENTS ? "students" : ALL ? "all" : String(TOWER_N));
     towerBtns[tb].classList.toggle("is-on", isThis);
     if (isThis) { towerBtns[tb].setAttribute("aria-current", "page"); }
   }

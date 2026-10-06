@@ -791,9 +791,10 @@ Tower 1 and the rest in Tower 2. The 5th floor is 01-05 and 25-30 in Tower 1,
 studios, Tower 2 70, Tower 3 90 and Tower 4 8.
 
 The page shows one tower at a time. `?tower=2` on the address is Tower 2, and
-so on up to 4; anything else is Tower 1. The **Tower** buttons under the
-heading go between them, and because they are plain links a tower's address
-can be sent to a trade and opens on that tower.
+so on up to 4; `?tower=all` is the whole building together (see below) and
+`?tower=students` the students' reports; anything else is Tower 1. The
+**Tower** buttons under the heading go between them, and because they are
+plain links a tower's address can be sent to a trade and opens on that tower.
 
 Tower 2 also splits north and south. The singles (14-19 on each floor,
 506-511 on the 5th, CW002-006 on the ground) are the north side and the
@@ -837,6 +838,29 @@ CW149-152 and CW249-252 on the control sheet. The eight MVHR rows for it
 were made from the plans, so their keys carry the plan numbers and any tick
 on them stays where it is; `ROOM_ALIAS` in the page maps each to the sheet's
 number, which is what the page shows and what the audit log records against.
+
+## The whole building on one page
+
+A **Whole building** button beside the towers (6 Oct): `?tower=all` is
+every tower together on one page, with the same views, filters and audit
+log as a tower's page. Its trade lists carry every tower's rows, so the
+trade summary, By floor and By studio cover the building; each room says
+its tower beside its number ("CW316 Tower 2"), a corridor or stair core
+says it in its label ("Floor 3 corridor (Tower 2)"), and a room's audit
+picker entry and studio card say it too. Nothing is re-keyed: a row keeps
+the key its tower's page gives it, so a tick or note made on the whole
+building is the same tick on the tower's page, and `tools/check_keys.py`
+loads the whole-building page as well and fails if it misses any tower's
+job. The audit log works the same way: the picker is every room and area
+of the building, Tower 1's rooms in Stelling's order then the other towers'
+as their own pages have them, and a check recorded here is the tower's
+record. Logging a ticket picks the room from a list grouped by tower.
+Comments are every tower's: a tower-wide one says "Tower N as a whole" in
+its line, and the About picker offers each tower as a whole, then the rooms
+by tower, then the corridors; a comment posted about Tower 3 as a whole is
+tagged `tower:3`, exactly as if posted on Tower 3. The page keeps its own
+order, floor, comment and fold settings apart from the towers'. The
+Students reported issues page is unchanged by it.
 
 ## Updating the list
 

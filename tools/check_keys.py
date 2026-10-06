@@ -7,7 +7,8 @@ rewords a row leaves the tick with nothing to attach to. This loads the
 build that is live and the build about to go out, each once per tower,
 with the Supabase client mocked so nothing is written anywhere, gathers
 the keys from the page, and fails if any key on the live build is missing
-from the new one.
+from the new one. The whole-building page (?tower=all) is loaded on the
+new build too: it must carry every tower's keys, and must not throw.
 
     python tools/check_keys.py live.html new.html
 
@@ -23,6 +24,7 @@ from playwright.async_api import async_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 MOCK = open(os.path.join(HERE, "mock_supabase.js"), encoding="utf-8").read()
 TOWERS = (1, 2, 3, 4)
+WHOLE = "all"   # every tower on one page
 
 
 async def keys_for(browser, path, tower):
@@ -33,7 +35,7 @@ async def keys_for(browser, path, tower):
     page = await ctx.new_page()
     errors = []
     page.on("pageerror", lambda e: errors.append(str(e)))
-    await page.goto("file://" + os.path.abspath(path) + "?tower=%d" % tower)
+    await page.goto("file://" + os.path.abspath(path) + "?tower=%s" % tower)
     await page.wait_for_timeout(1200)
     keys = await page.eval_on_selector_all(
         "#sections input[type=checkbox][data-id]",
@@ -57,7 +59,16 @@ async def main(live, new):
                 await browser.close()
                 return 2
             print("tower %d: live %d jobs, new %d jobs" % (tower, len(k), len(k2)))
+        whole, werrs = await keys_for(browser, new, WHOLE)
         await browser.close()
+    if werrs:
+        print("page errors on the new build, whole building: %s" % werrs)
+        return 2
+    short = sorted(new_keys - whole)
+    print("whole building: %d jobs on the new build; the towers together %d" % (len(whole), len(new_keys)))
+    if short:
+        print("The whole-building page is missing %d of the towers' jobs, e.g. %s" % (len(short), short[:5]))
+        return 1
     lost = sorted(old_keys - new_keys)
     print("live build: %d keys; new build: %d keys; lost: %d" % (len(old_keys), len(new_keys), len(lost)))
     if lost:
